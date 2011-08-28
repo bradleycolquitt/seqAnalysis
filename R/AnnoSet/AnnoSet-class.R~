@@ -1,0 +1,66 @@
+setClass(Class = 'AnnoSet',
+         representation = representation(
+           name='character',
+           set_chr='character',
+           set_pos='numeric',
+           set_names='character',
+           set_group='numeric',
+           set_strand='character',
+           #anno_data='big.matrix',
+           chr_names='character',
+           bin_size='numeric',
+           genome_name='character',
+           coupling_vectors='character',         # CouplingVector
+           seq_data='character',                 # SeqSet
+           pattern_data='character'              # PatternSet
+           ),
+         prototype = prototype(),
+         validity = function(object){
+           if(FALSE) stop("")
+           return(TRUE)
+         }         
+)
+
+setClass(Class = "DataSet",
+         representation = representation(
+           sample='character',
+           raw='numeric',
+           rpm='numeric',
+           ams='character'                        # NormData
+           ),
+         prototype = prototype()
+         )
+
+setClass(Class = 'NormalizedData',
+         representation = representation(
+           coupling_vector_type='character',
+           data='numeric'
+           ),
+         prototype = prototype()
+         )
+
+setClass(Class = "PatternSet",
+         representation = representation(
+           pattern='character',
+           pattern_chr='character',
+           pattern_pos='numeric',
+           coupling_vector='CouplingVector'
+           ),
+         prototype = prototype()
+         )
+
+setClass(Class = "CouplingVector",
+         representation = representation(
+           fragmentLength='numeric',
+           func='character'
+           ),
+         prototype = prototype()
+         )
+
+addDataSet <- function(AnnoSet, dataset_name, vals) {
+  DataSetObj <- new('DataSet', sample = dataset_name, raw = vals)
+  AnnoSet@seq_data <- c(AnnoSet@seq_data, DataSetObj)
+  return(AnnoSet)
+}
+
+

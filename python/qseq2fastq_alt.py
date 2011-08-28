@@ -1,0 +1,57 @@
+#!/usr/bin/env python
+
+import sys
+from string import *
+import numpy
+
+def qseq2fastq(destination, qseqs, trim=None, pf=False):
+    for qstream in qseqs:
+        for line in qstream:
+            # parse line
+            record = line.strip().split('\t')
+            machine_name = record[0]
+            run_number = record[1]
+            lane_number = record[2]
+            tile = record[3]
+            x = record[4]
+            y = record[5]
+            index = record[6]
+            read = record[7]
+            sequence = record[8].replace('.','N')
+            # Illumina scores are Phred + 64
+            # Fastq scores are Phread + 33
+            # the following code grabs the string, converts to short ints and
+            # subtracts 31 (64-33) to convert between the two score formats.
+            # The numpy solution is twice as fast as some of my other
+            # ideas for the conversion.
+            # sorry about the uglyness in changing from character, to 8-bit int
+            # and back to a character array
+            quality = numpy.asarray(record[9],'c')
+            quality.dtype = numpy.uint8
+            quality -= 31
+            quality.dtype = '|S1'
+            # I'd like to know what the real numpy char type is
+            # instead of '|S1' 
+
+            destination.write('@%s_%s:%s:%s:%s:%s/%s%s%s' % ( \
+                machine_name,
+                run_number,
+                lane_number,
+                tile,
+                x,
+                y,
+                read,
+                pass_qc_msg,
+                os.linesep))
+            destination.write(sequence[trim])
+            destination.write(os.linesep)
+            destination.write('+')
+            destination.write(os.linesep)
+            destination.write(quality[trim].tostring())
+            destination.write(os.linesep)
+
+def main(argv):
+    qseq2fastq(argv[2], argv[1])
+
+if __name__ == "__main__":
+    main(sys.argv)

@@ -1,0 +1,21 @@
+## Take AnnoSet object
+## Divide RMS by coupling vector
+## Transform to [0,1000]
+
+AnnoSet.computeAMS <- function(data, reads) {
+  read.data <- .extract(data@read_data, reads)
+  rms <- read.data@rms
+  cf <- data@coupling_vector@coupCF
+
+  ams <- rms/cf
+  ams <- MEDIPS.transform(ams)
+
+  .updateReadData <- function(data) {
+    ReadDataObj <- new('ReadSet', name=curr_read_set@name, raw=curr_read_set@raw,
+                       rms=signal, ams=ams, number_regions=curr_read_set@number_regions)
+    data@read_data <- .replace(data@read_data, reads, ReadDataObj)
+    return(data)
+        }
+        
+  return(.updateReadData(data))
+}

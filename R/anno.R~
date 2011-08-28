@@ -1,0 +1,69 @@
+#####
+# Annotation object containing:
+#     BED positions
+#     Names
+#     Group
+#     Strand
+#     Coupling vector for a given nucleotide pattern
+#
+#####
+
+source("~/src/R/util.R")
+
+AnnoSet <- function(anno.name, set_chr=NULL, set_pos=NULL, chr_names=NULL, bin_size=NULL,
+                    coupling_vectors=NULL, genome_data = genome_data) {
+  obj <- list(name = anno_name,
+              set_chr = set_chr
+              set_pos = set_pos
+              chr_names = chr_names
+              bin_size = bin_size
+              coupling_vectors = coupling_vectors
+              genome_data = genome_data
+  class(obj) <- "AnnoSet"
+  return(obj)
+}
+
+AnnoBedToDipData <- function(anno.bed.name) {
+  anno.bed <- read.delim(anno.bed.name, header = FALSE,
+                         col.names = c("chr", "start", "end", "name", "group", "strand")
+                         colclasses = c("character", "integer", "integer", "character",
+                           "integer", "character"))
+  chr.names <- unique(anno.bed$chr)
+  bin.size <- with(anno.bed, end - start + 1)
+  pos <- anno.bed$start + 1
+
+  AnnoSetObj <- new('DipData', set_chr = anno.bed$chr, set_pos = pos,
+                    chr_names = chrNames, bin_size = bin.size, coupling_vectors = NULL
+                    genome_data = NULL)
+  return(AnnoSetObj)
+}
+
+addDataIntersection <- function(annoSet, data.path) {
+  data <- read.delim(data.path, header = FALSE, col.names = c("chr", "start", "end", "strand"),
+                     colClasses = c("character", "integer", "integer", "character"))
+  counts <- MEDIPS.distributeReads(reads_start = data$start, reads_stop = data$end,
+                                   reads_strand = data$strand, positions = annoSet$set_pos)
+  addData(annoSet, data.path, counts) 
+}
+
+addData <- function(annoSet=NULL, data.name=NULL, counts=NULL) {
+  annoSet$genome_data[[data.name]]['raw'] <- counts
+  return(annoSet)
+ 
+}
+
+ addPattern <- function(annoSet=NULL, pattern="CG", chr=NULL, start=NULL) {
+   annoSet$pattern_data[[pattern]] <- cbind(chr = chr, start = start)
+   return(annoSet)
+ }
+  
+makeCouplingVector <- function(AnnoSet=NULL, pattern="CG") {
+  # pass AnnoSet param to MEDIPS.couplingVector(pattern, "count")
+  
+}
+
+normalizeData <- function(AnnoSet=NULL, data, pattern="CG") {
+  # normalize specified data by given coupling vector
+}
+
+  

@@ -1,0 +1,31 @@
+MP.plotProfiles.All <- function(data=NULL, sample=NULL, cols=NULL, write=FALSE, ...) {
+  data_path <- paste("~/analysis/mprofiles", data , "profiles", sep="/")
+  if (!file.exists(data_path)) dir.create(data_path)
+  dir_files <- list.files(data_path)
+  select_files <- dir_files[grep(sample, dir_files)]
+  val_files <- sort(select_files[grep("mean$", select_files)])
+  ci_files_1 <- sort(select_files[grep("bootCI_1", select_files)])
+  ci_files_2 <- sort(select_files[grep("bootCI_2", select_files)])
+  
+  val_data <- lapply(val_files, function(x) {
+    d <- read.delim(paste(data_path, x, sep="/"), header=F)
+    return(d)
+  })
+  ci_data_1 <- lapply(ci_files_1, function(x) {
+    d <- read.delim(paste(data_path, x, sep="/"), header=F, colClasses="numeric")
+    return(d)
+  })
+  ci_data_2 <- lapply(ci_files_2, function(x) {
+    d <- read.delim(paste(data_path, x, sep="/"), header=F, colClasses="numeric")
+    return(d)
+  })
+  
+  for(i in 1:length(val_data)) {
+    profile_name <- val_files[i]
+    print(profile_name)
+    fname = paste(data_path, "plots", val_files[i], sep="/")
+    plotProfiles(profile=val_data[[i]], ci_1=ci_data_1[[i]],
+                      ci_2=ci_data_2[[i]], cols=cols, write=write, fname=fname,
+                 main=profile_name, combine=combine, ...)
+  }
+}

@@ -1,0 +1,136 @@
+
+getFeatureFile <- function(sample, feature) {
+  file.path <- paste(mp.path, sample, feature, sep="/")
+  data <- read.delim(file.path, colClasses=mp.classes)
+  data.fin <- data[is.finite(data$ams_A),]
+  return(data.fin)
+}
+getIndVals <- function(feature, samples, value_type) {
+  omp.ngn <- getFeatureFile(samples[1], feature)
+  omp.icam <- getFeatureFile(samples[2], feature)
+  value_types <- paste(value_type, c("_A", "_B"), sep="")
+  omp.val <- omp.ngn[, value_types[1]]
+  ngn.val <- omp.ngn[, value_types[2]]
+  icam.val <- omp.icam[, value_types[2]]
+  cells.val <- cbind(icam.val, ngn.val, omp.val)
+  rownames(cells.val) <- rownames(omp.ngn)
+  return(cells.val)
+}
+getTwoVals <- function(feature, samples, value_type) {
+  one.two <- getFeatureFile(samples, feature)
+  value_types <- paste(value_type, c("_A", "_B"), sep="")
+  one.val <- one.two[, value_types[1]]
+  two.val <- one.two[, value_types[2]]
+  vals <- cbind(one.val, two.val)
+  rownames(vals) <- rownames(one.two)
+  return(vals)
+}
+addRowNames <- function(sample, feature) {
+  ori.path <- paste("~/lib/features/", feature, sep="")
+  mp.path <- paste("~/analysis/mprofiles/features", sample, feature, sep="/")
+  ori <- read.delim(ori.path, header=FALSE)
+  mp <- read.delim(mp.path, header=TRUE, colClasses=mp.classes)
+  rownames(mp) <- ori[,4]
+  write.table(mp, file=mp.path, quote=FALSE, sep="\t")
+}
+
+addRowNames.all <- function(sample) {
+  mp.path <- paste(mp.path, sample, sep="/")
+  mp.files <- list.files(mp.path)
+  mp.files <- mp.files[-grep("MACS", mp.files)]
+  mp.files <- mp.files[-grep("refgene$", mp.files)]
+  mp.files <- mp.files[-grep("refgene_10to20kb", mp.files)]
+  for(file in mp.files) {
+    cat(file)
+    cat("\n")
+    addRowNames(sample, file)
+  }
+}
+
+
+removeZeroRows <- function(data) {
+  data <- data[apply(data,1,prod) > 0,]
+  return(data)
+}
+
+removeInf <- function(data) {
+  vals <- apply(data, 2, is.finite)
+  #return(vals)
+  ind <- c(1:nrow(data)) * apply(vals, 1, prod)
+  #return(ind)
+  return(data[ind,])
+}
+threshRowsByVal <- function(data, thresh) {
+  data <- data[apply(data, 1, min) >= thresh, ]
+  return(data)
+}
+
+filterClustered <- function(data, thresh=10) {
+  require(stringr)
+  require(reshape)
+  letter_starts <- paste("^", LETTERS, sep="")
+  data_letters <- list()
+  for (i in 1:length(letter_starts)) {
+    data_letters <- c(data_letters, list(data[grep(letter_starts[i], data[,4]),]))
+  }
+
+  final <- foreach (letter=data_letters, .combine="rbind") %dopar% {
+    cat("=")
+    split_names <- str_split(letter[,4], "[0-9]")
+    count <- 1
+    compare <- ""
+    out <- list()
+    tmp <- letter[1,]
+    for (i in 2:nrow(letter)) {
+      prefix <- split_names[[i]][1]
+      if (prefix == compare) {
+        count <- count + 1
+        tmp <- rbind(tmp, letter[i,])
+      } else {
+        #print(prefix)
+        compare <- prefix
+        if (count <= thresh) {
+          out <- c(out, list(tmp))
+        }
+        count <- 1
+        tmp <- letter[i,]
+      }
+    }
+    return(ldply(out))
+  }  
+  return(final)
+}
+
+
+formatFeature <- function(feature, key) {
+  data <- read.delim(paste(feature.path, feature, sep="/"), header=FALSE, as.is=T)
+  name.split <- sapply(data[,4], function(x) strsplit(x, key))
+  data[,4] <- unlist(lapply(name.split, function(x) x[1]))
+  data <- data[!duplicated(data[,4]),]
+  write.table(data, file=paste(feature.path, feature, sep="/"), quote=FALSE, sep="\t",
+              row.names=FALSE, col.names=FALSE)
+  return(data)
+}
+dataThresh <- function(data, key, thresh, above) {
+  data.thresh <- NULL
+  if (above) { data.thresh <- data[data[,key] >= thresh,]
+  } else { data.thresh <- data[data[,key] <= thresh,] }
+  return(data.thresh)
+}
+valThresh <- function(vals, thresh, above=TRUE) {
+  vals.thresh <- NULL
+  if (above) { vals.thresh <- vals[vals >= thresh]
+  } else { vals.thresh <- vals[vals <= thresh] }
+  return(vals.thresh)
+}
+
+valThresh.matrix <- function(data, thresh, above=TRUE) {
+  ind <- apply(data, 1, function(x) {
+    bool <- NULL
+    if (above) {bool <- x >= thresh
+    } else {bool <- x <= thresh}
+    prod(bool)
+  })
+  
+  return(data[as.logical(ind),])
+}

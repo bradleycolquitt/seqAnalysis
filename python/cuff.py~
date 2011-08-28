@@ -1,0 +1,13 @@
+#!/usr/bin/env python
+
+import os, sys
+import pysam
+import bam2bed
+import sam
+from subprocess import Popen
+
+def main(argv):
+
+    
+if __name__ == "__main__":
+    main(sys.argv)

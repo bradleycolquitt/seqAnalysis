@@ -1,0 +1,10 @@
+
+## Read in intersections and make count matrix
+
+intersectToMatrix <- function() {
+  file.path <- "~/data/ecmp/reads_count_inter_MACS_DNAse"
+  files <- list.files(file.path)
+  files <- files[grep("norm_wg", files)]
+
+  files[length(files)]
+}

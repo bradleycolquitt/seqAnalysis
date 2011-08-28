@@ -1,0 +1,284 @@
+library(stats)
+library(itertools)
+library(foreach)
+library(multicore)
+library(mclust)
+
+source("~/src/R/LEA/dipdata.R")
+source("~/src/R/LEA/seqdata.R")
+
+corrs <- function(data1, data2, method="spearman", N) {
+	index <- seq(1, length(data1) - N , by = N)
+	cors <- c()
+	for (i in index){
+		sub1 <- data1[seq(i, i + N)]
+                sub2 <- data2[seq(i, i + N)]
+		cors <- c(cors,cor(sub1, sub2, method=method))
+		}
+	return(cors)
+	}
+	
+corr.null<-function(data1, data2, n){
+	index<-seq(1,nrow(data)-n,by=n)
+	cors.n<-c()
+	for (i in index){
+		r<-seq(i,i+n)
+		r.rand1<-sample(r,n)
+		r.rand2<-sample(r,n)
+		cors.n<-c(cors.n,cor(data1[r.rand1],data2[r.rand2]))
+		}
+	cors.n
+	}
+
+corrMedips <- function(data1, data2, data_type="norm") {
+  read_vals.1 <- getDataByType(data1, data_type)
+  read_vals.2 <- getDataByType(data2, data_type)
+
+  sample_corr <- corrs(read_vals.1, read_vals.2, 100)
+  sapmle_cors_null <- corrs.null(read_vals.1, read_vals.2, 100)
+
+  ks <- ks.text(sample_corr, sample_corr_null)
+  print(ks)
+  return(mean(sample_corr, na.rm=T))
+}
+
+corrDipData <- function(data1, data2, data_type="norm", method="spearman",
+                        N=1000, test=FALSE) {
+  dd1 <- load.DipData(data1)
+  dd2 <- load.DipData(data2)
+  
+  dd1.data <- dd1$genome.data[,data_type]
+  dd2.data <- dd2$genome.data[,data_type]
+
+  dd1.data <- 
+  sample_corr <- corrs(dd1.data, dd2.data, N)
+  if(test) {
+    sample_corr_null <- corrs.null(dd1.data, dd2.data, N)
+    ks <- ks.test(sample_corr, sample_corr_null)
+    print(ks)
+  }
+  
+  return(mean(sample_corr, na.rm=TRUE))
+}
+
+hmedips <- paste(c("omp", "ngn","icam"), "hmedip", sep="_")
+medips <- paste(c("omp", "ngn","icam"), "medip", sep="_")
+mk4 <- paste(c("omp", "ngn"), "mk4", sep="_")
+corrDNAmodAndmk4 <- function(data_type="raw", method="spearman", N=100, fname=NULL) {
+  #print(mk4)
+  dipdata <- foreach(data=c(hmedips, medips), .combine="cbind") %do% {
+    
+    dd <- load.DipData(data)    
+    genome.data <- dd$genome.data
+    dd.data <- genome.data[!genome.data[,1]==22, data_type]
+    if (data_type == "raw") dd.data <- (dd.data * 1e6) / sum(dd.data)
+    return(dd.data) 
+  }
+  
+  seqdata <- foreach(data=mk4, .combine="cbind") %do% {
+    cat("mk4\n")
+    print(data)
+    sd <- load.SeqData(data)
+    print("loaded")
+    genome.data <- sd$genome.data
+    sd.data <- genome.data[!genome.data[,1]==22, "rpm"]   
+    return(sd.data) 
+  }
+  
+  mat <- cbind(dipdata, seqdata)
+  #return(mat)
+  colnames(mat) <- c(hmedips, medips, mk4)
+  #return(mat)
+  corr_mat <- corrMatrix(mat, method=method, N=N, fname=fname)
+  return(corr_mat)
+}
+
+#Combinatorial patterns of histone acetylations and methylations in the human genome
+corrMatrix <- function(set, method, N, fname) { 
+ # cat("Getting data...\n")
+ # set_data <- foreach(data=set, .combine="cbind") %do% {
+ #   dd <- load.DipData(data)    
+ #   genome.data <- dd$genome.data
+ #   dd.data <- genome.data[!genome.data[,1]==22, data_type]   
+ #   return(dd.data) 
+ # }
+  #return(set)
+ 
+  cat("Removing zeros...\n")
+  set_names <- colnames(set)
+  set <- removeZeros(set)
+  #return(set_data)
+  #colnames(set_data) <- set
+  gc()
+  cat("Correlating...\n")
+  comb <- combn(set_names, 2)
+  registerDoMC(cores=6)
+  corr_vals <- foreach(pair=iter(comb, by="col"), .inorder=TRUE, .combine="c") %dopar% {
+    cat(paste(pair[1], " and ", pair[2], "\n", sep=""))
+    val <- corrs(set[,pair[1]], set[,pair[2]], method=method, N=N)
+    return(mean(val, na.rm=TRUE))
+  }
+  #return(corr_vals)
+  registerDoMC(cores=12)
+  
+  mat <- fillMatrix(set_names, corr_vals)
+  dimnames(mat) <- list(set_names, set_names)
+  if (!is.null(fname)) write.table(mat, file=paste("~/storage/analysis/cor/", fname, sep=""),
+              quote=FALSE, sep="\t", row.names=FALSE, col.names=FALSE)
+  return(mat)
+}
+
+mclustDNAmodRNA <- function(dna=NULL, dip=NULL, rna=NULL) {
+  #rna.path <- "~/data/rna/omp_ngn_icam_rna.txt"
+  #rna.path <- "~/data/rna/cv_iv_cd_id_rna"
+  rna.path <- "~/storage/data/rna/cuffdiff/moe_wt_mrna_moe_d3a_mrna/gene_exp.diff"
+  #dna.path <- paste("~/analysis/mprofiles/features/feature_summaries/", paste(dip, "refgene_long", sep="_"), sep="")
+  dna.path <- "~/storage/analysis/mprofiles/features/moe_wt_hmc_moe_dnmt3a_hmc/refgene_noclust"
+  rna.data.full <- read.delim(rna.path)
+  rna.data <- matrix(c(rna.data.full$value_1, rna.data.full$value_2), nrow=nrow(rna.data.full), ncol=2,
+                     dimnames=list(rna.data.full$test_id, c("WT", "Dnmt3a")))
+  #dimnames(rna.data) <- list(rna.data.full$test_id, c("WT", "Dnmt3a"))
+  rna.data <- removeZeros(rna.data)
+  dna.data.full <- read.delim(dna.path)
+  dna.data <- matrix(c(dna.data.full$ams_A, dna.data.full$ams_B), nrow=nrow(dna.data.full), ncol=2,
+                     dimnames=list(rownames(dna.data.full), c("WT", "Dnmt3a")))
+  #dimnames(dna.data) <- list(rownames(dna.data.full), c("WT", "Dnmt3a"))
+  rna.sample.data <- log(rna.data[, grep(rna, colnames(rna.data))],2)
+  dna.sample.data <- dna.data[, grep(dna, colnames(dna.data))]
+  rna.select.data <- rna.sample.data[match(rownames(dna.data), rownames(rna.data))]
+  #rna.select.data <- rna.data[match(rownames(dna.data), rownames(rna.data))]
+  sample.data <- na.omit(cbind(rna.select.data, dna.sample.data))
+  #return(sample.data)
+  sample.mc <- Mclust(sample.data, G=2)
+  return(list(sample.mc, sample.data))
+  #corr <- cor(dna.sample.data, rna.select.data, method="spearman", use="complete.obs") 
+  #col <- rgb(0,0,0,.2)
+  #x11()
+  #plot(sample.data[,2], sample.data[,1], col=col, pch=20, ylim=c(400,1000))
+  #return(corr)
+}
+
+mclustDNAmodRNA.2 <- function(dna=NULL, dip=NULL, rna=NULL) {
+  rna.path <- "~/guanz/data/rna/sc_rna_df"
+  dna.path <- paste("~/storage/analysis/mprofiles/features/feature_summaries")
+}
+mclustSplitClass <- function(mclust, data, class=2, corr=TRUE) {
+  classif <- mclust$classification
+  data.class <- data[classif==class,]
+  if (!corr) return(data.class)
+  data.cor <- cor(data.class[,1], data.class[,2])
+  return(data.cor)
+}
+
+mclustFit <- function(mclust, data, class=2) {
+  data.class <- NULL
+  if (class > 0) {data.class <- mclustSplitClass(mclust, data, class)
+  } else {data.class <- data[data[,1] >= -1,]}
+  data.fit <- lm(data.class[,2]~data.class[,1])
+  return(data.fit)
+}
+cust.topo <- topo.colors(50)
+cust.topo[1] <- "white"
+mclustPlotSurface <- function(mclust, data, type="image", fname=NULL, corr.val=NULL) {
+   if (is.null(fname)) {x11()
+   } else {
+     pdf(file=paste("~/analysis/mprofiles/features/clustering/plots",
+           paste(fname, ".pdf", sep=""), sep="/"),
+         width=5, height=5)
+   }                     
+   
+   surfacePlot(data=data, what="density", type=type,
+               parameters=mclust$parameters,
+               col=topo.colors(100),
+               ylim=c(0, 0.0025), xlim=c(0,10),
+               cex.axis=1.2,
+               ann=FALSE)
+   mtext("log2 RPKM", side=1, line=2, cex=1.2)
+   mtext("AMS", side=2, line=2, cex=1.2)
+   if (!is.null(corr.val)) {
+     corr.val <- round(corr.val, digits=2)
+     text(8, 425, paste("R = ", corr.val, sep=""), col="white", pos=2, cex=1.6)
+   }
+   if(!is.null(fname)) dev.off()
+ }
+
+mclustComplete <- function(dna, dip, rna) {
+  data <- plotDNAmodRNA(dna, dip, rna)
+  mclustPlotSurface(data[[1]], data[[2]])
+}
+
+sectionByFullQ <- function(rna_file, dna_file, Q) {
+  rna <- read.delim("~/data/rna/omp_ngn_icam_rna.txt")
+  dna <- read.delim(paste("~/storage/analysis/mprofiles/features/feature_summaries/", dna_file, sep=""))
+  dna.unwrap <- c(dna[,1], dna[,2], dna[,3])
+  q.val <- quantile(dna.unwrap, probs=Q)
+  dna.filter <- list()
+  
+  for (i in 1:ncol(dna)){
+    ind <- dna[,i] >= q.val
+    m <- match(rownames(dna[ind,]), rownames(rna))
+    vals <- cbind(dna[ind,i], rna[m,i])
+    #dna.filter[[i]] <- dna[ind, i]
+    #names(dna.filter[[i]]) <- rownames(dna[ind,])
+    
+    #dna.filter[[i]] <- cbind(dna.filter[[i]], rna[m, i])
+    rownames(vals) <- rownames(dna[ind,])
+    colnames(vals) <- c("dna", "rna")
+    vals <- na.omit(vals)
+    dna.filter[[i]] <- vals
+  }
+  names(dna.filter) <- colnames(dna)
+  return(dna.filter)
+}
+TopHmcRnaDensity <- function(val_a, val_b, fname=NULL) {
+  if (is.null(fname)) {
+    X11()
+  } else {
+    pdf(fname, 5, 5)
+  }
+  val_a_density <- density(val_a)
+  val_b_density <- density(val_b)
+  max_y <- max(val_a_density$y)
+  max_y <- max(c(max_y, val_b_density$y))
+  print(max_y)
+  plot(1,1, type="n", xlim=c(-10,10), ylim=c(0, .25), xlab="log2 FPKM", ylab="Density", axes=FALSE)
+  lines(val_a_density$x, val_a_density$y, col=col3[3])
+  lines(val_b_density$x, val_b_density$y, col=col3[2])
+  axis(2, seq(0, .25, .05))
+  axis(1)
+  #box()
+  legend(-8, max_y-(max_y*.1), c("OSN", "GBC"), col=col3[3:2], bty="n", lty=1)
+  if (!is.null(fname)) dev.off()
+}
+removeZeros <- function(data) {
+  ind <- 1:nrow(data)
+  registerDoMC(cores=3)
+  out <- foreach(it=isplitRows(data, chunks=10), .combine="rbind") %dopar% {
+    return(it[apply(it, 1, prod)>0,])
+  }
+  return(out)
+  #return(data[apply(data, 1, prod)>0,])
+}
+
+fillMatrix <- function(set, vals) {
+   mat <- matrix(1, nrow=length(set), ncol=length(set))
+   .filler <- function(mat) {
+     prev <- 0
+     for(i in 1:(length(set) - 1)) {
+       step <- prev + length(set) - i
+       mat[i, (i+1):ncol(mat)] <- vals[(prev + 1):step]
+       prev <- step
+    }
+    return(mat)
+   }
+   mat <- .filler(mat)
+   mat <- .filler(t(mat))
+   return(mat)
+ }
+
+distanceMatrix <- function(mat, method="euclidean") {
+  mat.nz <- mat[apply(mat, 1, prod) > 0,]
+  dist.mat <- dist(t(mat.nz), method=method)
+  return(dist.mat)
+}
+

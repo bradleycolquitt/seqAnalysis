@@ -1,0 +1,52 @@
+library(BSgenome)
+library(BSgenome.Mmusculus.UCSC.mm9)
+
+shiftBedPositions <- function(bed, shift, direction="up") {
+  if (direction == "up") {
+    direct <- 1
+  } else {
+    direct <- -1
+  }
+  left <- vector(length=nrow(bed))
+  right <- vector(length=nrow(bed))
+  plus.ind <- na.omit(bed[,6] == "+")
+  #minus.ind <- bed[,6] == "-"
+  #return(plus.ind)
+  #print(shift)
+  #return(bed[plus.ind, 2])
+  left[plus.ind] <- bed[plus.ind, 2] - shift
+  #return(left)
+  right[plus.ind] <- bed[plus.ind, 2]
+  right[!plus.ind] <- bed[!plus.ind, 3] + shift
+  left[!plus.ind] <- bed[!plus.ind, 3]
+  out <- cbind(bed[,1], left, right, bed[,4:6])
+  return(out)
+}
+#take matrix with sequence names and sequence, and generate
+#fasta file
+formatFasta <- function(data, fname=NULL) {
+  names <- data[,1]
+  seq <- data[,2]
+  fc <- file(fname, 'w')
+  for (i in 1:nrow(data)) {
+    name.out <- paste(c(">", names[i], "\n"), sep="")
+    cat(name.out, file=fc)
+    seq.out <- paste(c(seq[i], "\n"), sep="")
+    cat(seq.out, file=fc)
+  }
+  close(fc)
+}
+
+trimBed <- function(bed, amt, pos="up") {
+  plus.ind <- bed[,6] == "+"
+  if (pos == "up") {
+    plus.pos <- 2
+    minus.pos <- 3
+  } else {
+    plus.pos <- 3
+    minus.pos <- 2
+  }
+  bed[plus.ind, plus.pos] <- bed[plus.ind, plus.pos] + amt
+  bed[!plus.ind, minus.pos] <- bed[!plus.ind, minus.pos] - amt
+  return(bed)
+}

@@ -1,0 +1,6 @@
+## Segments
+
+function <- arrow(x, y, col, width) {
+  lines(x, y, col=col, lwd=width)
+  polygon(c(x[2]-width/2, x[2], x[2]+width/2), y=c(y[2], y[2] + 1, y[2]), col=col)
+}

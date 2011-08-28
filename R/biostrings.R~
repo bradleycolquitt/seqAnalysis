@@ -1,0 +1,10 @@
+chrs <- paste("chr", c(1:19, "X", "Y"), sep="")
+BS.matchPattern <- function(positions, pattern) {
+  positions.split <- split(positions, positions[,1])
+  seq <- foreach(chr=chrs, position=positions.split) %dopar% {
+    curr.seq <- Views(Mmusculus[[,chr]], start=position[,2], end=position[3], name=position[,4])
+    hits <- matchPattern(pattern, curr.seq)
+    start <- 
+  }
+}
+

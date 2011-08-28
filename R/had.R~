@@ -1,0 +1,3 @@
+deseas <- function(var, month) {
+  resid(lm(var~factor(month))) + mean(var, na.rm=TRUE)
+}

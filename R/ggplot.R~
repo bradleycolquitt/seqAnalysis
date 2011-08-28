@@ -1,0 +1,8 @@
+## For 5hmC, 5mC, mRNA associations
+
+ggplot.1 <- function(data, label_thresh) {
+  ind_1 <- data$Value[data$Measure == "5hmC"] <= label_thresh
+  ind_2 <- data@Value[data$Measure == "5mC"] <= label_thresh
+  gg <- ggplot(data, aes(Value[Measure=="5hmC"], Value[Measure=="5mC"]))
+  gg + geom_point(alpha=I(1/5)) + geom_text(aes(Value[Measure=="5hmC" & ind_1 & ind_2], Value[Measure=="5mC" & ind_1 & ind_2], label=Gene[ind_1 & ind_2]), hjust=.25, vjust=.25, color="red")
+}
