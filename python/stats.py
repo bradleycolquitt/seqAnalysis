@@ -10,7 +10,7 @@ from math import *
 import argparse
 
 DATA_NAME = "genes.fpkm_tracking"
-ANALYSIS_FEATURE = "/media/storage2/analysis/features"
+SUMMARY_PATH = "/media/storage2/analysis/features/norm/summaries"
 INF = float('inf')
 
 # from MISO
@@ -94,8 +94,10 @@ class ExprData:
     priorfun = lambda x: 1 + x if x <= 0 else 1 - x
     analytic_prior_density = map(priorfun, np.arange(-1,1,0.001))
     if np.mean(abs(delta)) <= 0.009:
+      #print "null peaked"
       postfun = NullPeakedDensity(delta)
     else:
+      #print "not null peaked"
       postfun = self._fit_posterior()
     bf = np.zeros(delta.size)
     posterior = postfun.evaluate(np.transpose(delta))
@@ -151,28 +153,34 @@ def import_data(dname):
         d[fields[0]] =  (float(fields[10]), float(fields[13])) 
   return d
 
-def import_features(feature, date, samples):
-  sample_names = ["/".join([ANALYSIS_FEATURE, date, sample, feature]) for sample in samples]
-  sample_data = [open(sample_name, 'r') for sample_name in sample_names]
+def import_features(set, feature, samples):
+  sample_name = "/".join([SUMMARY_PATH, "_".join([set, feature])])
+  sample_data = open(sample_name)
   d = {}
-  
-  for s1, s2 in itertools.izip(sample_data[0], sample_data[1]):
-    s1 = s1.split()
-    s2 = s2.split()
-    d[s1[3]] = (float(s1[4]), float(s2[4]))
+  cnames = sample_data.readline().split()
+  indices = [cnames.index(sample) + 1 for sample in samples]
+  for line in sample_data:
+    line = line.split()
+    
+    d[line[0]] = (float(line[indices[0]]), float(line[indices[1]]))
+  #for s1, s2 in itertools.izip(sample_data[0], sample_data[1]):
+  #  s1 = s1.split()
+  #  s2 = s2.split()
+  #  d[s1[3]] = (float(s1[4]), float(s2[4]))
 
   return d  
 def main():
   parser = argparse.ArgumentParser(description='Determine differentially expressed genes.')
   parser.add_argument('--fpkm', metavar='file.fpkm_tracking', type=str, help='name of gene fpkm file')
+  parser.add_argument('--set')
   parser.add_argument('--feature', help='feature file', required=False)
-  parser.add_argument('--date', required=False)
+  #parser.add_argument('--date', required=False)
   parser.add_argument('--samples', nargs=2, help='samples to be compared', required=False)
   parser.add_argument('--cutoff', type=float, help='Cutoff for differential expression')
   args = parser.parse_args()
   d = {}
   if args.feature and args.samples:
-    d = import_features(args.feature, args.date, args.samples)
+    d = import_features(args.set, args.feature, args.samples)
   elif args.fpkm:  
     d = import_data(args.fpkm)
   n = d.keys()

@@ -3,17 +3,19 @@
 import sys
 import os
 import argparse
+import pdb
 import re
 import tables as tb
 import tempfile
 import shutil
+import warnings
 import numpy as np
 from scipy import stats
 from string import atoi, atof
 from multiprocessing import Pool
 
 ANNO_PATH = '/home/user/lib/annotations'
-FEATURE_PATH = '/home/user/lib/features'
+FEATURE_PATH = '/home/user/lib/features_general'
 SAMPLE_PATH = '/media/storage2/data/h5'
 ANNO_OUT_PATH = '/media/storage2/analysis/profiles/norm'
 FEATURE_OUT_PATH = '/media/storage2/analysis/features/norm'
@@ -34,16 +36,19 @@ D3A_SAMPLES = ['moe_wt_mc_rlm', 'moe_d3a_mc_rlm',
 
 
 class tab:
-    def __init__(self, anno, h5, fun, type):
+    def __init__(self, anno, h5, fun, type, split_anno):
         self.anno = anno
         self.h5 = h5
         self.fun = fun
         self._type = type
+        self.split_anno = split_anno
         self.out_path = ""
         if type == "anno":
             self.out_path = "/".join([ANNO_OUT_PATH, os.path.basename(anno)])
         elif type == "feature":
             self.out_path = "/".join([FEATURE_OUT_PATH, os.path.basename(anno)])
+        if split_anno:
+            self.out_path = self.out_path + "_split"
         if not os.path.exists(self.out_path): os.makedirs(self.out_path)
         
     def run(self):
@@ -59,6 +64,7 @@ class tab:
             #pool = Pool(processes=6)
             for chr_tbp in chrs_tbp:
                 print chr_tbp
+                
                 self.tab_core(anno, sample, chr_tbp, tmp_path, self.fun)
             ##    pool.apply_async(tab_core, (anno, sample, chr_tbp, self.fun))
             ##pool.close()
@@ -86,9 +92,16 @@ class tab:
             start = atoi(sline[1]) / window_size
             end = atoi(sline[2]) / window_size
             vals = sample_data[start:end]
-            result = np.mean(vals)
-            out = "\t".join([line, str(result)]) + "\n"
-            anno_out.write(out)
+            if len(vals) > 0:
+                if self.split_anno:
+                    for val in vals:
+                        out = "\t".join([line, str(val)]) + "\n"
+                        anno_out.write(out) 
+                else:
+                    result = np.mean(vals[vals > 0])
+                    if np.isnan(result): result = 0
+                    out = "\t".join([line, str(result)]) + "\n"
+                    anno_out.write(out)
         anno_data.close()
         anno_out.close()
             
@@ -117,18 +130,23 @@ def worker(anno, sample, chrs_tbp, tmp_path, fun):
                 #sample_data.close()
                 #anno_out.close()    
     file_combine(anno, tmp_path, sample._v_name)
-def tab_worker(anno, h5, fun, type):
+def tab_worker(anno, h5, fun, type, split_anno):
     print anno
-    obj = tab(anno, h5, fun, type)
-    obj.run()
+    obj = tab(anno, h5, fun, type, split_anno)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        obj.run()
     
 def main(argv):
+    warnings.simplefilter("ignore")
     parser = argparse.ArgumentParser()
     parser.add_argument('-a', dest='annotation', required=False, default="")
+    parser.add_argument('-f', dest='feature', required=False)
     parser.add_argument('--anno_set', action="store_true", required=False)
     parser.add_argument('--feature_set', action="store_true", required=False)
     parser.add_argument('-t', dest='sample_h5')
     parser.add_argument('--function', dest='fun', required=False)
+    parser.add_argument('--split', dest="split_anno", action="store_true", default=False)
     args = parser.parse_args()
     
     #annos = args.annotation
@@ -142,17 +160,22 @@ def main(argv):
     
     if args.anno_set:
         annos = [ANNO_PATH + "/"+ f for f in os.listdir(ANNO_PATH) if re.search("chr", f)]
-        [tab_worker(anno, h5, fun, "anno") for anno in annos]
+        [tab_worker(anno, h5, fun, "anno", args.split_anno) for anno in annos]
         #pool = Pool(processes=2)
         #result = [pool.apply_async(tab_worker, (anno, h5, args.fun)) \
         #        for anno in annos]
         #pool.close()
         #pool.join()
     elif args.feature_set:
+        print args.split_anno
         features = [FEATURE_PATH + "/" + f for f in os.listdir(FEATURE_PATH) if re.search("chr", f)]
-        [tab_worker(feature, h5, fun, "feature") for feature in features]
-    else:       
-        obj = tab(ANNO_PATH + "/" + args.annotation, h5, args.fun, "anno")
+        print features
+        [tab_worker(feature, h5, fun, "feature", args.split_anno) for feature in features]
+    elif args.annotation:       
+        obj = tab(ANNO_PATH + "/" + args.annotation, h5, fun, "anno", args.split_anno)
+        obj.run()
+    elif args.feature:
+        obj = tab(FEATURE_PATH + "/" + args.feature, h5, fun, "feature", args.split_anno)
         obj.run()
 
    

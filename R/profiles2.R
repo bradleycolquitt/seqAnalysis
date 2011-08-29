@@ -66,7 +66,12 @@ writeModule <- function(out.path, sample, group2=NULL, profile, CI) {
 }
 
 
-MP.makeProfile2 <- function(anno, sample, group2=NULL, rpm=TRUE, write=TRUE) {
+profileCompute <- function(data, param) {
+  grouping <- lapply(param[[2]], function(x) if(!is.null(x)) data[,x])
+  return(tapply(data[,param[[1]]], grouping, param[[3]]))
+}
+
+MP.makeProfile2 <- function(anno, sample, group2=NULL, data_type="rpm_avg", write=TRUE) {
   data <- read.delim(paste(anno, sample, sep="/"))
   colnames(data) <- c("chr", "start", "end", "name", "group", "strand", "norm")
   #ind <- c("raw", "norm")
@@ -103,12 +108,12 @@ MP.makeProfile2 <- function(anno, sample, group2=NULL, rpm=TRUE, write=TRUE) {
   }  
 }
 
-MP.makeProfile2.allSamp <- function(anno, set="d3a", group2=NULL, rpm=TRUE, write=T) {
+MP.makeProfile2.allSamp <- function(anno, set="d3a", group2=NULL, data_type="rpm_avg", write=T) {
   if (set=="d3a") {samples <- samples.d3a
   } else if (set=="cells") {samples <- samples.cells
   } else if (set=="cells_rlm") {samples <- samples.cells.rlm}
   #samples <- lapply(samples, function(sample) paste(profile2.path, sample, sep="/"))
-  sample_path <- paste(profile2.path, "norm", anno, sep="/")
+  sample_path <- paste(profile2.path, "norm", data_type, anno, sep="/")
   print(sample_path)
   samples <- list.files(sample_path)
   print(samples)
@@ -371,7 +376,8 @@ MP.plotAnno <- function(data, annotation, cols=NULL, lab=NULL,
                       paste("+", lab.data$dist, " kb", sep="")),
        cex.axis=1)
   print(y.val)
-  axis(2, at=seq(round(y.val[1], 1), round(y.val[2],1), round(diff(y.val)/3, 2)), cex.axis=1)
+  axis(2, at=y.val)
+  #axis(2, at=seq(round(y.val[1], 1), round(y.val[2],1), round(diff(y.val)/3, 2)), cex.axis=1)
   abline(v=lab.data$pos[2], lty=2, col="grey")
   abline(v=lab.data$pos[3], lty=2, col="grey")
 }
@@ -379,34 +385,36 @@ MP.plotAnno <- function(data, annotation, cols=NULL, lab=NULL,
 
 
 
-MP.plot2 <- function(annotation, sample, data_type = "raw", group2=NULL, cols=NULL, lab=NULL, y.val=NULL, type="range", fname=NULL) {
+MP.plot2 <- function(annotation, sample, data_type = "rpm_avg", group2=NULL, cols=NULL, lab=NULL, y.vals=NULL, type="range", fname=NULL) {
   ## Get sample names
   if (!is.null(group2)) {
     anno <- paste(annotation, group2, data_type, sep="_")
   } else {
     anno <-  paste(annotation, data_type, sep="_")
   }
-  data <- MP.getData(profile2.path, sample, annotation=anno, group2=group2)[[1]]
+ 
+  data <- profileRead(paste(profile2.path, "norm", data_type, annotation, "profiles", sep="/"), sample, group2)
+  #data <- MP.getData(profile2.path, sample, annotation=anno, group2=group2)[[1]]
   #return(data)
   #data <- splitReform(data)
-  if (!is.null(dim(data[[1]]))) {
-    #print("here")
-    data <- lapply(data, function(x) apply(x, 2, function(y) y[1:length(y) - 1]))
-  } else {
-    data <- lapply(data, function(x) trimData(x, c(0, length(x[[1]][[1]]) - 1)))
+  #if (!is.null(dim(data[[1]]))) {
+  #  #print("here")
+  #  data <- lapply(data, function(x) apply(x, 2, function(y) y[1:length(y) - 1]))
+  #} else {
+  #  data <- lapply(data, function(x) trimData(x, c(0, length(x[[1]][[1]]) - 1)))
                                         #return(data)
-  }
+  #}
   if (is.null(fname))  {x11("", 6, 4)
   } else {
-    pdf(file=paste(profile2.path, "plots", fname, sep="/"), 6, 4.5)
+    pdf(file=paste(profile2.path, "norm", "plots", fname, sep="/"), 6, 4.5)
   }
-  .profile <- function(data, y.val) {
+  .profile <- function(data, y.vasl) {
     MP.plotAnno(list(data), annotation, cols=cols, lab=lab,
-                y.val=y.val) 
+                y.val=y.vals) 
   }
-  if (is.null(y.val)) y.val <- getRange(list(data), buffer=0)
+  if (is.null(y.vals)) y.vals <- getRange(list(data), buffer=0)
   #print(y.val)
-  .profile(data, y.val)
+  .profile(data, y.vals)
   
   #mtext("AMS", at=.775, side=2, outer=T, line=-1, cex=1.6)
   #mtext("AMS", at=.275, side=2, outer=T, line=-1, cex=1.6)
@@ -422,9 +430,10 @@ MP.plot2 <- function(annotation, sample, data_type = "raw", group2=NULL, cols=NU
   }
 }
 
-MP.plot2.several <- function(annotation, set="d3a", data_type="raw", group2=NULL, cols=NULL, lab=NULL, y.vals=NULL, standard=FALSE,
+MP.plot2.several <- function(annotation, set="d3a", data_type="rpm", group2=NULL, cols=NULL, lab=NULL, y.vals=NULL, standard=FALSE,
                              fname=NULL) {
   samples <- NULL
+  orient <- 1
   if (set=="d3a") {
     samples <- list(list("moe_wt_hmc.bed", "moe_d3a_hmc.bed"), list("moe_wt_mc.bed", "moe_d3a_mc.bed"))
     legend <- c("Dnmt3a +/+", "Dnmt3a -/-")
@@ -449,8 +458,13 @@ MP.plot2.several <- function(annotation, set="d3a", data_type="raw", group2=NULL
   } else if (set=="cells_norm") {
     samples <- list(list("omp_hmc", "ngn_hmc", "icam_hmc"),
                     list("omp_mc", "ngn_mc", "icam_mc"))
-    rows <- 2
     columns <- 1
+    if (!is.null(group2)) {
+      columns <- 3
+    }
+    rows <- 2
+    
+    orient <- 2
   }
 
   #print(samples)
@@ -461,12 +475,16 @@ MP.plot2.several <- function(annotation, set="d3a", data_type="raw", group2=NULL
   }                      
   
   par(mfrow=c(rows, columns), mar=c(2,4,1,1) + 0.1, oma=c(1, 5, 1, 1))
-#  data <- lapply(samples, function(sample) lapply(sample,
-#                                                  function(s) profileRead(paste(profile2.path, s, "profiles", sep="/"),
- #                                                                         paste(annotation, data_type, sep="_"), group2)))
-  data <- lapply(samples, function(sample)
+  if (orient==1) {
+    data <- lapply(samples,
+                 function(sample) lapply(sample, function(s)
+                                         profileRead(paste(profile2.path, s, "profiles", sep="/"),
+                                                           paste(annotation, data_type, sep="_"), group2)))
+  } else if (orient==2) {
+    data <- lapply(samples, function(sample)
                  lapply(sample, function(s)
-                        profileRead(paste(profile2.path, "norm", annotation, "profiles", sep="/"), s, group2)))
+                        profileRead(paste(profile2.path, "norm", data_type, annotation, "profiles", sep="/"), s, group2)))
+  }  
 
   #return(data)
 

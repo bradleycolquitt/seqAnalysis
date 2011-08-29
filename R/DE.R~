@@ -1,0 +1,19 @@
+source("~/src/R/paths.R")
+library(reshape)
+library(multicore)
+
+computePvalue <- function(set, feature, samples) {
+  data <- foreach(sample=samples, .combine="cbind") %dopar% {
+    
+    tmp <- read.delim(paste(feature_norm_path, 
+                            paste(feature, "split", sep="_"), sample, sep="/"), header=FALSE)
+    return(tmp[,4:5])
+  }
+  data <- data[,-3]
+  colnames(data) <- c("name", "s1", "s2")
+  #pvals <- daply(data, .(name), summarize, t.test(s1, s2))
+  pvals <- unlist(mclapply(split(data, data[,1]), mc.cores=10, function(region) t.test(region[,1], region[,2])))
+#  pvals <- tapply(data[,2:3], data[,1], function(x) ttest(x[,1], x[,2]))
+  qvals <- p.adjust(pvals, method="BH")
+  return(qvals)
+}
