@@ -35,8 +35,11 @@ def group(lst, n):
     return zip(*[lst[i::n] for i in range(n)]) 
 ## end of http://code.activestate.com/recipes/303060/ }}}
 
-def index_split(files, path):
-#    print files    
+def index_split(args):
+    
+    print args
+    files = args[0]
+    path = args[1]
     one_name = path + "/" + files[0]
     two_name = path + "/" + files[1]
     three_name = path + "/" + files[2]
@@ -120,10 +123,12 @@ def main(argv):
         indices[line[0]] = line[1]
 
     ## Split by indices
-    pool = Pool(processes=12)
+    pool = Pool(processes=10)
     start_time = time.time()
-    for files in files_group:
-        pool.apply_async(index_split, (files,))
+    #print files_group
+    args = [(files, argv) for files in files_group]
+    for arg in args:
+        pool.apply_async(index_split, (arg,))
     #    index_split(files, argv)
     pool.close()
     pool.join()

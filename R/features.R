@@ -1,8 +1,9 @@
+source("~/src/R/paths.R")
 source("~/src/R/blocks.R")
 source("~/src/R/profiles2.R")
 
 feature.path <- "~/lib/features_general"
-feature2.path <- "~/s2/analysis/features"
+
 
 makeFeatureMatrix <- function(feature, set="cells", value_type = "raw", write=TRUE) {
   if (set=="cells") {
@@ -42,8 +43,33 @@ makeFeatureMatrix.all <- function(set="cells", value_type="raw") {
   }
 }
 
+makeFeatureMatrix2 <- function(feature, set = "all", write=TRUE) {
+  if (set=="cells") {
+    samples <- samples.cells_norm
+  } else if (set=="d3a") {
+    samples <- samples.d3a_norm
+  } else if (set=="all") {
+    samples <- list.files(paste(feature_norm_path, feature, sep="/")) 
+  }
+  print(samples)
+  vals <- foreach (sample=samples, .combine="cbind") %dopar% {
+    print(paste(feature_norm_path, feature, sample, sep="/"))
+    data <- read.delim(paste(feature_norm_path, feature, sample, sep="/"), header=FALSE)
+    val <- data[,5]
+    names(val) <- data[,4]
+    return(val)
+  }
+  colnames(vals) <- samples
+  if (write) write.table(vals, file=paste(feature_norm_path, "summaries",
+                                 paste(set, feature, sep="_"), sep="/"),
+                        quote=FALSE, sep="\t")
+  return(vals)
+  
+  
+}
 prepForHeatmap <- function(mat, var_ind=c(1:3), N=1000) {
   mat <- apply(mat, 2, pseudoCountNorm)
+  mat <- na.omit(mat)
   #mat <- log(mat, 2)
   mat_extremes <- quantile(mat, probs=c(.1,.9))
   mat <- mat[as.logical(apply(mat >= mat_extremes[1] & mat <= mat_extremes[2], 1, prod)),]

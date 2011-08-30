@@ -21,7 +21,7 @@ class bowtie_class:
         self.input_prefix = index[1]
         self.input1 = ""
         self.input2 = ""
-        if single_end:
+        if self.single_end:
             self.input1 = "/".join([fastq_dir, date, "".join([sample, '.fastq'])])
                                    
         else:
@@ -30,6 +30,10 @@ class bowtie_class:
             self.input2 = "/".join([fastq_dir, date, sample, index[0], 
                                     "_".join([self.sample, '3.fastq'])]) 
         self.samfile = "/".join([sam_dir, self.date, "".join([self.input_prefix, ".sam"])])
+        #if os.path.exists(self.samfile):
+        #    dec = raw_input("SAM file exists. Overwrite? [y/n]")
+        #    if dec == "n": return
+        #    elif dec == "y": os.remove(self.samfile)
         self.bamfile = "/".join([bam_dir, self.date, "".join([self.input_prefix, ".bam"])])
         sam_dir_date = "/".join([sam_dir, self.date])
         if not os.path.exists(sam_dir_date): os.mkdir(sam_dir_date)
@@ -40,7 +44,7 @@ class bowtie_class:
     def map(self):        
         if not os.path.exists(self.samfile):
             if not self.single_end:
-                cmd_args = ['bowtie', '-S', '-m', '1', '-p', '10', 
+                cmd_args = ['bowtie', '--phred33-quals', '-S', '-m', '1', '-p', '10', 
                             '-I', '100', '-X', '1500', '--chunkmbs', '256', 
                             'mm9', '-1', self.input1, '-2', self.input2, self.samfile]
             else:
@@ -49,11 +53,11 @@ class bowtie_class:
             print "Mapping with bowtie: " + " ".join(cmd_args[1:])
             bowtie = Popen(cmd_args)
             bowtie.wait()
-            
+        else: print "Samfile exists. Skipping..."   
     def sam2bam(self):
         if not os.path.exists(self.bamfile):
             sam.sam2bam(self.samfile, self.bamfile)
-            sam.proc(self.bamfile)
+        sam.proc(self.bamfile)
         
 def bowtie(date, sample, single_end, index):
     bowtie_obj = bowtie_class(date, sample, single_end, index)
@@ -64,8 +68,8 @@ def main(argv):
     parser = argparse.ArgumentParser(description="Map fastq files.")
     parser.add_argument('-d', required=True, dest='date', help='sample date')
     parser.add_argument('-s', dest='sample', required=True, help='sample name')
-    parser.add_argument('--single-end', action='store_true', dest='single_end', default=False)
-    parser.add_argument('-n', '--index', dest='index', required=True, help='index number of library')
+    parser.add_argument('--single-end', action='store_true', type='bool', dest='single_end', default=False)
+    parser.add_argument('-n', '--index', dest='index', required=True, help='index number and rename of library')
     args = parser.parse_args()
     
     bowtie(args.date, args.sample, args.single_end, args.index)

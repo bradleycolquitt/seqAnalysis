@@ -19,9 +19,17 @@ def main(argv):
         for index_name in indices_names:
             index_name = index_name.split("-")
             indices.append((index_name[0], index_name[1]))
+        errorlog = open("bowtie_log", 'w')
         for index in indices:
-            line_args = ['-d', date, '-s', sample, '-i', index]
-            bowtie.bowtie(date, sample, single_end, index)
+            print line
+            #line_args = ['-d', date, '-s', sample, '-i', index]
+            if single_end == "PE": single_end = ""
+            try:
+                bowtie.bowtie(date, sample, bool(single_end), index)
+            except:
+                errorlog.write(str(sys.exc_info()[0]) + " ".join([str(index[0]), index[1]]) + "\n")
+                continue
+        errorlog.close()   
 
 if __name__ == "__main__":
     main(sys.argv)

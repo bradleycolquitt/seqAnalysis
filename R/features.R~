@@ -4,35 +4,32 @@ source("~/src/R/profiles2.R")
 feature.path <- "~/lib/features_general"
 feature2.path <- "~/s2/analysis/features"
 
-makeValMatrix <- function(feature, set="cells", value_type = "raw", write=TRUE) {
+makeFeatureMatrix <- function(feature, set="cells", value_type = "raw", write=TRUE) {
   if (set=="cells") {
     samples <- samples.cells
+  } else if (set=="cells_rlm") {
+    samples <- samples.cells.rlm
   }
   if (value_type == "raw") {
     value_column <- 5
   } else {
     value_column <- 6
   }
- rnames <- c()
+ 
  vals <- foreach (sample=samples, .combine="cbind") %dopar% {
-    #print(sample)
     data <- read.delim(paste(feature2.path, sample, feature, sep="/"), header=FALSE)
-    #return(data)
     val <- data[, value_column]
-    rnames <- as.character(data[,4])
-    #return(rnames)
+    names(val) <- data[,4]
     return(val)
- }
- #return(vals)
- #return(rnames)
+  }
+  
  colnames(vals) <- samples
- rownames(vals) <- rnames
  if (write) write.table(vals, file=paste(feature2.path, "summaries", paste(set, feature, value_type, sep="_"), sep="/"),
                         quote=FALSE, sep="\t")
  return(vals)
 }
 
-makeValMatrix.all <- function(set="cells", value_type="raw") {
+makeFeatureMatrix.all <- function(set="cells", value_type="raw") {
   files <- list.files(feature.path)
   files <- files[grep("chr", files)]
   for(file in files) {
@@ -41,10 +38,20 @@ makeValMatrix.all <- function(set="cells", value_type="raw") {
       print("File exists")
       return
     }  
-    a <- makeValMatrix(file, set=set, value_type=value_type, write=TRUE)
+    a <- makeFeatureMatrix(file, set=set, value_type=value_type, write=TRUE)
   }
 }
 
+prepForHeatmap <- function(mat, var_ind=c(1:3), N=1000) {
+  mat <- apply(mat, 2, pseudoCountNorm)
+  #mat <- log(mat, 2)
+  mat_extremes <- quantile(mat, probs=c(.1,.9))
+  mat <- mat[as.logical(apply(mat >= mat_extremes[1] & mat <= mat_extremes[2], 1, prod)),]
+  mat.var <- apply(mat, 1, function(x) var(x[var_ind]))
+  mat.var.q <- quantile(mat.var, probs=(length(mat.var) - N)/ length(mat.var))
+  mat <- mat[mat.var >= mat.var.q,]
+  return(mat)
+}
 makeFeatureDF <- function(set="cells", value_type="raw", FUN=mean) {
   files <- list.files(paste(feature2.path, "summaries", sep="/"))
   files <- files[grep(set, files)]

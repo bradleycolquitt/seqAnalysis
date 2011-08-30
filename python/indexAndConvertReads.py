@@ -34,7 +34,7 @@ class index_class:
             cmd_args = ['qseq2fastq', 
                     '-i', self.input_dir + "/" + str(index), 
                     '-o', "/".join([self.fastq_dir, self.sample, str(index)]),
-                    '--preserve', '--threads', '8']
+                    '--preserve', '--threads', '10']
             p = Popen(cmd_args)
             p.wait()
      
@@ -58,7 +58,7 @@ def main(argv):
             print "Processing: " + qseq
             index(args.date, qseq)
     else:
-        index(args.date, args.sample)
+        index(args.date, args.qseq)
 
 if __name__ == "__main__":
     main(sys.argv)
