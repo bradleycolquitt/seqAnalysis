@@ -78,20 +78,24 @@ def index_split(args):
                 index = find_key(indices, l2[8])
                 if len(index) > 0: 
                     index = index[0]
-                    index_path = "/".join([path, index])
-                    if not os.path.exists(index_path): 
-                        os.mkdir(index_path)
-                    # Populate read file dict
-                    if index not in output_files:
-                        #print index
-                        #print one_name, two_name, three_name
-                        output_files[index] = [open("/".join([path, index, os.path.basename(one_name)]), 'a'),
-                                               open("/".join([path, index, os.path.basename(two_name)]), 'a'),
-                                               open("/".join([path, index, os.path.basename(three_name)]), 'a'),]                                                                                            
-                    #Write to respective index read files
-                    output_files[index][0].write(l1)
-                    output_files[index][1].write("\t".join(l2) + "\n")
-                    output_files[index][2].write(l3)
+                else:
+                    index = str(0)
+                index_path = "/".join([path, index])
+                if not os.path.exists(index_path): 
+                    os.mkdir(index_path)
+                # Populate read file dict
+                if index not in output_files:
+                    #print index
+                    #print one_name, two_name, three_name
+                    output_files[index] = [open("/".join([path, index, os.path.basename(one_name)]), 'a'),
+                                           open("/".join([path, index, os.path.basename(two_name)]), 'a'),
+                                           open("/".join([path, index, os.path.basename(three_name)]), 'a'),]                                                                                            
+                #Write to respective index read files
+                output_files[index][0].write(l1)
+                output_files[index][1].write("\t".join(l2) + "\n")
+                output_files[index][2].write(l3)
+            
+                    
     for k, v in output_files.items():
         for i in v:
             i.close()

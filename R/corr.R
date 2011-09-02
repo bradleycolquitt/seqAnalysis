@@ -130,24 +130,26 @@ mclustDNAmodRNA <- function(feature, dna=NULL, value_type="", rna=NULL) {
   #rna.path <- "~/data/rna/omp_ngn_icam_rna.txt"
   #rna.path <- "~/data/rna/cv_iv_cd_id_rna"
   #rna.path <- "~/storage/data/rna/cuffdiff/moe_wt_mrna_moe_d3a_mrna/gene_exp.diff"
-  rna.path <- "~/s2/data/rna/cuffdiff/omp_mrna_ngn_mrna/gene_exp.diff"
+  #rna.path <- "~/s2/data/rna/cuffdiff/omp_mrna_ngn_mrna/gene_exp.diff"
+  rna.path <- "~/s2/analysis/rna/summaries/omp_ngn_icam_mrna_pseudo_log2"
   #dna.path <- paste("~/analysis/mprofiles/features/feature_summaries/", paste(dip, "refgene_long", sep="_"), sep="")
   dna.path <- paste("~/s2/analysis/features/summaries/", paste("cells", feature, value_type, sep="_"), sep="")
   #dna.path <- "~/storage/analysis/mprofiles/features/moe_wt_hmc_moe_dnmt3a_hmc/refgene_noclust"
   rna.data.full <- read.delim(rna.path)
   #rna.data <- matrix(c(rna.data.full$value_1, rna.data.full$value_2), nrow=nrow(rna.data.full), ncol=2,
 
-  rna.data <- matrix(c(rna.data.full$value_1, rna.data.full$value_2), nrow=nrow(rna.data.full), ncol=2,
-                     dimnames=list(rna.data.full$test_id, c("mOSN", "GBC")))
+  #rna.data <- matrix(c(rna.data.full$value_1, rna.data.full$value_2), nrow=nrow(rna.data.full), ncol=2,
+  #                   dimnames=list(rna.data.full$test_id, c("mOSN", "GBC")))
                                         #dimnames(rna.data) <- list(rna.data.full$test_id, c("WT", "Dnmt3a"))
-  rna.data <- removeZeros(rna.data)
+  #rna.data <- removeZeros(rna.data)
   dna.data <- read.delim(dna.path)
   dna.data <- apply(dna.data, 2, pseudoCountNorm)
   #return(dna.data)
                                         #dimnames(dna.data) <- list(rownames(dna.data.full), c("WT", "Dnmt3a"))
-  rna.sample.data <- log(rna.data[, grep(rna, colnames(rna.data))],2)
+  #rna.sample.data <- log(rna.data[, grep(rna, colnames(rna.data))],2)
+  rna.sample.data <- rna.data.full[,grep(rna, colnames(rna.data.full))]
   dna.sample.data <- log(dna.data[, grep(dna, colnames(dna.data))], 2)
-  rna.select.data <- rna.sample.data[match(rownames(dna.data), rownames(rna.data))]
+  rna.select.data <- rna.sample.data[match(rownames(dna.data), rownames(rna.data.full))]
   #rna.select.data <- rna.data[match(rownames(dna.data), rownames(rna.data))]
   sample.data <- na.omit(cbind(rna.select.data, dna.sample.data))
 #  return(sample.data)
@@ -163,8 +165,9 @@ mclustDNAmodRNA <- function(feature, dna=NULL, value_type="", rna=NULL) {
 mclust.several <- function(feature, set="cells", value_type="") {
   if (set=="cells") {
     dna.samples <- samples.cells
-    rna.samples <- c("mOSN", "GBC")
+    rna.samples <- c("omp", "ngn", "icam")
   }
+
   samples <- list()
   samples_paste <- list()
   for (i in 1:length(dna.samples)) {
@@ -173,7 +176,6 @@ mclust.several <- function(feature, set="cells", value_type="") {
       samples_paste <- c(samples_paste, list(paste(c(dna.samples[i], rna.samples[j]), collapse="_")))
     }             
   }
- 
   #return(samples)
   registerDoMC(cores=4)
   mcs <- foreach(sample=samples, .inorder=TRUE) %dopar% {
@@ -211,19 +213,19 @@ mclustPlotSurface <- function(mclust, data, type="image", fname=NULL, corr.val=N
   #         paste(fname, ".pdf", sep=""), sep="/"),
   #       width=5, height=5)
   # }                     
-   y.lim <- c(min(data[,2]), 0)
-              
+   #y.lim <- c(min(data[,2]), 0)
+   y.lim <- c(-6, 0)           
    surfacePlot(data=data, what="density", type=type,
                parameters=mclust$parameters,
                col=topo.colors(100),
                ylim=y.lim, xlim=c(-10,10),
                cex.axis=1.2,
                ann=FALSE)
-   mtext("log2 FPKM", side=1, line=2, cex=1.2)
-   mtext("log2 read count", side=2, line=2, cex=1.2)
+   mtext("log2 FPKM", side=1, line=2.5, cex=1.2)
+   mtext("log2 score", side=2, line=2.5, cex=1.2)
    if (!is.null(corr.val)) {
-     #corr.val <- round(corr.val, digits=2)
-     text(-7, 0, paste("R = ", as.character(corr.val), sep=""), col="white", pos=1, cex=1.6)
+     corr.val <- round(corr.val, digits=2)
+     text(-10, -0.5, paste("R = ", as.character(corr.val), sep=""), col="white", pos=4, cex=1.6)
    }
    if(!is.null(fname)) dev.off()
  }

@@ -156,12 +156,13 @@ def import_data(dname):
 
 def import_features(set, feature, samples, data_type):
   d = {}
-  path = ""
+  sample_name = ""
   if data_type == "norm":
     path = SUMMARY_PATH_NORM
+    sample_name = "/".join([path, "_".join([set, feature])])
   elif data_type == "raw":
     path = SUMMARY_PATH_RAW
-  sample_name = "/".join([path, "_".join([set, feature])])
+    sample_name = "/".join([path, "_".join([set, feature, data_type])])
   sample_data = open(sample_name)
   #d = {}
   cnames = sample_data.readline().split()
@@ -208,7 +209,7 @@ def main():
   bf = e.compute_bayes_factor()
   for i in range(len(bf)):
     if args.cutoff:
-      if bf[i] > args.cutoff or bf[i] < -1 * args.cutoff:
+      if bf[i] > args.cutoff:
         print "%s\t%d" % (n[i], bf[i])
     else:  
       print "%s\t%d" % (n[i], bf[i])

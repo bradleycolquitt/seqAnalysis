@@ -25,7 +25,7 @@ class windower:
             self.chrs_queue.append((self.bamfile.references[index], self.bamfile.lengths[index]))
         
     def window(self):
-        p = Pool(processes=2)
+        p = Pool(processes=1)
         args = []
         for chr in self.chrs_queue:
             args.append((self.bamname, self.window_size, chr, self.nreads, self.outpath))

@@ -26,8 +26,8 @@ shiftBedPositions <- function(bed, shift, direction="up") {
 #take matrix with sequence names and sequence, and generate
 #fasta file
 formatFasta <- function(data, fname=NULL) {
-  names <- data[,1]
-  seq <- data[,2]
+  names <- as.character(data[,1])
+  seq <- as.character(data[,2])
   fc <- file(fname, 'w')
   for (i in 1:nrow(data)) {
     name.out <- paste(c(">", names[i], "\n"), sep="")
@@ -50,6 +50,14 @@ trimBed <- function(bed, amt, pos="up") {
   bed[plus.ind, plus.pos] <- bed[plus.ind, plus.pos] + amt
   bed[!plus.ind, minus.pos] <- bed[!plus.ind, minus.pos] - amt
   return(bed)
+}
+
+getSeqByStrand <- function(bed) {
+  seq <- getSeq(Mmusculus, bed[,1], bed[,2], bed[,3])
+  ind <- bed[,6] == "-"
+  seq <- DNAStringSet(seq)
+  seq[ind] <- reverseComplement(seq[ind])
+  return(seq)
 }
 
 countBasesByStrand <- function(seq, strand, pattern) {

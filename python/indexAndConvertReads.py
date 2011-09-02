@@ -28,15 +28,18 @@ class index_class:
             indexSplitter.main(self.input_dir)
 
     def convert(self):
-        for index in range(1,7):
-            index_dir = self.output_dir + "/" + str(index)
-            if not os.path.exists(index_dir): os.mkdir(index_dir)
-            cmd_args = ['qseq2fastq', 
-                    '-i', self.input_dir + "/" + str(index), 
-                    '-o', "/".join([self.fastq_dir, self.sample, str(index)]),
-                    '--preserve', '--threads', '10']
-            p = Popen(cmd_args)
-            p.wait()
+        for index in range(0,7):
+            split_index_dir = self.input_dir + "/" + str(index)
+            if os.path.exists(split_index_dir):
+                index_dir = self.output_dir + "/" + str(index)
+                if not os.path.exists(index_dir): os.mkdir(index_dir)
+                else: continue
+                cmd_args = ['qseq2fastq', 
+                        '-i', self.input_dir + "/" + str(index), 
+                        '-o', "/".join([self.fastq_dir, self.sample, str(index)]),
+                        '--preserve', '--threads', '10']
+                p = Popen(cmd_args)
+                p.wait()
      
 def index(date, sample):
     index_obj = index_class(date, sample)

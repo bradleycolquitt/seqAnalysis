@@ -57,7 +57,7 @@ class bowtie_class:
     def sam2bam(self):
         if not os.path.exists(self.bamfile):
             sam.sam2bam(self.samfile, self.bamfile)
-        sam.proc(self.bamfile)
+            sam.proc(self.bamfile)
         
 def bowtie(date, sample, single_end, index):
     bowtie_obj = bowtie_class(date, sample, single_end, index)

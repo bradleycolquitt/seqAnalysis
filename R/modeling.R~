@@ -1,0 +1,8 @@
+fitNormal <- function(vals, plot=TRUE) {
+  normfit <- fitdistr(vals, "normal")
+  x <- seq(min(vals), max(vals), length=100)
+  y <- dnorm(x, normfit$mean, normfit$sd)
+  plot(density(vals))
+  lines(x, y, col="red")
+  return(normfit)
+}

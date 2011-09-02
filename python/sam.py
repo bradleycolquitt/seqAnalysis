@@ -19,7 +19,7 @@ def proc(bamfile):
     bam_prefix = os.path.basename(bamfile).split(".bam")[0]
     mapped_bam = bam_dir + bam_prefix + "_mapped.bam"
     rmdup_bam = bam_dir + bam_prefix + "_rmdup.bam"
-    sort_bam = bam_dir + bam_prefix
+    sort_bam = bam_dir + bam_prefix + "_sort"
     
     if not os.path.exists(mapped_bam):
         print "Removing unmapped..."
@@ -30,16 +30,18 @@ def proc(bamfile):
                 continue
             mb.write(read)
         mb.close()
-    print "Removing duplicates..."
-    pysam.rmdup("-S", mapped_bam, rmdup_bam)
-    os.remove(mapped_bam)
-    print "Sorting..."
+    if not os.path.exists(rmdup_bam):
+        
+        print "Removing duplicates..."
+        pysam.rmdup("-S", mapped_bam, rmdup_bam)
+    #os.remove(mapped_bam)
+    #print "Sorting..."
     pysam.sort(rmdup_bam, sort_bam)
-    os.remove(rmdup_bam)
+    #os.remove(rmdup_bam)
     print "Indexing..."
-    #sort_bam = sort_bam + ".bam"
+    sort_bam = sort_bam + ".bam"
     pysam.index(sort_bam)
-    os.remove(bamfile)
+    #os.remove(bamfile)
 
 def splitStrands(bam):
     bam_base = bam.split(".bam")[0]
@@ -94,8 +96,10 @@ def bam2bed(sam, pe = True, region = None):
                             read.mapq, strand) )            
 
 def main(argv):
-    if argv[1] == "proc":
-        proc(argv[2], argv[3])
+    if argv[1] == "sam2bam":
+        sam2bam(argv[2], argv[3])
+    elif argv[1] == "proc":
+        proc(argv[2])
     elif argv[1] == "splitStrands":
         splitStrands(argv[2])
     elif argv[1] == "bam2bed":
