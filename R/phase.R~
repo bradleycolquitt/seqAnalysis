@@ -1,0 +1,8 @@
+source("~/src/seqAnalysis/R/paths.R")
+
+loadPhaseData <- function() {
+  files <- list.files(phase.path)
+  data <- lapply(files, read.delim, header=F)
+  return(data)
+  
+}

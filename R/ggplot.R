@@ -25,3 +25,14 @@ ggplot.box <- function(data, thresh) {
 #gg.filt + geom <- point(aes(y=Value[Measure=="5mC"]), alpha=I(1/5)) + geom <- text(aes(x=Value[Measure=="5hmC" & ind.hmc], y=Value[Measure=="5mC" & ind.hmc], label=Gene[ind.hmc], color="blue", size=.5, hjust=-.25, vjust=-.5))
 
 #gg.rna + geom <- density(aes(x=FPKM, y=..density..)) + facet <- grid(var1000~.) + scale <- x <- continuous(limit=c(-10, 12))
+
+
+FOR RNA tracking plots
+rna.melt is ~/s2/analysis/rna/cells_mrna_mclust_4_and_5_melt
+gg.rna <- ggplot(rna.melt[!is.na(rna.melt$var2000.cl),], aes(variable, value, group=id, color=var2000.cl4))
+gg.rna + geom_line(alpha=I(1/10)) + facet_grid(var2000.cl4~.)
+
+FOR DNA boxplots split by RNA tracking classes
+dna.bx is ~/s2/analysis/features/norm/cells_hmc_mc_norm_mrna_var2000_cl4
+gg.bx <- ggplot(dna.bx, aes(cell, value, fill=class))
+gg.bx + geom_boxplot() + facet_grid(class~mod) + ylim(0,.3)

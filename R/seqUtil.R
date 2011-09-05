@@ -4,17 +4,20 @@ library(foreach)
 
 shiftBedPositions <- function(bed, shift, direction="up") {
   if (direction == "up") {
-    direct <- 1
+    ind_direct <- TRUE
+    pos_direct <- 1
   } else {
+    ind_direct <- FALSE
     direct <- -1
   }
   left <- vector(length=nrow(bed))
   right <- vector(length=nrow(bed))
-  plus.ind <- na.omit(bed[,6] == "+")
+  plus.ind <- !xor(na.omit(bed[,6] == "+"),ind_direct)
   #minus.ind <- bed[,6] == "-"
   #return(plus.ind)
   #print(shift)
   #return(bed[plus.ind, 2])
+  
   left[plus.ind] <- bed[plus.ind, 2] - shift
   #return(left)
   right[plus.ind] <- bed[plus.ind, 2]

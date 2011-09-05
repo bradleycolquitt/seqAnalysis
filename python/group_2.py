@@ -54,7 +54,9 @@ class tab:
     def run(self):
         anno = self.anno
         for sample in self.h5.iterNodes("/"):
-            if os.path.exists(self.out_path + "/" + sample._v_name): continue
+            if os.path.exists(self.out_path + "/" + sample._v_name):
+                print "File exists. Skipping..."
+                continue
             print sample._v_name
             anno_chrs = os.listdir(anno)
             sample_chrs = [chr._v_name for chr in sample._f_iterNodes()]
@@ -85,7 +87,7 @@ class tab:
         anno_out = open(anno_out_path, 'w')
         window_size = int(sample_data.getAttr('Resolution'))
         anno_line = anno_data.readline().strip().split()
-            
+        #pdb.set_trace()    
         for line in anno_data:
             line = line.strip()
             sline = line.split()
@@ -98,10 +100,12 @@ class tab:
                         out = "\t".join([line, str(val)]) + "\n"
                         anno_out.write(out) 
                 else:
-                    result = np.mean(vals[vals > 0])
-                    if np.isnan(result): result = 0
-                    out = "\t".join([line, str(result)]) + "\n"
-                    anno_out.write(out)
+                    vals = vals[vals>0]
+                    if len(vals) > 0:
+                        result = np.mean(vals)
+                    #if np.isnan(result): result = 0
+                        out = "\t".join([line, str(result)]) + "\n"
+                        anno_out.write(out)
         anno_data.close()
         anno_out.close()
             

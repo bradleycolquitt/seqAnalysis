@@ -19,3 +19,4 @@ samples.cells.rlm <- paste(c("omp", "ngn", "icam"), rep(c("hmc_rlm", "mc_rlm"), 
 samples.d3a.rlm <- paste(c("moe_wt", "moe_d3a"), rep(c("hmc_rlm", "mc_rlm"), each=2), sep="_")
 samples.cells_raw <- c("omp_hmc_unnorm", "ngn_hmc_unnorm", "icam_hmc_unnorm")
 samples.tfo_unnorm <- c("tfo_hmc_unnorm", "omp_hmc_unnorm", "ngn_hmc_unnorm")
+b

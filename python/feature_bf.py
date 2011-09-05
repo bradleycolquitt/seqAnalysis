@@ -54,7 +54,7 @@ def main(argv):
     #            ds.append(stats_bf.import_features(args.set, args.feature, sample, args.data_type))
     #        run(ds, out_path, samples_permute)
             
-    sample_name = "/".join([path, "_".join([args.set, args.feature, args.data_type])])
+    sample_name = "/".join([path, "_".join([args.set, args.feature])])
     sample_data = open(sample_name)
     samples = sample_data.readline().strip().split()
     samples_permute = permute(samples)

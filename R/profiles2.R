@@ -122,9 +122,10 @@ MP.makeProfile2.allSamp <- function(anno, set="d3a", group2=NULL, data_type="rpm
   out_path = paste(sample_path, "profiles", sep="/")
   #if (norm) samples <- paste("norm", samples, sep="/")
   data <- foreach(sample=samples) %dopar% {
-    if (file.exists(paste(out_path, sample, sep="/"))) {
-      return
-    }
+    #if (file.exists(paste(out_path, paste(sample, "mean", sep="_"), sep="/"))) {
+    #  print("Skipping")
+    #  next 
+    #}
     print(sample)
     return(MP.makeProfile2(sample_path, sample, group2=group2, write=write))
   }
@@ -132,8 +133,8 @@ MP.makeProfile2.allSamp <- function(anno, set="d3a", group2=NULL, data_type="rpm
   return(data)
 }
 
-MP.makeProfile2.allAnno <- function(sample, set="d3a", group2=NULL, write=TRUE) {
-  files <- list.files(paste(profile2.path, "norm", sep="/"))
+MP.makeProfile2.allAnno <- function(data_type="rpm_avg_2", group2=NULL, write=TRUE) {
+  files <- list.files(paste(profile2.path, "norm", data_type, sep="/"))
   registerDoMC(cores=4)
   i <- 0
   for(file in files) {
@@ -142,7 +143,7 @@ MP.makeProfile2.allAnno <- function(sample, set="d3a", group2=NULL, write=TRUE) 
     cat(file)
     cat(paste(" ", i, " of ", length(files), sep=""))
     cat("\n")
-    tryCatch(MP.makeProfile2.allSamp(file, group2=group2, rpm=TRUE, write=write), error = function(e) {
+    tryCatch(MP.makeProfile2.allSamp(file, group2=group2, data_type=data_type, write=write), error = function(e) {
       print(paste("Skipping", file, sep=" "))
       print(e)
       return
@@ -408,7 +409,7 @@ MP.plot2 <- function(annotation, sample, data_type = "rpm_avg", group2=NULL, col
   } else {
     pdf(file=paste(profile2.path, "norm", "plots", fname, sep="/"), 6, 4.5)
   }
-  .profile <- function(data, y.vasl) {
+  .profile <- function(data, y.vals) {
     MP.plotAnno(list(data), annotation, cols=cols, lab=lab,
                 y.val=y.vals) 
   }
@@ -547,7 +548,7 @@ MP.plot2.horiz <- function(annotation, set="d3a", data_type = "raw", group2=NULL
   par(mfrow=c(rows, columns), mar=c(2,4,1,1) + 0.1, oma=c(1, 5, 1, 1))
   data <- lapply(samples, function(sample)
                  lapply(sample, function(s)
-                        profileRead(paste(profile2.path, "norm", annotation, "profiles", sep="/"), s, group2)))
+                        profileRead(paste(profile2.path, "norm", data_type, annotation, "profiles", sep="/"), s, group2)))
             
   #return(data)
 

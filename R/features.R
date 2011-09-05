@@ -1,6 +1,6 @@
-source("~/src/R/paths.R")
-source("~/src/R/blocks.R")
-source("~/src/R/profiles2.R")
+source("~/src/seqAnalysis/R/paths.R")
+source("~/src/seqAnalysis/R/blocks.R")
+source("~/src/seqAnalysis/R/profiles2.R")
 
 feature.path <- "~/lib/features_general"
 
@@ -37,15 +37,20 @@ makeFeatureMatrix.all <- function(set="cells", value_type="raw") {
     print(file)
     if (file.exists(paste(feature2.path, "summaries", paste(set, file, value_type, sep="_"), sep="/"))) {
       print("File exists")
-      return
+      next
     }  
     a <- makeFeatureMatrix(file, set=set, value_type=value_type, write=TRUE)
   }
 }
 
+## Make summari
 makeFeatureMatrix2 <- function(feature, set = "all", write=TRUE) {
-  if (set=="cells") {
+  if (set=="cells_norm") {
     samples <- samples.cells_norm
+  } else if (set=="cells_unnorm") {
+    samples <- samples.cells_raw
+  } else if (set=="tfo_unnorm") {
+    samples <- samples.tfo_unnorm
   } else if (set=="d3a") {
     samples <- samples.d3a_norm
   } else if (set=="all") {
@@ -71,8 +76,8 @@ prepForHeatmap <- function(mat, var_ind=c(1:3), N=1000) {
   mat <- apply(mat, 2, pseudoCountNorm)
   mat <- na.omit(mat)
   #mat <- log(mat, 2)
-  mat_extremes <- quantile(mat, probs=c(.1,.9))
-  mat <- mat[as.logical(apply(mat >= mat_extremes[1] & mat <= mat_extremes[2], 1, prod)),]
+  #mat_extremes <- quantile(mat, probs=c(.1,.9))
+  #mat <- mat[as.logical(apply(mat >= mat_extremes[1] & mat <= mat_extremes[2], 1, prod)),]
   mat.var <- apply(mat, 1, function(x) var(x[var_ind]))
   mat.var.q <- quantile(mat.var, probs=(length(mat.var) - N)/ length(mat.var))
   mat <- mat[mat.var >= mat.var.q,]
