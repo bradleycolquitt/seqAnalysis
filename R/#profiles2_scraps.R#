@@ -1,3 +1,98 @@
+
+
+MP.makeProfile2.all <- function(set="d3a", write=TRUE) {
+  if (set=="d3a") samples <- samples.d3a
+  if (set=="cells") samples <- samples.cells
+  if (set=="cells_rlm") samples <- samples.cells.rlm
+  if (set=="d3a_rlm") samples <- samples.d3a.rlm
+  for (sample in samples) {
+    cat(sample)
+    cat("\n")
+    sample.path <- paste(profile2.path, sample, sep="/") 
+    MP.makeProfile2.allAnno(sample.path, write=write)
+  }
+}
+
+MP.makeProfile.medips <- function(anno, sample, group2=NULL, data_type="rpm_avg", write=TRUE) {
+  
+  data <- read.delim(paste(profile2.path, sample, anno, sep="/"))
+  colnames(data) <- c("chr", "start", "end", "name", "group", "strand", "raw", "norm")
+  #colnames(data) <- c("chr", "start", "end", "name", "group", "strand", "norm")
+  ind <- c("raw", "norm")
+  #ind <- "norm"
+  profile <- NULL
+  CI <- NULL
+#  return(data)
+  if (!is.null(group2)) {
+    group2_vals <- read.delim(paste(group2.path, group2, sep="/"), header=FALSE)
+    data$group2 <- group2_vals[match(data$name, group2_vals[,1]),2]
+    group2_name <- "group2"
+    profile <- lapply(ind, function(x) profileCompute(data, list(x, list("group", group2_name), mean)))
+    names(profile) <- ind
+    CI <- lapply(ind, function(x) profileCompute(data, list(x, list("group", group2_name), bootCI)))
+    names(CI) <- ind
+  } else {
+    profile <- lapply(ind, function(x) profileCompute(data, list(x, list("group"), mean)))
+    names(profile) <- ind
+    CI <- lapply(ind, function(x) profileCompute(data, list(x, list("group"), bootCI)))
+    names(CI) <- ind
+  }
+  #return(CI) 
+  if(!write) {
+    return(profile)
+  } else {
+    out.path <- paste(profile2.path, sample, "profiles", sep="/")
+    if (!is.null(group2)) {
+      group2_out <- str_split(group2, "/")
+      group2_out <- group2_out[length(group2_out)]
+    } else {
+      group2_out <- NULL
+    }   
+    writeModule(out.path=out.path, sample=anno, group2=group2_out, profile=profile, CI=CI)   
+  }  
+}
+MP.makeProfile.AllAnno <- function(sample, group2=NULL, select=NULL, fname) {
+  file.path <- paste("~/storage/analysis/mprofiles", sample, sep="/")
+  profile.path <- paste(file.path, "profiles", sep="/")
+  if (!file.exists(profile.path)) dir.create(profile.path)
+  extend <- NULL
+  if (!is.null(group2)) extend <- group2
+  if (!is.null(select)) extend <- select
+  files.tbp <- checkExisting(file.path, profile.path, extend=extend)  
+  files.tbp <- files.tbp[-grep("profiles", files.tbp)]
+  for(file in files.tbp) {
+    cat(file)
+    cat("\n")
+    result <- try(MP.makeProfile(sample=sample, mp=file, group2=group2, select=select, fname=fname))
+    if (class(result) == "try-error") next
+  }
+}
+
+MP.makeProfile.AllSamples <- function(mp, group2=NULL, select=NULL, cluster=NULL, fname) {
+  x <- foreach(sample=samples) %dopar% {
+    file.path <- paste("~/storage/analysis/mprofiles", sample, sep="/")
+    profile.path <- paste(file.path, "profiles", sep="/")
+    if (!file.exists(profile.path)) dir.create(profile.path)
+    extend <- NULL
+    if (!is.null(group2)) extend <- group2
+    if (!is.null(select)) extend <- select
+    cat(sample)
+    cat("\n")
+    MP.makeProfile(sample=sample, mp=mp, group2=group2, select=select, cluster=cluster, fname=fname)
+  }
+}
+
+MP.makeProfile.Genes <- function(sample, group2=NULL) {
+  file.path <- paste("~/analysis/mprofiles", sample, sep="/")
+  profile.path <- paste(file.path, "profiles", sep="/")
+  if (!file.exists(profile.path)) dir.create(profile.path)
+  files.tbp <- checkExisting(file.path, profile.path, select=gene.profiles, extend=group2)
+  for(file in files.tbp) {
+    cat(file)
+    cat("\n")
+    MP.makeProfile(sample, file, group2)
+  }
+}
 ### MP all MEDIPS for all annotations
 ### NOT FUNC
 MP.all <- function(bin.size=200) {

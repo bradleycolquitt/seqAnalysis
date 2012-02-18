@@ -17,8 +17,9 @@ def main(argv):
     args = parser.parse_args()
     
     ref_name = os.path.basename(args.gtf).split(".gtf")[0]
-    samp1_name = os.path.basename(args.samp1).split(".bam")[0]
-    samp2_name = os.path.basename(args.samp2).split(".bam")[0]
+    samp1_name = os.path.dirname(args.samp1).split("/")[-1]
+    samp2_name = os.path.dirname(args.samp2).split("/")[-1]
+    print samp1_name
     library_type = 'fr-unstranded'
     if args.strand: library_type = 'fr-secondstrand'
     
@@ -34,11 +35,12 @@ def main(argv):
     cmd_args = ['cuffdiff', '-o', cuffdiff_out, '-L', samp1_name + "," + samp2_name, 
                 '-p', '8', '-N', '-v', argv[1], argv[2], argv[3]]
     """
-    cmd_args = ['cuffdiff','-p', '8', '-L', samp1_name + ',' + samp2_name, '-N', 
+    cmd_args = ['cuffdiff','-p', '4', '-L', samp1_name + ',' + samp2_name, 
                 '--library-type', library_type, 
                 args.gtf, args.samp1, args.samp2]
     print "Running cuffdiff: " + " ".join(cmd_args[1:])
-    cuff = Popen(cmd_args)
+    error_log = open("error_log", 'w')
+    cuff = Popen(cmd_args, stderr=error_log)
     cuff.wait()
 
 if __name__ == "__main__":

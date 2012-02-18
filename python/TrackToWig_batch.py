@@ -19,7 +19,11 @@ def main(argv):
     nodes_tbp = []
     for node in nodes:
         node_name = node._v_name
-        cmd_args = ['TrackToWig', '-t', track_file, '-n', node_name, '-w', WIG_DIR + "/" + node_name]
+        res = h5.getNodeAttr("/" + "/".join([node_name, "chr1"]), "Resolution")
+        cmd_args = ['TrackToWig', '-t', track_file,
+                    '-n', node_name,
+                    '-w', WIG_DIR + "/" + \
+                    node_name + "_" + str(res[0])]
         print cmd_args
         p = Popen(cmd_args)
         p.wait()

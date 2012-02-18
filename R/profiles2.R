@@ -10,9 +10,9 @@ library(colorspace)
 library(cluster)
 library(gplots)
 
-source("~/src/R/paths.R")
-source("~/src/R/boot.R")
-source("~/src/R/plotUtil.R")
+source("~/src/seqAnalysis/R/paths.R")
+source("~/src/seqAnalysis/R/boot.R")
+source("~/src/seqAnalysis/R/plotUtil.R")
 source("~/src/MEDIPS/R/MEDIPS_mod.methylProfiling.R")
 
 registerDoMC(cores=10)
@@ -21,7 +21,8 @@ col4 <- brewer.pal(4, "Spectral")
 col3 <- brewer.pal(3, "Dark2")
 col2 <- rev(brewer.pal(3, "Set1")[1:2])
 
-writeModule <- function(out.path, sample, group2=NULL, profile, CI) {
+# Accepts data from makeProfile and writes to givin out.path
+writeModule <- function(out.path, sample, group2=NULL, rm.outliers=0, profile, CI) {
   if (!file.exists(out.path)) {
     dir.create(out.path)
   }
@@ -32,6 +33,12 @@ writeModule <- function(out.path, sample, group2=NULL, profile, CI) {
   } else {
     out.name <- paste(sample, group2, sep="_")
   }
+  if (rm.outliers == 0) {
+    out.name <- out.name
+  } else {
+    out.name <- paste(out.name, paste("trim", rm.outliers, sep=""), sep="_")
+  }
+  # Test if data list has multiple elements, indicating that profile has been split
   if (length(profile) > 1) {
     lapply(names(profile), function(name) {
       write.table(as.matrix(profile[[name]]),
@@ -43,11 +50,10 @@ writeModule <- function(out.path, sample, group2=NULL, profile, CI) {
         } else {unwrapped <- apply(CI[[name]], 2, function(y) .unwrap(y, x))}
         write.table(unwrapped,
                   file=paste(out.path, paste(out.name, name, "mean_bootCI", x, sep="_"),
-                    sep="/"),
+                    sep="/"),                    
                     quote=FALSE, sep="\t", row.names=FALSE, col.names=FALSE)
       })
     })
-    
   } else {
     write.table(profile,
               file=paste(out.path, paste(out.name, "mean", sep="_"), sep="/"),
@@ -71,69 +77,98 @@ profileCompute <- function(data, param) {
   return(tapply(data[,param[[1]]], grouping, param[[3]]))
 }
 
-MP.makeProfile2 <- function(anno, sample, group2=NULL, data_type="rpm_avg", write=TRUE) {
-  data <- read.delim(paste(anno, sample, sep="/"))
-  colnames(data) <- c("chr", "start", "end", "name", "group", "strand", "norm")
-  #ind <- c("raw", "norm")
-  ind <- "norm"
-  profile <- NULL
-  CI <- NULL
-#  return(data)
-  if (!is.null(group2)) {
-    group2_vals <- read.delim(paste(group2.path, group2, sep="/"), header=FALSE)
-    data$group2 <- group2_vals[match(data$name, group2_vals[,1]),2]
-    group2_name <- "group2"
-    profile <- lapply(ind, function(x) profileCompute(data, list(x, list("group", group2_name), mean)))
-    names(profile) <- ind
-    CI <- lapply(ind, function(x) profileCompute(data, list(x, list("group", group2_name), bootCI)))
-    names(CI) <- ind
-  } else {
-    profile <- lapply(ind, function(x) profileCompute(data, list(x, list("group"), mean)))
-    names(profile) <- ind
-    CI <- lapply(ind, function(x) profileCompute(data, list(x, list("group"), bootCI)))
-    names(CI) <- ind
-  }
-  #return(CI) 
-  if(!write) {
-    return(profile)
-  } else {
-    out.path <- paste(anno, "profiles", sep="/")
-    if (!is.null(group2)) {
-      group2_out <- str_split(group2, "/")
-      group2_out <- group2_out[length(group2_out)]
-    } else {
-      group2_out <- NULL
-    }   
-    writeModule(out.path=out.path, sample=sample, group2=group2_out, profile=profile, CI=CI)   
-  }  
+## Takes intersection information produced by group_2.py and generates meta-plot of sample
+##    over given annotation.
+## Arguments: anno - annotation file (from ~/lib/)
+##            sample - sequencing sample whose read per window values were interseted with anno
+##            group2 - optional, group rows of anno by some factor to process groups independently
+##            data_type - type of normalization. also directory where data is located
+##            rm.outliers - fraction of extreme-valued samples to remove from each position
+##                          e.g. 0.05 removes top and bottom 5% of values
+##            sample_num - number of annotation observations to sample. 0 indicates to use whole set
+##            write - write data to file
+makeProfile2 <- function(anno, samples, group2=NULL, data_type="unnorm/mean", rm.outliers=0, sample_num=0, write=TRUE) {
+  sample_path <- paste(profile2.path, "norm", data_type, anno, sep="/")
+  a <- sapply(samples, function(sample) {
+      data <- read.delim(paste(sample_path, sample, sep="/"))
+      colnames(data) <- c("chr", "start", "end", "name", "group", "strand", "norm")
+      ind <- "norm"
+      profile <- NULL
+      CI <- NULL
+      if (sample_num > 0) {
+        print(sample_num)
+        sample_names <- sample(unique(data$name), sample_num)
+        data <- data[data$name %in% sample_names,]
+        gc()
+      }
+
+      if (rm.outliers > 0) {
+        thresh <- quantile(data$norm, probs=c(rm.outliers, 1-rm.outliers))
+        data <- data[data$norm >= thresh[1] & data$norm <= thresh[2], ]
+      }
+
+      if (!is.null(group2)) {
+        group2_vals <- read.delim(paste(group2.path, group2, sep="/"), header=FALSE)
+        data$group2 <- group2_vals[match(data$name, group2_vals[,1]),2]
+        group2_name <- "group2"
+        profile <- lapply(ind, function(x) profileCompute(data, list(x, list("group", group2_name), mean)))
+        names(profile) <- ind
+        CI <- lapply(ind, function(x) profileCompute(data, list(x, list("group", group2_name), bootCI)))
+        names(CI) <- ind
+      } else {
+        profile <- lapply(ind, function(x) profileCompute(data, list(x, list("group"), mean)))
+        names(profile) <- ind
+        CI <- lapply(ind, function(x) profileCompute(data, list(x, list("group"), bootCI)))
+        names(CI) <- ind
+      }
+
+      if(!write) {
+        return(profile)
+      } else {
+        #out.path <- paste(anno, "profiles", sep="/")
+        out.path <- paste(sample_path, "profiles", sep="/")
+        group2_out <- NULL
+        if (!is.null(group2)) {
+          group2_out <- str_split(group2, "/")
+          group2_out <- group2_out[length(group2_out)]
+        }
+
+        writeModule(out.path=out.path, sample=sample, group2=group2_out,
+                    rm.outliers=rm.outliers, profile=profile, CI=CI)   
+      }
+  })       
 }
 
-MP.makeProfile2.allSamp <- function(anno, set="d3a", group2=NULL, data_type="rpm_avg", write=T) {
-  if (set=="d3a") {samples <- samples.d3a
-  } else if (set=="cells") {samples <- samples.cells
-  } else if (set=="cells_rlm") {samples <- samples.cells.rlm}
-  #samples <- lapply(samples, function(sample) paste(profile2.path, sample, sep="/"))
+## Wrapper to run makeProfile2 on all samples within a given profile direction
+## Arguments as makeProfile2
+makeProfile2.allSamp <- function(anno, group2=NULL, data_type="unnorm/mean", rm.outliers=0, sample_num=0, write=T) {  
   sample_path <- paste(profile2.path, "norm", data_type, anno, sep="/")
   print(sample_path)
   samples <- list.files(sample_path)
-  print(samples)
   ind <- grep("profiles", samples)
   if (length(ind) > 0) samples <- samples[-ind]
   out_path = paste(sample_path, "profiles", sep="/")
-  #if (norm) samples <- paste("norm", samples, sep="/")
   data <- foreach(sample=samples) %dopar% {
-    #if (file.exists(paste(out_path, paste(sample, "mean", sep="_"), sep="/"))) {
-    #  print("Skipping")
-    #  next 
-    #}
+    out_name <- sample
+    if (!is.null(group2)) {
+      out_name <- paste(out_name, group2, sep="_")
+    }
+    if (rm.outliers > 0) {
+      out_name <- paste(out_name, paste("trim", rm.outliers, sep=""), sep="_")
+    }
+    if (file.exists(paste(out_path, paste(out_name, "mean", sep="_"), sep="/"))) {
+      print("Skipping")
+      next 
+    }
     print(sample)
-    return(MP.makeProfile2(sample_path, sample, group2=group2, write=write))
+    return(makeProfile2(sample_path, sample, data_type=data_type, group2=group2,
+                           rm.outliers=rm.outliers, sample_num=sample_num, write=write))
   }
-  names(data) <- samples
-  return(data)
 }
 
-MP.makeProfile2.allAnno <- function(data_type="rpm_avg_2", group2=NULL, write=TRUE) {
+## Wrapper to run makeProfile2 on all annotation and all samples within given profile data_type
+## Arguments as makeProfile2
+makeProfile2.allAnno <- function(data_type="rpm_avg_2", group2=NULL, write=TRUE) {
   files <- list.files(paste(profile2.path, "norm", data_type, sep="/"))
   registerDoMC(cores=4)
   i <- 0
@@ -143,175 +178,21 @@ MP.makeProfile2.allAnno <- function(data_type="rpm_avg_2", group2=NULL, write=TR
     cat(file)
     cat(paste(" ", i, " of ", length(files), sep=""))
     cat("\n")
-    tryCatch(MP.makeProfile2.allSamp(file, group2=group2, data_type=data_type, write=write), error = function(e) {
+    tryCatch(makeProfile2.allSamp(file, group2=group2, data_type=data_type, write=write), error = function(e) {
       print(paste("Skipping", file, sep=" "))
       print(e)
       return
     })
-#    }
   } 
 }
 
-MP.makeProfile2.all <- function(set="d3a", write=TRUE) {
-  if (set=="d3a") samples <- samples.d3a
-  if (set=="cells") samples <- samples.cells
-  if (set=="cells_rlm") samples <- samples.cells.rlm
-  if (set=="d3a_rlm") samples <- samples.d3a.rlm
-  for (sample in samples) {
-    cat(sample)
-    cat("\n")
-    sample.path <- paste(profile2.path, sample, sep="/") 
-    MP.makeProfile2.allAnno(sample.path, write=write)
-  }
-}
-MP.makeProfile.AllAnno <- function(sample, group2=NULL, select=NULL, fname) {
-  file.path <- paste("~/storage/analysis/mprofiles", sample, sep="/")
-  profile.path <- paste(file.path, "profiles", sep="/")
-  if (!file.exists(profile.path)) dir.create(profile.path)
-  extend <- NULL
-  if (!is.null(group2)) extend <- group2
-  if (!is.null(select)) extend <- select
-  files.tbp <- checkExisting(file.path, profile.path, extend=extend)  
-  files.tbp <- files.tbp[-grep("profiles", files.tbp)]
-  for(file in files.tbp) {
-    cat(file)
-    cat("\n")
-    result <- try(MP.makeProfile(sample=sample, mp=file, group2=group2, select=select, fname=fname))
-    if (class(result) == "try-error") next
-  }
-}
-
-MP.makeProfile.AllSamples <- function(mp, group2=NULL, select=NULL, cluster=NULL, fname) {
-  x <- foreach(sample=samples) %dopar% {
-    file.path <- paste("~/storage/analysis/mprofiles", sample, sep="/")
-    profile.path <- paste(file.path, "profiles", sep="/")
-    if (!file.exists(profile.path)) dir.create(profile.path)
-    extend <- NULL
-    if (!is.null(group2)) extend <- group2
-    if (!is.null(select)) extend <- select
-    cat(sample)
-    cat("\n")
-    MP.makeProfile(sample=sample, mp=mp, group2=group2, select=select, cluster=cluster, fname=fname)
-  }
-}
-
-MP.makeProfile.Genes <- function(sample, group2=NULL) {
-  file.path <- paste("~/analysis/mprofiles", sample, sep="/")
-  profile.path <- paste(file.path, "profiles", sep="/")
-  if (!file.exists(profile.path)) dir.create(profile.path)
-  files.tbp <- checkExisting(file.path, profile.path, select=gene.profiles, extend=group2)
-  for(file in files.tbp) {
-    cat(file)
-    cat("\n")
-    MP.makeProfile(sample, file, group2)
-  }
-}
-
-MP.positionMatrix <- function(data, data_type="raw") {
-  groups <- unique(data$group)
-  names <- unique(data$name)
-  #out <- matrix(NA, nrow=length(names), ncol=length(groups), dimnames=list(names, groups))
-  data_groups = split(data, data$group)
-  
-  out <- foreach(ind=icount(length(data_groups)), .combine="cbind") %dopar% {
-    data_group <- data_groups[[ind]]
-    m <- match(names, data_group$name)
-    return(data_group[m, data_type])
-    #out[,ind] <- data_group[m, data_type]
-  }
-  rownames(out) <- names
-  #for(i in 1:length(groups)) {
-  #  tmp <- subset(mp, mp$group==groups[i])
-  #  m <- match(rownames(out), tmp$name)
-  #  out[,i] <- tmp[m, data_type]
-  #}
-  return(out)
-}
-
-MP.positionMatrix.all <- function(anno, set="d3a", data_type="raw") {
-  if (set=="d3a") {
-    samples <- samples.d3a
-  } else if (set=="cells") {
-    samples <- samples.cells
-  }
-  for (sample in samples) {
-    print(sample)
-    data <- read.delim(paste(profile2.path, sample, anno, sep="/"), header=FALSE, colClasses=profile.classes)
-    colnames(data) <- c("chr", "start", "end", "name", "group", "strand", "raw", "norm")
-    pos_matrix <- MP.positionMatrix(data, data_type=data_type)
-    out_path <- paste(profile2.path, sample, "images", sep="/")
-    if (!file.exists(out_path)) dir.create(out_path)
-    write.table(pos_matrix, file=paste(profile2.path, sample, "images", anno, sep="/"),
-                quote=FALSE, sep="\t", col.names=FALSE)
-  }
-  
-}
-
-
-MP.makeImage <- function(sample, anno, image=TRUE) {
-  image.path <- paste(profile2.path, sample, "images", anno, sep="/")
-  print(image.path)
-  data <- read.delim(image.path, header=FALSE, row.names=1)
-  #mp.data <- prepMP(mp.data)
-  #mp.data <- thresh
-  #out <- MP.positionMatrix(mp.data)
-  if (image) {MP.image(data)}
-  return(data)
-}
-
-MP.makeImages.all <- function(set="d3a", anno) {
-  if (set=="d3a") {
-    samples <- samples.d3a
-  }
-  out <- lapply(samples, function(sample) {
-    MP.makeImage(sample, anno, image=FALSE)
-  }) 
-
-  return(out)
-  
-}
-
-MP.processImage <- function(vals) {
-  v <- apply(vals, 2, pseudoCountNorm)
-  v <- na.omit(v)
-  v <- log(v, 2)
-  return(v)
-}
-MP.image <- function(vals) {
-  X11()
-  image(t(vals),
-        #col=rev(heat_hcl(50, c=c(80,30), l=c(30,90), power=c(1/5, 1.3))))
-        col=greenred(50))
-  
-}
-
-orderByAnchor <- function(vals, anchor, width) {
-  add_vector <- c(0, rep(c(1:width), each=2))
-  add_vector <- add_vector * rep(c(1, -1), times=length(add_vector))
-  ind_vector <- add_vector + anchor
- # return(ind_vector)
-  order_vals <- order(vals[, ind_vector])
-  return(order_vals)
-  up <- c()
-  
-  #test <- c(vals[,1], vals[,2])
-  #vals <- vals[order(-test),]
-  return(vals[order_vals,])
-                               
-}
-MP.plyrMatrix <- function(mp) {
-  fun <- function(x) {
-    return(data.frame(x$ams_A, colnames=x$name))
-  }
-  out <- daply(mp, group, fun)
-}
-
-MP.plotProfiles <- function(profile=NULL, ci_1=NULL, ci_2=NULL, cols=NULL,
+## Draws profile and confidence intervals
+plotProfiles <- function(profile=NULL, ci_1=NULL, ci_2=NULL, cols=NULL,
                             smooth=FALSE, span=0.1) {
 
   col.rgb <- col2rgb(cols, alpha=TRUE)
   col.rgb[4,] <- 50
-
+  
   if (smooth) {
     profile <- smoothProfile(profile, span)
     if (length(ci_1) > 0) {
@@ -319,9 +200,9 @@ MP.plotProfiles <- function(profile=NULL, ci_1=NULL, ci_2=NULL, cols=NULL,
       ci_2 <- smoothCI(ci_2, span)
     }
   }
-  
+
+  # if CI provided, draw polygon
   if (!is.null(ci_1)) {
-    #if (!is.null(dim(profile)))
       polygon(c(c(1:length(profile)), c(length(profile):1)),
               c(ci_1, rev(ci_2)),
               col=rgb(col.rgb[1,1], col.rgb[2,1], col.rgb[3,1],
@@ -331,7 +212,8 @@ MP.plotProfiles <- function(profile=NULL, ci_1=NULL, ci_2=NULL, cols=NULL,
   lines(profile, col=cols)
 }
 
-MP.plotAnno <- function(data, annotation, cols=NULL, lab=NULL,
+## Establishes plot area
+plotAnno <- function(data, annotation, cols=NULL, lab=NULL,
                         y.val=NULL, combine=FALSE,
                         stack=FALSE, ...) {
   lab.data <- NULL
@@ -341,30 +223,31 @@ MP.plotAnno <- function(data, annotation, cols=NULL, lab=NULL,
     x.lim <- nrow(data[[1]][[1]])
   }
  
-  ## Send data to line drawer
+  
   #if (stack || length(data) > 1) {
-    plot(1, 1, type="n",
+  # Set up plot area
+  plot(1, 1, type="n",
        xlim=c(1, x.lim),
-       ylim=c(round(y.val[1],2), round(y.val[2], 2)),
+       #ylim=c(round(y.val[1],2), round(y.val[2], 2)),
+       ylim=y.val,
        xlab="",
        ylab="",
        ann=FALSE, axes=FALSE)
-    
-    for(i in 1:length(data)) {
+
+  # Send data to drawer  
+  for(i in 1:length(data)) {
       data.curr <- data[[i]]
       data.val <- data.curr[[1]]
       data.ci1 <- data.curr[[2]]
       data.ci2 <- data.curr[[3]]
       if (ncol(data.val) > 1) {
         for (i in 1:ncol(data.val)) {
-          MP.plotProfiles(profile=data.val[,i], ci_1=data.ci1[,i], ci_2=data.ci2[,i],
-                          smooth=FALSE, cols=cols[i])
-          
+          plotProfiles(profile=data.val[,i], ci_1=data.ci1[,i], ci_2=data.ci2[,i],
+                          smooth=FALSE, cols=cols[i])  
         }
         lab.data <- computeAxis(data.val[,1], lab)
       } else {
-
-        MP.plotProfiles(profile=data.val[,1], ci_1=data.ci1[,1], ci_2=data.ci2[,1],
+        plotProfiles(profile=data.val[,1], ci_1=data.ci1[,1], ci_2=data.ci2[,1],
                           smooth=FALSE, cols=cols[i])
         lab.data <- computeAxis(data.val[,1], lab)
       }
@@ -383,68 +266,92 @@ MP.plotAnno <- function(data, annotation, cols=NULL, lab=NULL,
   abline(v=lab.data$pos[3], lty=2, col="grey")
 }
 
+##############################################################
+## Primary interface for drawing profile of a single sample ##
+##############################################################
+plot2 <- function(annotation, sample, orient=2, data_type = "unnorm/mean", group2=NULL,
+                     cols=NULL, lab=c("",""), y.vals=NULL, range=NULL, type="range", fname=NULL) {
 
-
-
-MP.plot2 <- function(annotation, sample, data_type = "rpm_avg", group2=NULL, cols=NULL, lab=NULL, y.vals=NULL, type="range", fname=NULL) {
-  ## Get sample names
+  ## make profile path
   if (!is.null(group2)) {
     anno <- paste(annotation, group2, data_type, sep="_")
   } else {
     anno <-  paste(annotation, data_type, sep="_")
   }
- 
-  data <- profileRead(paste(profile2.path, "norm", data_type, annotation, "profiles", sep="/"), sample, group2)
-  #data <- MP.getData(profile2.path, sample, annotation=anno, group2=group2)[[1]]
-  #return(data)
-  #data <- splitReform(data)
-  #if (!is.null(dim(data[[1]]))) {
-  #  #print("here")
-  #  data <- lapply(data, function(x) apply(x, 2, function(y) y[1:length(y) - 1]))
-  #} else {
-  #  data <- lapply(data, function(x) trimData(x, c(0, length(x[[1]][[1]]) - 1)))
-                                        #return(data)
-  #}
-  if (is.null(fname))  {x11("", 6, 4)
+  
+  ## Orient 1 data structure is no longer used (2/14/12)
+  if (orient==1) {
+    data <- profileRead(paste(profile2.path, sample, "profiles", sep="/"),
+                        paste(annotation, group2, data_type, sep="_"))
+  } else if (orient==2) {
+    data <- profileRead(paste(profile2.path, "norm", data_type, annotation, "profiles", sep="/"), sample, group2)
+  }
+
+  ## If range specificed, trim profile by given values
+  if (!is.null(range)) {
+      data <- lapply(data, function(x) x[range[1]:range[2],])
+  }
+
+  ## Set up graphics device
+  if (is.null(fname))  {
+    x11("", 6, 4)
+  } else if (fname=="manual") {
+    # do nothing, device has already been set
   } else {
     pdf(file=paste(profile2.path, "norm", "plots", fname, sep="/"), 6, 4.5)
   }
-  .profile <- function(data, y.vals) {
-    MP.plotAnno(list(data), annotation, cols=cols, lab=lab,
-                y.val=y.vals) 
-  }
+
+  ## If y.vals not provided, determine y axis range from the data
   if (is.null(y.vals)) y.vals <- getRange(list(data), buffer=0)
-  #print(y.val)
-  .profile(data, y.vals)
   
+  ## Send data to plotAnno
+  plotAnno(list(data), annotation, cols=cols, lab=lab,
+                y.val=y.vals) 
+  
+  ## Label axes
   #mtext("AMS", at=.775, side=2, outer=T, line=-1, cex=1.6)
   #mtext("AMS", at=.275, side=2, outer=T, line=-1, cex=1.6)
-  mtext("Normalized read count", at=.5, side=2, outer=T, line=-2, cex=1)
-  par(las=1)
+  #mtext("Normalized read count", at=.5, side=2, outer=T, line=-2, cex=1)
+  #par(las=1)
   #mtext("5hmC", at=.775, side=2, outer=T, line=1, cex=1.6)
   #mtext("5mC", at=.275, side=2, outer=T, line=1, cex=1.6)
   #mtext("5hmC", at=.275, side=3, outer=T, line=0, cex=1.6)
   #mtext("5mC", at=.775, side=3, outer=T, line=0, cex=1.6)
   #mtext(paste(sample, " -> ", group2, sep=""), side=3, outer=T, cex=1.6)
   if (!is.null(fname)) {
-    dev.off()
+    if (fname != "manual") dev.off()
   }
 }
 
-MP.plot2.several <- function(annotation, set="d3a", data_type="rpm", group2=NULL, cols=NULL, lab=NULL, y.vals=NULL, standard=FALSE,
-                             fname=NULL) {
+plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2=NULL, cols=NULL, lab=c("",""), y.vals=NULL, standard=FALSE, fname=NULL) {
   samples <- NULL
   orient <- 1
+  rows <- 1
+  columns <- 1
   if (set=="d3a") {
     samples <- list(list("moe_wt_hmc.bed", "moe_d3a_hmc.bed"), list("moe_wt_mc.bed", "moe_d3a_mc.bed"))
     legend <- c("Dnmt3a +/+", "Dnmt3a -/-")
     rows <- 2
     columns <- 1
+  } else if (set=="d3a_2") {
+    samples <- list(list("moe_d3a_wt_hmc", "moe_d3a_ko_hmc"), list("moe_d3a_wt_mc", "moe_d3a_ko_mc"))
+    rows <- 2
+    columns <- 1
+    orient <- 2
+  } else if (set=="d3a_3") {
+    samples <- list(list("d3a_wt_hmc", "d3a_ko_hmc"), list("d3a_wt_mc", "d3a_ko_mc"))
+    rows <- 2
+    columns <- 1
+    orient <- 2
   } else if (set=="d3a_rlm") {
     samples <- list(list("moe_wt_hmc_rlm", "moe_d3a_hmc_rlm"), list("moe_wt_mc_rlm", "moe_d3a_mc_rlm"))
     rows <- 2
     columns <- 1
-  } 
+  } else if (set=="d3a_rf") {
+    samples <- list(list("moe_wt_mc_rf", "moe_d3a_mc_rlm"))
+    rows <- 1
+    columns <- 1
+  }
   else if (set=="cells") {
     samples <- list(list("omp_hmedip.bed", "ngn_hmedip.bed", "icam_hmedip.bed"),
                     list("omp_medip.bed", "ngn_medip.bed", "icam_medip.bed"))
@@ -460,21 +367,46 @@ MP.plot2.several <- function(annotation, set="d3a", data_type="rpm", group2=NULL
     samples <- list(list("omp_hmc", "ngn_hmc", "icam_hmc"),
                     list("omp_mc", "ngn_mc", "icam_mc"))
     columns <- 1
-    if (!is.null(group2)) {
-      columns <- 3
-    }
+    #if (!is.null(group2)) {
+    #  columns <- 3
+    #}
     rows <- 2
-    
+    orient <- 2
+  } else if (set=="cells_norm_hmc") {
+    samples <- list("omp_hmc", "ngn_hmc", "icam_hmc")
+    columns <- 1
+    rows <- 2
+    orient <- 2
+  } else if (set=="cells_norm_mc") {
+    samples <- list("omp_mc", "ngn_mc", "icam_mc")
+    columns <- 1
+    rows <- 2
+    orient <- 2
+  } else if (set=="tfo_omp") {
+    samples <- list(list("tfo_hmc", "omp_hmc"),
+                    list("tfo_mc", "omp_mc"))
+    rows <- 2
+    columns <- 1
+    orient <- 2
+  } else if (set=="tfo_omp_d3a") {
+    samples <- list(list("tfo_hmc", "omp_hmc", "moe_d3a_wt_hmc", "moe_d3a_ko_hmc"),
+                    list("tfo_mc", "omp_mc", "moe_d3a_wt_mc", "moe_d3a_ko_mc"))
+    rows <- 2
+    columns <- 1
+    orient <- 2
+  } else if (set=="nuc") {
+    samples <- list(list("omp_nuc_0123", "icam_nuc_01234"))
+    rows <- 1
+    columns <- 1
     orient <- 2
   }
 
-  #print(samples)
-  #columns <- length(samples[[1]])
   if (is.null(fname))  {x11("", 10, 5)
   } else {
-    pdf(file=paste(profile2.path, "plots", fname, sep="/"), 6 * columns, 3 * rows)
+    if (fname!="manual") {
+      pdf(file=paste(profile2.path, "norm", "plots", fname, sep="/"), 6 * columns, 4.5 * rows)
+    }  
   }                      
-  
   par(mfrow=c(rows, columns), mar=c(2,4,1,1) + 0.1, oma=c(1, 5, 1, 1))
   if (orient==1) {
     data <- lapply(samples,
@@ -483,15 +415,15 @@ MP.plot2.several <- function(annotation, set="d3a", data_type="rpm", group2=NULL
                                                            paste(annotation, data_type, sep="_"), group2)))
   } else if (orient==2) {
     data <- lapply(samples, function(sample)
-                 lapply(sample, function(s)
-                        profileRead(paste(profile2.path, "norm", data_type, annotation, "profiles", sep="/"), s, group2)))
+                 lapply(sample, function(s) 
+                        profileRead(paste(profile2.path, "norm",
+                                          data_type, annotation, "profiles", sep="/"), s, group2)))
   }  
 
   #return(data)
 
   if (is.null(y.vals)) {
     y.vals <- lapply(data, getRange)
-    
     if (standard) {
       tmp_vals <- findMaxMin(y.vals)
       y.vals <- list(tmp_vals)
@@ -501,10 +433,11 @@ MP.plot2.several <- function(annotation, set="d3a", data_type="rpm", group2=NULL
     tmp_vals <- y.vals
     y.vals <- list(tmp_vals)
     for(i in 2:length(data)) y.vals <- c(y.vals, list(tmp_vals))
-  }  
+  }
+  
   y_label_pos <- c(0.75, 0.25)
   lapply(c(1:length(samples)), function(x) {
-    MP.plotAnno(data[[x]], annotation, cols=cols, lab=lab, y.val=y.vals[[x]], stack=TRUE)
+    plotAnno(data[[x]], annotation, cols=cols, lab=lab, y.val=y.vals[[x]], stack=TRUE)
     mtext("Normalized read count", at=y_label_pos[x], side=2, outer=TRUE, line=-1, cex=1)
     name <- lapply(samples[[x]], function(y) unlist(str_split(y[1], "_")))
     name <- unlist(lapply(name, function(y) y[-length(y)]))
@@ -514,10 +447,12 @@ MP.plot2.several <- function(annotation, set="d3a", data_type="rpm", group2=NULL
   mtext("5hmC", at=.775, side=2, outer=T, line=1, cex=1.6)
   mtext("5mC", at=.275, side=2, outer=T, line=1, cex=1.6)
   mtext(annotation, side=3, outer=TRUE, cex=1.6)
-  if (!is.null(fname)) dev.off()
+  if (!is.null(fname))
+    if (fname!="manual") dev.off()
 }
 
 MP.plot2.horiz <- function(annotation, set="d3a", data_type = "raw", group2=NULL, cols=NULL, lab=c("",""), y.vals=NULL, standard=TRUE, fname=NULL) {
+  orient <- 2
   if (set == "cells_pair") {
     samples <- list(list("icam_hmedip.bed", "icam_medip.bed"),
                     list("ngn_hmedip.bed", "ngn_medip.bed"),
@@ -536,9 +471,24 @@ MP.plot2.horiz <- function(annotation, set="d3a", data_type = "raw", group2=NULL
                     list("omp_hmc", "omp_mc"))
     rows <- 1
     columns <- 3
-  }
-  else if (set == "d3a_pair") {
+  } else if (set=="cells_norm_hmc") {
+    samples <- list("icam_hmc", "ngn_hmc", "omp_hmc")
+    columns <- 3
+    rows <- 1
+    orient <- 2
+  } else if (set=="cells_norm_mc") {
+    samples <- list("icam_mc", "ngn_mc", "omp_mc")
+    columns <- 3
+    rows <- 1
+    orient <- 2
+    
+  } else if (set == "d3a_pair") {
     samples <- list(list("moe_wt_hmc.bed"))
+  } else if (set=="cells_rf") {
+    samples <- list(list("omp_hmc_rf", "omp_mc_rf"))
+    rows <- 1
+    columns <- 1
+    orient <- 1
   }
   
   if (is.null(fname))  {x11("", 10, 5)
@@ -546,9 +496,18 @@ MP.plot2.horiz <- function(annotation, set="d3a", data_type = "raw", group2=NULL
     pdf(file=paste(profile2.path, "plots", fname, sep="/"), 3 * columns, 3 * rows)
   }                      
   par(mfrow=c(rows, columns), mar=c(2,4,1,1) + 0.1, oma=c(1, 5, 1, 1))
-  data <- lapply(samples, function(sample)
+  if (orient==1) {
+    data <- lapply(samples, function(sample)
                  lapply(sample, function(s)
-                        profileRead(paste(profile2.path, "norm", data_type, annotation, "profiles", sep="/"), s, group2)))
+                        profileRead(paste(profile2.path, "norm", data_type, annotation, "profiles", sep="/"),
+                                    s, group2)))
+    
+  } else if (orient==2) {
+    data <- lapply(samples, function(sample)
+                 lapply(sample, function(s)
+                        profileRead(paste(profile2.path, "norm", data_type, annotation, "profiles", sep="/"),
+                                    s, group2)))
+  }  
             
   #return(data)
 
@@ -570,7 +529,7 @@ MP.plot2.horiz <- function(annotation, set="d3a", data_type = "raw", group2=NULL
     for(i in 2:length(data)) y.vals <- c(y.vals, list(tmp_vals))
   }  
   lapply(c(1:length(samples)), function(x) {
-    MP.plotAnno(data[[x]], annotation, cols=cols, lab=lab, y.val=y.vals[[x]], stack=TRUE)
+    plotAnno(data[[x]], annotation, cols=cols, lab=lab, y.val=y.vals[[x]], stack=TRUE)
     #legend(0, y=(y.vals[[x]][2] - (y.vals[[x]][2] / 20)), legend=legend, col=cols, bty="n", lty=1, horiz=TRUE)
   })
   mtext("Normalized read count", at=.5, side=2, outer=TRUE, line=-1, cex=1)
@@ -698,11 +657,12 @@ saveRoiByChr.all <- function(anno_set="std") {
   ind <- grep("chr", files)
   if (length(ind) > 0) files <- files[-ind]
   a <- foreach(file=files) %dopar% {
-    cat(file)
-    cat("\n")
-    result <- try(saveRoiByChr(paste(anno.path, file, sep="/")))
-    if (class(result) == "try-error") next
-  }
+    if (!file.exists(paste(anno.path, paste(file, "_chr", sep=""), sep="/"))) {
+      cat(file)
+      cat("\n")
+      result <- try(saveRoiByChr(paste(anno.path, file, sep="/")))
+      if (class(result) == "try-error") next
+    }
 }
-
+}
 

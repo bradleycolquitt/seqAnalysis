@@ -4,10 +4,11 @@ library(foreach)
 library(multicore)
 library(mclust)
 
-source("~/src/R/LEA/dipdata.R")
+#source("~/src/R/LEA/dipdata.R")
 source("~/src/R/LEA/seqdata.R")
 source("~/src/R/plotUtil.R")
-source("~/src/R/profiles2.R")
+source("~/src/seqAnalysis/R/profiles2.R")
+source("~/src/seqAnalysis/R/util.R")
 
 corrs <- function(data1, data2, method="spearman", N) {
 	index <- seq(1, length(data1) - N , by = N)
@@ -49,11 +50,9 @@ corrDipData <- function(data1, data2, data_type="norm", method="spearman",
   dd1 <- load.DipData(data1)
   dd2 <- load.DipData(data2)
   
-  dd1.data <- dd1$genome.data[,data_type]
-  dd2.data <- dd2$genome.data[,data_type]
-
-  dd1.data <- 
-  sample_corr <- corrs(dd1.data, dd2.data, N)
+  dd1.data <- dd1$genome.data[dd1$genome.data[,1]!=22, data_type]
+  dd2.data <- dd2$genome.data[dd1$genome.data[,1]!=22, data_type]
+  sample_corr <- corrs(dd1.data, dd2.data, method=method, N=N)
   if(test) {
     sample_corr_null <- corrs.null(dd1.data, dd2.data, N)
     ks <- ks.test(sample_corr, sample_corr_null)
@@ -61,6 +60,55 @@ corrDipData <- function(data1, data2, data_type="norm", method="spearman",
   }
   
   return(mean(sample_corr, na.rm=TRUE))
+}
+
+meanWindows <- function(data, step) {
+  end <- length(data)/step
+  ind <- 0
+  mod <- length(data)%%step
+  if (mod == 0) {
+    ind <- rep(1:end, each=step)
+  } else {
+    ind <- c(rep(1:end, each=step), rep(end+1, times=mod)) 
+  }
+  return(tapply(data, ind, mean))
+}
+  
+corrWig <- function(wig1, wig2, method="spearman", N=1000, step=1) {
+  
+  wig1_chr <- list.files(wig1)
+  wig2_chr <- list.files(wig2)
+  #print(wig1_chr)
+  common_chr <- wig1_chr[wig1_chr %in% wig2_chr]
+  filter <- c(grep("random", common_chr), grep("NT", common_chr))
+  if (length(filter) > 0) common_chr <- common_chr[-filter]
+  corrs <- foreach(chr=common_chr, .combine="c", .verbose=FALSE) %dopar% {
+    #print(chr)
+    data1 <- scan(paste(wig1, chr, sep="/"), skip=1, quiet=TRUE)
+    data2 <- scan(paste(wig2, chr, sep="/"), skip=1, quiet=TRUE)
+    if (step > 1) {
+      #print(paste("Binning ", chr, sep=""))
+      time <- Sys.time()
+      data1 <- meanWindows(data1, step)
+      data2 <- meanWindows(data2, step)
+      #print(paste(chr, Sys.time() - time, sep=" "))
+    }
+    if (length(data1) != length(data2)) {
+      stop(paste("Non-matching wig lengths: ", chr, sep=""))
+    }
+    tryCatch(cor(data1, data2, method=method), error=function(e) return(NA))   
+  }
+  return(list(mean=mean(corrs), sd=sd(corrs), se=sd(corrs)/length(corrs)))
+}
+
+stepCorrWig <- function(wig1, wig2, method="spearman", steps) {
+  step_corrs <- list()
+  for (step in steps) {
+    print(step)
+    step_corrs <- c(step_corrs, list(corrWig(wig1, wig2, method=method, step=step)))
+  }
+  names(step_corrs) <- steps
+  return(step_corrs)
 }
 
 hmedips <- paste(c("omp", "ngn","icam"), "hmedip", sep="_")
@@ -95,6 +143,8 @@ corrDNAmodAndmk4 <- function(data_type="raw", method="spearman", N=100, fname=NU
   return(corr_mat)
 }
 
+
+
 #Combinatorial patterns of histone acetylations and methylations in the human genome
 corrMatrix <- function(set, method, N, fname) { 
  # cat("Getting data...\n")
@@ -126,14 +176,14 @@ corrMatrix <- function(set, method, N, fname) {
   return(mat)
 }
 
-mclustDNAmodRNA <- function(feature, dna=NULL, value_type="", rna=NULL) {
+mclustDNAmodRNA <- function(feature, dna=NULL, set, value_type="", rna=NULL) {
   #rna.path <- "~/data/rna/omp_ngn_icam_rna.txt"
   #rna.path <- "~/data/rna/cv_iv_cd_id_rna"
   #rna.path <- "~/storage/data/rna/cuffdiff/moe_wt_mrna_moe_d3a_mrna/gene_exp.diff"
   #rna.path <- "~/s2/data/rna/cuffdiff/omp_mrna_ngn_mrna/gene_exp.diff"
-  rna.path <- "~/s2/analysis/rna/summaries/omp_ngn_icam_mrna_pseudo_log2"
+  rna.path <- "~/s2/analysis/rna/summaries/omp_ngn_icam_mrna_dup_nozero_log2"
   #dna.path <- paste("~/analysis/mprofiles/features/feature_summaries/", paste(dip, "refgene_long", sep="_"), sep="")
-  dna.path <- paste("~/s2/analysis/features/summaries/", paste("cells", feature, value_type, sep="_"), sep="")
+  dna.path <- paste("~/s2/analysis/features/norm", value_type, "summaries", paste(set, feature, sep="_"), sep="/")
   #dna.path <- "~/storage/analysis/mprofiles/features/moe_wt_hmc_moe_dnmt3a_hmc/refgene_noclust"
   rna.data.full <- read.delim(rna.path)
   #rna.data <- matrix(c(rna.data.full$value_1, rna.data.full$value_2), nrow=nrow(rna.data.full), ncol=2,
@@ -143,12 +193,14 @@ mclustDNAmodRNA <- function(feature, dna=NULL, value_type="", rna=NULL) {
                                         #dimnames(rna.data) <- list(rna.data.full$test_id, c("WT", "Dnmt3a"))
   #rna.data <- removeZeros(rna.data)
   dna.data <- read.delim(dna.path)
-  dna.data <- apply(dna.data, 2, pseudoCountNorm)
+  dna.data <- removeZeros(dna.data)
+  #dna.data <- apply(dna.data, 2, pseudoCountNorm)
   #return(dna.data)
                                         #dimnames(dna.data) <- list(rownames(dna.data.full), c("WT", "Dnmt3a"))
   #rna.sample.data <- log(rna.data[, grep(rna, colnames(rna.data))],2)
   rna.sample.data <- rna.data.full[,grep(rna, colnames(rna.data.full))]
-  dna.sample.data <- log(dna.data[, grep(dna, colnames(dna.data))], 2)
+  #dna.sample.data <- log(dna.data[, grep(dna, colnames(dna.data))], 2)
+  dna.sample.data <- sqrt(dna.data[, grep(dna, colnames(dna.data))])
   rna.select.data <- rna.sample.data[match(rownames(dna.data), rownames(rna.data.full))]
   #rna.select.data <- rna.data[match(rownames(dna.data), rownames(rna.data))]
   sample.data <- na.omit(cbind(rna.select.data, dna.sample.data))
@@ -164,7 +216,16 @@ mclustDNAmodRNA <- function(feature, dna=NULL, value_type="", rna=NULL) {
 
 mclust.several <- function(feature, set="cells", value_type="") {
   if (set=="cells") {
-    dna.samples <- samples.cells
+    dna.samples <- samples.cells_norm
+    rna.samples <- c("omp", "ngn", "icam")
+  } else if (set=="medips_rf_1" | set=="medips_rf_2") {
+    dna.samples <- samples.medips_rf
+    
+  } else if (set=="unnorm") {
+    dna.samples <- samples.cells_norm
+    rna.samples <- c("omp", "ngn", "icam")
+  } else if (set=="unnorm_2") {
+    dna.samples <- samples.cells_norm
     rna.samples <- c("omp", "ngn", "icam")
   }
 
@@ -177,21 +238,25 @@ mclust.several <- function(feature, set="cells", value_type="") {
     }             
   }
   #return(samples)
-  registerDoMC(cores=4)
+  registerDoMC(cores=6)
   mcs <- foreach(sample=samples, .inorder=TRUE) %dopar% {
     print(sample)
-    mc <- mclustDNAmodRNA(feature=feature, dna=sample[1], value_type=value_type, rna=sample[2])
+    mc <- mclustDNAmodRNA(feature=feature, dna=sample[1], set=set, value_type=value_type, rna=sample[2])
     gc()
     return(mc)
   }
   names(mcs) <- unlist(samples_paste)
   return(mcs)
 }
-mclustSplitClass <- function(mclust, data, class=2, corr=TRUE) {
+mclustSplitClass <- function(mclust, data, class=2, plot=FALSE, corr=TRUE) {
   classif <- mclust$classification
   data.class <- data[classif==class,]
+  if (plot) plot(data.class[,1], data.class[,2])
   if (!corr) return(data.class)
-  data.cor <- cor(data.class[,1], data.class[,2])
+  data.cor <- cor(data.class[,1], data.class[,2], method="spearman")
+                                        #data.cor <- cor.test(data.class[,1], data.class[,2], method="spearman")
+  #data.cor <- lm(data.class[,2]~ data.class[,1])
+  #data.cor <- glm(data.class[,2] ~ data.class[,1])
   return(data.cor)
 }
 
@@ -206,7 +271,7 @@ mclustFit <- function(mclust, data, class=2) {
 cust.topo <- topo.colors(50)
 cust.topo[1] <- "white"
 
-mclustPlotSurface <- function(mclust, data, type="image", fname=NULL, corr.val=NULL) {
+mclustPlotSurface <- function(mclust, data, type="image", x.lim=c(-8, 8), y.lim=c(0, 1), fname=NULL, corr.val=NULL, corr.val.pos=c(0,0)) {
   # if (is.null(fname)) {x11()
   # } else {
   #   pdf(file=paste("~/s2/analysis/features/plots",
@@ -214,18 +279,18 @@ mclustPlotSurface <- function(mclust, data, type="image", fname=NULL, corr.val=N
   #       width=5, height=5)
   # }                     
    #y.lim <- c(min(data[,2]), 0)
-   y.lim <- c(-6, 0)           
+   #y.lim <- c(-6, -2)           
    surfacePlot(data=data, what="density", type=type,
                parameters=mclust$parameters,
                col=topo.colors(100),
-               ylim=y.lim, xlim=c(-10,10),
+               ylim=y.lim, xlim=x.lim,
                cex.axis=1.2,
                ann=FALSE)
-   mtext("log2 FPKM", side=1, line=2.5, cex=1.2)
-   mtext("log2 score", side=2, line=2.5, cex=1.2)
+   #mtext("log2 FPKM", side=1, line=2.5, cex=1.2)
+   #mtext(expression(sqrt("RPM")), side=2, line=2.5, cex=1.2)
    if (!is.null(corr.val)) {
      corr.val <- round(corr.val, digits=2)
-     text(-10, -0.5, paste("R = ", as.character(corr.val), sep=""), col="white", pos=4, cex=1.6)
+     text(corr.val.pos[1], corr.val.pos[2], paste(expression(rho), " = ", as.character(corr.val), sep=""), col="white", pos=1, cex=2)
    }
    if(!is.null(fname)) dev.off()
  }
@@ -278,15 +343,7 @@ TopHmcRnaDensity <- function(val_a, val_b, fname=NULL) {
   legend(-8, max_y-(max_y*.1), c("OSN", "GBC"), col=col3[3:2], bty="n", lty=1)
   if (!is.null(fname)) dev.off()
 }
-removeZeros <- function(data) {
-  ind <- 1:nrow(data)
-  registerDoMC(cores=3)
-  out <- foreach(it=isplitRows(data, chunks=10), .combine="rbind") %dopar% {
-    return(it[apply(it, 1, prod)>0,])
-  }
-  return(out)
-  #return(data[apply(data, 1, prod)>0,])
-}
+
 
 fillMatrix <- function(set, vals) {
    mat <- matrix(1, nrow=length(set), ncol=length(set))

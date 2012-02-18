@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
+
+# Input BedGraph in the form: chr  start  stop	value
+# Output variableStep wig
+
 import re, os, shutil, time, sys
 from string import *
 from optparse import OptionParser
 import operator
-
- 
 
 def main(argv):
 

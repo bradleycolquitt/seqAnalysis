@@ -56,15 +56,15 @@ def index_split(args):
             # Check illumina PF
             if l2[10] == "1":
                 # Check index read quality
-                quality = list(l2[9])
-                quality_convert = []
-                for letter in quality:
-                    quality_convert.append(ord(letter) - 65)
-                below_thresh = 0
-                for val in quality_convert:
-                    if val < 20: below_thresh = below_thresh + 1
-                if below_thresh >= 6:
-                    continue
+                #quality = list(l2[9])
+                #quality_convert = []
+                #for letter in quality:
+                #    quality_convert.append(ord(letter) - 65)
+                #below_thresh = 0
+                #for val in quality_convert:
+                #    if val < 20: below_thresh = below_thresh + 1
+                #if below_thresh >= 6:
+                #    continue
                 """
                 read1_quality = list(l1[9])
                 read2_quality = list(l2[9])
@@ -128,7 +128,7 @@ def main(argv):
 
     ## Split by indices
     pool = Pool(processes=10)
-    start_time = time.time()
+    #start_time = time.time()
     #print files_group
     args = [(files, argv) for files in files_group]
     for arg in args:
@@ -137,7 +137,7 @@ def main(argv):
     pool.close()
     pool.join()
 
-    print time.time() - start_time
+    #print time.time() - start_time
     
 if __name__ == "__main__":
     main(sys.argv)

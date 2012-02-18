@@ -1,4 +1,12 @@
-
+removeZeros <- function(data) {
+  ind <- 1:nrow(data)
+  registerDoMC(cores=3)
+  out <- foreach(it=isplitRows(data, chunks=10), .combine="rbind") %dopar% {
+    return(it[apply(it, 1, prod)>0,])
+  }
+  return(out)
+  #return(data[apply(data, 1, prod)>0,])
+}
 
 fdrAdjust <- function(p.vals) {
   qvals <- qvalue(signif(p.vals, 16))

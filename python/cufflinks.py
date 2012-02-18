@@ -15,8 +15,8 @@ def main(argv):
     if not os.path.exists(output_path): os.mkdir(output_path)
     
     ## Run cufflinks with given Tophat output and GTF file
-    cmd_args = ['cufflinks', '-o', output_path, '-p', '10', '-N',
-                argv[1]]
+    cmd_args = ['cufflinks', '-o', output_path, '-p', '10',
+                '-G', '/seq/lib/refgene_name2.gtf', argv[1]]
     print "Running cufflinks: " + " ".join(cmd_args[1:])
 
     cufflinks = Popen(cmd_args)

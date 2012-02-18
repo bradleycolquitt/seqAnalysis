@@ -8,6 +8,7 @@ import stats_bf
 FEATURE_PATH = '/home/user/lib/features_general'
 OUT_PATH = '/media/storage2/analysis/features/bf'
 SUMMARY_PATH_NORM = "/media/storage2/analysis/features/norm/summaries"
+#UMMARY_PATH_UNNORM = 
 SUMMARY_PATH_RAW = "/media/storage2/analysis/features/summaries"
 
 def permute(l):
@@ -40,6 +41,8 @@ def main(argv):
     
     path = ""
     if args.data_type == "norm":
+        path = SUMMARY_PATH_NORM
+    elif args.data_type == "unnorm":
         path = SUMMARY_PATH_NORM
     elif args.data_type == "raw":
         path = SUMMARY_PATH_RAW

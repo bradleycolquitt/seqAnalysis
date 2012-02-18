@@ -23,7 +23,6 @@ def main(argv):
             subject_dict[sline[0]] = [sline]
         else:
             subject_dict[sline[0]] = subject_dict[sline[0]].append(sline)
-    
     for line in query:
         line = line.strip().split()
         

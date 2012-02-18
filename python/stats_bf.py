@@ -11,7 +11,7 @@ import argparse
 
 DATA_NAME = "genes.fpkm_tracking"
 SUMMARY_PATH_NORM = "/media/storage2/analysis/features/norm/summaries"
-SUMMARY_PATH_RAW = "/media/storage2/analysis/features/summaries"
+SUMMARY_PATH_RAW = "/media/storage2/analysis/features/norm/unnorm/mean/summaries"
 INF = float('inf')
 
 # from MISO
@@ -41,7 +41,7 @@ class gaussian_kde_covfact(gaussian_kde):
 class NullPeakedDensity:
   def __init__(self, data):
     self.data = data
-  def eval(self, point):
+  def evaluate(self, point):
     if point[0] == 0:
       return INF
     else:
@@ -94,7 +94,7 @@ class ExprData:
     delta = delta - np.mean(delta)
     priorfun = lambda x: 1 + x if x <= 0 else 1 - x
     analytic_prior_density = map(priorfun, np.arange(-1,1,0.001))
-    if np.mean(abs(delta)) <= 0.009:
+    if np.mean(abs(delta)) <= 0.00009:
       #print "null peaked"
       postfun = NullPeakedDensity(delta)
     else:
@@ -162,10 +162,13 @@ def import_features(set, feature, samples, data_type):
     sample_name = "/".join([path, "_".join([set, feature])])
   elif data_type == "raw":
     path = SUMMARY_PATH_RAW
-    sample_name = "/".join([path, "_".join([set, feature, data_type])])
+    #sample_name = "/".join([path, "_".join([set, feature, data_type])])
+    sample_name = "/".join([path, "_".join([set, feature])])
+  #print sample_name
   sample_data = open(sample_name)
   #d = {}
   cnames = sample_data.readline().split()
+
   indices = [cnames.index(sample) + 1 for sample in samples]
   for line in sample_data:
     line = line.split()    
@@ -179,7 +182,7 @@ def import_features(set, feature, samples, data_type):
   return d
 
 def worker(d):
-  n = d.keys()
+  #n = d.keys()
   e = ExprData(d)
   bf = e.compute_bayes_factor()
   return bf

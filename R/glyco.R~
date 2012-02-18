@@ -1,0 +1,14 @@
+library(Biostrings)
+library(BSgenome)
+library(BSgenome.Mmusculus.UCSC.mm9)
+
+filterByLength <- function(seq, len) {
+  return(seq[width(seq) >= len])
+}
+
+filterByNGylco <- function(seq) {
+  pattern <- "N!P[TS]"  
+  pattern_ind <- vmatchPattern(seq, pattern)
+  return(pattern_ind)
+
+}

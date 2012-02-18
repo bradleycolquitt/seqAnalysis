@@ -9,34 +9,21 @@ import tables as tb
 import tempfile
 import shutil
 import warnings
+import operator
 import numpy as np
+from math import sqrt
 from scipy import stats
 from string import atoi, atof
 from multiprocessing import Pool
 
-ANNO_PATH = '/home/user/lib/annotations'
+ANNO_PATH = '/home/user/lib/annotations_hires'
 FEATURE_PATH = '/home/user/lib/features_general'
 SAMPLE_PATH = '/media/storage2/data/h5'
 ANNO_OUT_PATH = '/media/storage2/analysis/profiles/norm'
 FEATURE_OUT_PATH = '/media/storage2/analysis/features/norm'
-SAMPLES = []
-"""
-CELLS_SAMPLES = ['omp_hmedip.bed', 'ngn_hmedip.bed', 'icam_hmedip.bed',
-                 'omp_medip.bed', 'ngn_medip.bed', 'icam_medip.bed']
-"""
-#CELLS_SAMPLES = ['omp_hmc_rlm', 'ngn_hmc_rlm', 'icam_hmc_rlm',
-#                 'omp_mc_rlm', 'ngn_mc_rlm', 'icam_mc_rlm']
-
-"""
-D3A_SAMPLES = ['moe_wt_mc.bed', 'moe_d3a_mc.bed',
-               'moe_wt_hmc.bed', 'moe_d3a_hmc.bed']
-"""
-D3A_SAMPLES = ['moe_wt_mc_rlm', 'moe_d3a_mc_rlm',
-               'moe_wt_hmc_rlm', 'moe_d3a_hmc_rlm']
-
 
 class tab:
-    def __init__(self, anno, h5, fun, type, split_anno):
+    def __init__(self, anno, h5, fun, type, data_type, split_anno):
         self.anno = anno
         self.h5 = h5
         self.fun = fun
@@ -44,9 +31,9 @@ class tab:
         self.split_anno = split_anno
         self.out_path = ""
         if type == "anno":
-            self.out_path = "/".join([ANNO_OUT_PATH, os.path.basename(anno)])
+            self.out_path = "/".join([ANNO_OUT_PATH, data_type, fun, os.path.basename(anno)])
         elif type == "feature":
-            self.out_path = "/".join([FEATURE_OUT_PATH, os.path.basename(anno)])
+            self.out_path = "/".join([FEATURE_OUT_PATH, data_type, fun, os.path.basename(anno)])
         if split_anno:
             self.out_path = self.out_path + "_split"
         if not os.path.exists(self.out_path): os.makedirs(self.out_path)
@@ -62,12 +49,21 @@ class tab:
             sample_chrs = [chr._v_name for chr in sample._f_iterNodes()]
             chrs_tbp = list(set(anno_chrs) & set(sample_chrs))
             tmp_path = tempfile.mkdtemp(suffix=os.path.basename(anno))
+            
+            exp = 0
+            if self.fun=="randc":
+                try:
+                    exp = sample._f_getAttr('ExpectedRPM')
+                except AttributeError:
+                    exp = computeExpected(sample)
+                    sample._f_setAttr('ExpectedRPM', exp)
+                    self.h5.flush()
+                    print "Expected RPM:", exp
             #worker(anno, sample, chrs_tbp, tmp_path, self.fun)
             #pool = Pool(processes=6)
             for chr_tbp in chrs_tbp:
                 print chr_tbp
-                
-                self.tab_core(anno, sample, chr_tbp, tmp_path, self.fun)
+                self.tab_core(anno, sample, chr_tbp, tmp_path, self.fun, exp)
             ##    pool.apply_async(tab_core, (anno, sample, chr_tbp, self.fun))
             ##pool.close()
             ##pool.join()
@@ -79,15 +75,16 @@ class tab:
             #    #sample_data.close()
             #    #anno_out.close()    
             self.file_combine(tmp_path, sample._v_name)
-
-    def tab_core(self, anno, sample, chr_tbp, tmp_path, fun):
+        #self.h5.flush()
+        
+    def tab_core(self, anno, sample, chr_tbp, tmp_path, fun, exp):
         anno_data = open(anno + "/" + chr_tbp)
         sample_data = sample._f_getChild(chr_tbp)
         anno_out_path = tmp_path + "/" + chr_tbp
         anno_out = open(anno_out_path, 'w')
         window_size = int(sample_data.getAttr('Resolution'))
         anno_line = anno_data.readline().strip().split()
-        #pdb.set_trace()    
+        #print fun    
         for line in anno_data:
             line = line.strip()
             sline = line.split()
@@ -95,17 +92,30 @@ class tab:
             end = atoi(sline[2]) / window_size
             vals = sample_data[start:end]
             if len(vals) > 0:
+                #pdb.set_trace()
                 if self.split_anno:
                     for val in vals:
                         out = "\t".join([line, str(val)]) + "\n"
                         anno_out.write(out) 
                 else:
-                    vals = vals[vals>0]
-                    if len(vals) > 0:
-                        result = np.mean(vals)
-                    #if np.isnan(result): result = 0
-                        out = "\t".join([line, str(result)]) + "\n"
-                        anno_out.write(out)
+                    result = 0
+                    if fun == "mean":
+                        result = val_mean(vals)
+                    elif fun == "median":
+                        result = np.median(vals)
+                    elif fun == "mode":
+                        result = val_mode(vals)
+                    elif fun == "sum":
+                        result = sum(vals)
+                        #print result
+                    elif fun == "var":
+                        result = val_var(vals)
+                    elif fun == "cv":
+                        result = val_cv(vals)
+                    elif fun == "randc":
+                        result = val_compareRandom(vals, exp)
+                    out = "\t".join([line, str(result)]) + "\n"
+                    anno_out.write(out)
         anno_data.close()
         anno_out.close()
             
@@ -119,6 +129,47 @@ class tab:
                 out.write(line)
         shutil.rmtree(tmp_path)
         out.close()
+        
+def computeExpected(sample):
+    print 'Computing expected RPM per window...'
+    read_sum = 0
+    window_num = 0
+    for chrom in sample._f_iterNodes():
+        read_sum = read_sum + sum(chrom)
+        window_num = window_num + len(chrom)
+    return(read_sum / window_num)
+    
+def val_mean(vals):
+    result = np.mean(vals)
+    if np.isnan(result): result = 0
+    return result
+
+def val_mode(vals):
+    counts = {}
+    for val in vals:
+        if val in counts:
+            counts[val] = counts[val] + 1
+        else:
+            counts[val] = 1
+    return(max(counts.iteritems(), key=operator.itemgetter(1))[0])
+
+def val_var(vals):
+    mean = val_mean(vals)
+    denom = 1
+    if len(vals) > 1: denom = len(vals) - 1
+    var = sum(pow(vals - mean, 2)) / denom 
+    return(var)
+    
+def val_cv(vals):
+    mean = val_mean(vals)
+    if mean == 0: return(0)
+    sd = sqrt(val_var(vals))
+    return(sd / mean)
+    
+def val_compareRandom(vals, exp):
+    val_sum = np.sum(vals)
+    exp_sum = len(vals) * exp
+    return(val_sum / exp_sum)
     
 def worker(anno, sample, chrs_tbp, tmp_path, fun):
     pool = Pool(processes=6)
@@ -128,15 +179,11 @@ def worker(anno, sample, chrs_tbp, tmp_path, fun):
         pool.apply_async(tab_core, (anno, sample, chr_tbp, tmp_path, fun))
     pool.close()
     pool.join()
-                    
-                #self.tab_core(anno_data, sample_data, self.fun)
-                #anno_data.close()
-                #sample_data.close()
-                #anno_out.close()    
     file_combine(anno, tmp_path, sample._v_name)
-def tab_worker(anno, h5, fun, type, split_anno):
+    
+def tab_worker(anno, h5, fun, type, data_type, split_anno):
     print anno
-    obj = tab(anno, h5, fun, type, split_anno)
+    obj = tab(anno, h5, fun, type, data_type, split_anno)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         obj.run()
@@ -160,12 +207,12 @@ def main(argv):
         fun = "mean"
     else:
         fun = args.fun
-        
-    h5 = tb.openFile(SAMPLE_PATH + "/"+ args.sample_h5, 'r')
+    
+    h5 = tb.openFile(SAMPLE_PATH + "/"+ args.sample_h5, 'a')
     
     if args.anno_set:
         annos = [ANNO_PATH + "/"+ f for f in os.listdir(ANNO_PATH) if re.search("chr", f)]
-        [tab_worker(anno, h5, fun, "anno", args.split_anno) for anno in annos]
+        [tab_worker(anno, h5, fun, "anno", args.data_type, args.split_anno) for anno in annos]
         #pool = Pool(processes=2)
         #result = [pool.apply_async(tab_worker, (anno, h5, args.fun)) \
         #        for anno in annos]
@@ -174,15 +221,17 @@ def main(argv):
     elif args.feature_set:
         print args.split_anno
         features = [FEATURE_PATH + "/" + f for f in os.listdir(FEATURE_PATH) if re.search("chr", f)]
-        print features
-        [tab_worker(feature, h5, fun, "feature", args.split_anno) for feature in features]
+        #print features
+        [tab_worker(feature, h5, fun, "feature", args.data_type, args.split_anno) for feature in features]
     elif args.annotation:       
-        obj = tab(ANNO_PATH + "/" + args.annotation, h5, fun, "anno", args.split_anno)
-        obj.run()
+        tab_worker(ANNO_PATH + "/" + args.annotation, h5, fun, "anno", args.data_type, args.split_anno)
+        #obj = tab(ANNO_PATH + "/" + args.annotation, h5, fun, "anno", args.data_type, args.split_anno)
+        
+        #obj.run()
     elif args.feature:
-        obj = tab(FEATURE_PATH + "/" + args.feature, h5, fun, "feature", args.split_anno)
-        obj.run()
-
+        tab_worker(FEATURE_PATH + "/" + args.feature, h5, fun, "feature", args.data_type, args.split_anno)
+        #obj = tab(FEATURE_PATH + "/" + args.feature, h5, fun, "feature", args.data_type, args.split_anno)
+        #obj.run()
    
 if __name__ == "__main__":
     main(sys.argv)

@@ -2,31 +2,67 @@ library(BSgenome)
 library(BSgenome.Mmusculus.UCSC.mm9)
 library(foreach)
 
-shiftBedPositions <- function(bed, shift, direction="up") {
-  if (direction == "up") {
-    ind_direct <- TRUE
-    pos_direct <- 1
-  } else {
-    ind_direct <- FALSE
-    direct <- -1
-  }
+shiftBedPositions <- function(bed, shift, pos="start", direction="up") {
+  
   left <- vector(length=nrow(bed))
   right <- vector(length=nrow(bed))
-  plus.ind <- !xor(na.omit(bed[,6] == "+"),ind_direct)
-  #minus.ind <- bed[,6] == "-"
-  #return(plus.ind)
-  #print(shift)
-  #return(bed[plus.ind, 2])
-  
-  left[plus.ind] <- bed[plus.ind, 2] - shift
-  #return(left)
-  right[plus.ind] <- bed[plus.ind, 2]
-  right[!plus.ind] <- bed[!plus.ind, 3] + shift
-  left[!plus.ind] <- bed[!plus.ind, 3]
+  plus.ind <- bed[,6] == "+"
+
+  if (pos=="start") {
+    if (direction=="up") {
+      left[plus.ind] <- bed[plus.ind, 2] - shift
+      right[plus.ind] <- bed[plus.ind, 2]
+      right[!plus.ind] <- bed[!plus.ind, 3] + shift
+      left[!plus.ind] <- bed[!plus.ind, 3]
+    } else if (direction=="down") {
+      left[plus.ind] <- bed[plus.ind, 2]
+      right[plus.ind] <- bed[plus.ind, 2] + shift
+      right[!plus.ind] <- bed[!plus.ind, 3] 
+      left[!plus.ind] <- bed[!plus.ind, 3] - shift
+    }  
+  } else if (pos=="end") {
+    if (direction=="up") {
+      left[plus.ind] <- bed[plus.ind, 3] - shift 
+      right[plus.ind] <- bed[plus.ind, 3] 
+      right[!plus.ind] <- bed[!plus.ind, 2] + shift
+      left[!plus.ind] <- bed[!plus.ind, 2] 
+    } else if (direction=="down") {
+      left[plus.ind] <- bed[plus.ind, 3]
+      right[plus.ind] <- bed[plus.ind, 3] + shift
+      right[!plus.ind] <- bed[!plus.ind, 2] 
+      left[!plus.ind] <- bed[!plus.ind, 2] - shift
+    }  
+  }
+   
   out <- cbind(bed[,1], left, right, bed[,4:6])
   return(out)
 }
-#take matrix with sequence names and sequence, and generate
+
+#To adjust coordinates of all beds within a directory
+shiftBedPositions.dir <- function(dir, shift, pos="start", direction="up") {
+  files <- list.files(dir)
+  ind <- grep("(start|end)", files)
+  if (!is.null(ind)) files <- files[-ind]
+  foreach(file=files) %dopar% {
+    if (file=="subset") return
+    bed <- read.delim(paste(dir, file, sep="/"), header=FALSE)
+    bed <- shiftBedPositions(bed, shift=shift, pos=pos, direction=direction)
+    write.table(bed, file=paste(dir, paste(file, pos, direction, shift, sep="_"), sep="/"),
+                quote=FALSE, sep="\t", row.names=FALSE, col.names=FALSE)
+  }
+}
+
+batchShift <- function(path, shift, pos="start", direction="up") {
+  files <- list.files(path)
+  for (file in files) {
+    bed <- read.delim(paste(path, file, sep="/"), header=FALSE)
+    bed_out <- shiftBedPositions(bed, shift=shift, pos=pos, direction=direction)
+    write.table(bed_out, file=paste(path, paste(file, pos, direction, shift, sep="_"), sep="/"),
+                quote=FALSE, sep="\t", row.names=FALSE, col.names=FALSE)
+  }
+}
+
+#take data.frame with sequence names and sequence, and generate
 #fasta file
 formatFasta <- function(data, fname=NULL) {
   names <- as.character(data[,1])
@@ -41,6 +77,38 @@ formatFasta <- function(data, fname=NULL) {
   close(fc)
 }
 
+getSeq.masked <- function(bed) {
+  bed <- na.omit(bed)
+  chrs <- unique(bed[,1])
+  print(chrs)
+  bed.split <- split(bed, bed[,1])
+  names(bed.split) <- chrs
+  total.seq <- foreach(chr=chrs, .combine="c") %dopar%  {
+    chr <- as.character(chr)
+    print(chr)
+    chr.seq <- Mmusculus[[chr]]
+    active(masks(chr.seq))['RM'] <- TRUE
+    bed.curr <- bed.split[[chr]]
+    bed.seq <- apply(bed.curr, 1, function(line) {
+      tryCatch(return(getSeq.single(chr.seq, line)), error=function(e) return(NA))
+      #if (class(result) == "try-error") {
+      #  return(NA)
+      #} else {
+      #  return(result)
+      #}
+    })
+    names(bed.seq) <- bed.curr[,4]
+    return(bed.seq)
+  }
+  return(total.seq)
+}
+
+getSeq.single <- function(seq, line) {
+  line.seq <- subseq(seq, start=as.numeric(line[2]), end=as.numeric(line[3]))
+  line.seq <- as.character(line.seq)
+  line.seq <- str_replace_all(line.seq, "#", "N")
+  return(line.seq)
+}
 trimBed <- function(bed, amt, pos="up") {
   plus.ind <- bed[,6] == "+"
   if (pos == "up") {
@@ -52,9 +120,45 @@ trimBed <- function(bed, amt, pos="up") {
   }
   bed[plus.ind, plus.pos] <- bed[plus.ind, plus.pos] + amt
   bed[!plus.ind, minus.pos] <- bed[!plus.ind, minus.pos] - amt
-  return(bed)
+  return(bed[bed[,3] > bed[,2],])
+  #return(bed)
 }
 
+splitAndSave <- function(data, chunks, fname) {
+  count <- 0
+  a <- foreach(c=isplitRows(data, chunks=chunks)) %do% {
+    count <- count + 1
+    write.table(c, file=paste(fname, count, sep="_"), quote=FALSE, sep="\t", row.names=FALSE, col.names=FALSE)
+  }
+}
+
+readSplitGetNames <- function(path, filter=NULL) {
+  files <- list.files(path)
+  if (!is.null(filter)) files <- files[grep(filter, files)]
+  out <- foreach(file=files) %do% {
+    data <- read.delim(paste(path, file, sep="/"), header=FALSE)
+    return(data[,4])
+  }
+  names(out) <- files
+  return(out)
+}
+
+sortByName <- function(data, ind_pos=2) {
+  data_names <- names(data)
+  data_ind <- unlist(lapply(data_names, function(x) as.numeric(str_split(x, "_")[[1]][ind_pos])))
+  #return(data_ind)
+  return(data[order(data_ind)])  
+}
+
+classifyByQuantiles <- function(vals, probs) {
+  N <- seq(1:length(probs)) - 1
+  qs <- quantile(vals, probs)
+  cl <- vector("numeric", length=length(vals))
+  for (i in 1:(length(probs)-1)) {
+    cl[vals >= qs[i] & vals < qs[i+1]] <- N[i]
+  }
+  return(cl)
+  }
 getSeqByStrand <- function(bed) {
   seq <- getSeq(Mmusculus, bed[,1], bed[,2], bed[,3])
   ind <- bed[,6] == "-"
@@ -82,6 +186,8 @@ countBasesByStrand <- function(seq, strand, pattern) {
 
 }
 
+
+# Calculate the occurence frequency of each base 
 freqBasesByStrand <- function(seq, strand, phase=0) {
   print(paste("Phase: ", phase, sep=""))
    plus_ind <- strand == "+"
@@ -123,5 +229,140 @@ freqBasesByStrand.all3 <- function(seq, strand) {
   return(result)
 }
 
+# Input exonStart/End file
+## Format: chr strand starts stops name2
+# Extract sequences and paste together for given gene
+# Return list of sequences, with name2 for names
+stitchExons <- function(genes) {
+  genes_seq <- foreach(gene=isplitRows(genes, chunkSize=1)) %do% {
+    #print(gene)
+    #return(gene[3])
+    starts <- as.numeric(unlist(strsplit(as.character(gene[3]), ",")))
+    #print(starts)
+    ends <- as.numeric(unlist(strsplit(as.character(gene[4]), ",")))
+    exon_count <- length(starts)
+    #print(exon_count)
+    gene_seq <- foreach (exon_ind=exon_count, .combine="c") %do% {
+      return(getSeq(Mmusculus, as.character(gene[1]), starts[exon_ind], ends[exon_ind]))
+    }
+    gene_seq <- paste(gene_seq, collapse="")
+    return(gene_seq)
+  }
+  names(genes_seq) <- genes[,5]
+  return(genes_seq)
+}
 
+# To input codon usage data from http://www.kazusa.or.jp/codon
+# Read in codon usage file:
+# Header line: starts with >
+# Codon count line:
+# Realign DNAStringSet by strand
+CODON_USAGE <- c("CGA", "CGC", "CGG", "CGU", "AGA", "AGG", "CUA", "CUC", "CUG", "CUU", "UUA", "UUG", "UCA", "UCC", "UCG", "UCU", "AGC", "AGU", "ACA", "ACC", "ACG", "ACU", "CCA", "CCC", "CCG", "CCU", "GCA", "GCC", "GCG", "GCU", "GGA", "GGC", "GGG", "GGU", "GUA", "GUC", "GUG", "GUU", "AAA", "AAG", "AAC", "AAU", "CAA", "CAG", "CAC", "CAU", "GAA", "GAG", "GAC", "GAU", "UAC", "UAU", "UGC", "UGU", "UUC", "UUU", "AUA", "AUC", "AUU", "AUG", "UGG", "UAA", "UAG", "UGA")
+readUsage <- function(fname) {
+  data <- scan(fname, what=character(), sep="\n")
 
+  ## Extract and split headers for id
+  header_ind <- as.logical(sapply(data, function(x) grep(">", x)))
+  #headers <- na.omit(data[header_ind])
+  #head_split <- lapply(headers, strsplit, "product=\"")
+  #head_split <- lapply(head_split, function(x) strsplit(x[[1]][[2]], "\\\"/protein_id="))
+  #id <- unlist(lapply(head_split, function(x) x[[1]][1]))
+
+  ## Extract and split codon usage counts into matrix
+  usage <- na.omit(data[is.na(header_ind)])
+  usage_split <- lapply(usage, strsplit, " ")
+  usage_split <- lapply(usage_split, function(x) as.numeric(do.call("c", x)))
+  usage_matrix <- do.call("rbind", usage_split)
+  colnames(usage_matrix) <- CODON_USAGE
+  #return(usage_matrix)
+
+  usage_freq_matrix <- apply(usage_matrix, 1, function(x) x / sum(x))
+  return(usage_freq_matrix)  
+}
+
+alignByStrand <- function(dna_set, strand) {
+  minus_ind <- strand == "-"
+  dna_set[minus_ind] <- reverseComplement(dna_set[minus_ind])
+  atg_pattern <- vmatchPattern("ATG", dna_set)
+  atg_pattern_starts <- startIndex(atg_pattern) 
+  atg_pattern_lengths <- unlist(lapply(atg_pattern_starts, length))
+  atg_present_ind <- atg_pattern_lengths > 0
+  atg_pattern_present <- atg_pattern_starts[atg_present_ind]
+  dna_string_atg <- dna_set[atg_present_ind]
+  first_atg <- unlist(lapply(atg_pattern_present, function(x) x[1]))
+  dna_string_trim <- lapply(1:length(dna_string_atg), function(x) {
+    substr(dna_string_atg[[x]], first_atg[[x]], length(dna_string_atg[[x]]))})
+  dna_string_trim_char <- unlist(lapply(dna_string_trim, toString))
+  dna_string_trim_set <- DNAStringSet(dna_string_trim_char)
+  return(dna_string_trim_set)
+}
+
+# Take DNAStringSet and matched strand
+# Translate to protein, reverse complementing minus strand sequences first
+translateWithStrand <- function(dna_set, strand) {
+  dna_set_aligned <- alignByStrand(dna_set)
+  prot_string <- translate(dna_set_aligned)
+  return(prot_string)
+}
+
+# Take AAStringSet and compute AA usage frequencies
+protAlphabetFrequency <- function(prot) {
+  letter_counts <- alphabetFrequency(prot)
+  letter_counts <- letter_counts[,66:91]
+  colnames(letter_counts) <- LETTERS
+  aa_ind <- c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y")
+  letter_counts <- letter_counts[,aa_ind]
+  letter_freqs <- apply(letter_counts, 1, function(obs) obs / sum(obs))
+  return(letter_freqs)
+}
+
+# Take DNAStringSet and compute codon usage
+CODONS <- names(GENETIC_CODE)
+codonUsage <- function(dna_set) {
+  codon_counts <- vector("numeric", length=64)
+ # return(codon_counts)
+  names(codon_counts) <- codons
+ # return(codon_counts)
+  for (dna_ind in 1:length(dna_set)) {
+    dna <- dna_set[[dna_ind]]
+    ind <- seq(1, length(dna), 3)
+    ind <- ind[-length(ind)]
+    for (i in ind) {
+      codon <- toString(subseq(dna, start=i, end=i+2))
+      codon_counts[codon] <- codon_counts[codon] + 1
+    }
+  }
+  #return(codon_counts)
+  codon_freqs <- codon_counts / sum(codon_counts)
+  return(codon_freqs)
+}
+
+codonUsageByPosition <- function(dna_set) {
+  codon_pos_counts <- matrix(0, ncol=64, nrow=150, dimnames=list(1:150, CODONS))
+  for (dna_ind in 1:length(dna_set)) {
+    dna <- dna_set[[dna_ind]]
+    ind <- seq(1, by=3, length.out=nrow(codon_pos_counts))
+    if (length(dna) < ind[length(ind)]) next
+    #print(ind)
+    ind <- ind[-length(ind)]
+    for (i in ind) {
+      codon <- toString(subseq(dna, start=i, end=i+2))
+      #print(codon)
+      matrix_ind <- (i-1)/3 + 1
+      codon_pos_counts[matrix_ind,codon] <- codon_pos_counts[matrix_ind, codon] + 1
+    }
+  }
+  return(codon_pos_counts)
+}
+
+removeClusteredGenes <- function(bed, N) {
+  id <- bed[,4]
+  id_s <- sapply(id, function(x) str_replace(x, "[0-9]+$", ""))
+  id_table <- table(id_s)
+  #return(id_table)
+  id_table <- names(id_table)[id_table <= N]
+  id_index <- id_s %in% id_table
+  bed <- bed[id_index,]
+  id_mir <- grep("Mir", bed[,4])
+  return(bed[-id_mir,])
+}

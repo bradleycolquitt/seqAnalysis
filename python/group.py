@@ -15,19 +15,19 @@ ANNO_PATH = '/home/user/lib/annotations/'
 SAMPLE_PATH = '/media/storage2/data/medips_split/'
 OUT_PATH = '/media/storage2/analysis/profiles/'
 SAMPLES = []
-
+"""
 CELLS_SAMPLES = ['omp_hmedip.bed', 'ngn_hmedip.bed', 'icam_hmedip.bed',
                  'omp_medip.bed', 'ngn_medip.bed', 'icam_medip.bed']
 """
 CELLS_SAMPLES = ['omp_hmc_rlm', 'ngn_hmc_rlm', 'icam_hmc_rlm',
                  'omp_mc_rlm', 'ngn_mc_rlm', 'icam_mc_rlm']
-"""
+
 """
 D3A_SAMPLES = ['moe_wt_mc.bed', 'moe_d3a_mc.bed',
                'moe_wt_hmc.bed', 'moe_d3a_hmc.bed']
 """
-D3A_SAMPLES = ['moe_wt_mc_rlm', 'moe_d3a_mc_rlm',
-               'moe_wt_hmc_rlm', 'moe_d3a_hmc_rlm']
+D3A_SAMPLES = ['moe_wt_mc_rf', 'moe_d3a_mc_rf']
+               #'moe_wt_hmc_rlm', 'moe_d3a_hmc_rlm']
 
 class grouper:
     def __init__(self, anno_path, samples, window):

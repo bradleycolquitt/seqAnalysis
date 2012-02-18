@@ -18,10 +18,10 @@ CL.thresh <- function(de.file, FPKM=4, ratio=2, sig=TRUE, N=NULL, FDR=0) {
   de.data <- de.data[log(de.data$value_1, 2) >= FPKM | log(de.data$value_2, 2) >= FPKM, ]
   
   ## Select genes with absolute ratio above given value
-  de.data <- transform(de.data, log2.FC = log(exp(ln.fold_change.), 2))
-  de.data <- de.data[abs(de.data$log2.FC) >= ratio, ]
+  #de.data <- transform(de.data, log2.FC = log(exp(ln.fold_change.), 2))
+  de.data <- de.data[abs(de.data$log2.fold_change.) >= ratio, ]
   de.data$rel <- "down"
-  de.data$rel[de.data$log2.FC < 0] <- "up"
+  de.data$rel[de.data$log2.fold_change. < 0] <- "up"
 
   #de.data$name2 <- id2names(de.data$test_id)
   de.data$strand <- id2strand(de.data$test_id)
@@ -32,8 +32,8 @@ CL.thresh <- function(de.file, FPKM=4, ratio=2, sig=TRUE, N=NULL, FDR=0) {
   if (!is.null(N)) {
     de.data.sp <- split(de.data, de.data$rel)
     tops <- lapply(de.data.sp, function(x) {
-      q <- quantile(abs(x$log2.FC), (nrow(x) - N)/nrow(x))
-      x[abs(x$log2.FC) >= q,]
+      q <- quantile(abs(x$log2.fold_change.), (nrow(x) - N)/nrow(x))
+      x[abs(x$log2.fold_change.) >= q,]
     })
     de.data <- rbind(tops[[1]], tops[[2]]) 
   }
