@@ -15,6 +15,11 @@ features_toplot <- factor(1:10, labels=c("refgene_1to3kb_up_chr", "cgi_chr", "Re
                                   "phastCons30way_intergenic_merge500_thresh500_chr",
                                   "intergenic_sub_rmsk_chr"))
 
+feature_toplot2 <- factor(1:9, labels=c("refgene_1to3kb_up_chr", "cgi_chr", "Refgene_5_UTR_chr",
+                                  "Refgene_CDS_chr", "Refgene_3_UTR_chr", "Refgene_exons_chr",
+                                  "Refgene_intron_chr", "omp_mk4_intergenic_inter_cons.bed_chr",
+                                  "phastCons30way_intergenic_merge500_thresh500_chr"))
+
 makeFeatureMatrix <- function(feature, set="cells", value_type = "raw", write=TRUE) {
   if (set=="cells") {
     samples <- samples.cells
@@ -125,6 +130,7 @@ statCollect <- function(set, value_type, feature, transf=NULL) {
 #  print(ip)
   data_melt$celltype <- rep(celltype, each=nrow(data))
   data_melt$ip <- rep(ip, each=nrow(data) * 2)
+  if (!is.null(transf)) data_melt <- transform(data_melt, value=do.call(transf, list(value)))
   return(data_melt)
 }
 
@@ -247,6 +253,10 @@ iqr <- function(vals, bound="both") {
   } else if (bound=="lower") {
     return(stat[1])
   }
+}
+
+feature_wilcox <- function(test, ref) {
+  return(wilcox.test(test, ref)$p.value)
 }
 
 trimOutliers <- function(mat, trim) {

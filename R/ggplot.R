@@ -40,10 +40,12 @@ ggplot.box <- function(data, thresh) {
 #For TFO/OMP hmc/mc comparison, pointrange
 #tfo_iqr is output of statSummary.allIQR(set="tfo", value_type="unnorm/mean", transf="sqrt")
 #gg_tfo_iqr <- ggplot(tfo_iqr, aes(feature_fac, median, ymin=low, ymax=up, fill=celltype))
-#gg_tfo_iqr + geom_pointrange(aes(color=sample)) +
-#+   facet_grid(mod~celltype) + opts(strip.background=theme_blank(),
-#+   strip.text.x=theme_blank(), strip.text.y=theme_blank(),
-#+   axis.text.x=theme_blank()) + scale_color_manual(values=c("firebrick3", "forestgreen", "darkred","darkgreen"))
+gg_point <- function(gg) {
+gg + geom_pointrange(aes(color=variable)) +
+  facet_grid(ip~celltype) + opts(strip.background=theme_blank(),
+                                   strip.text.x=theme_blank(), strip.text.y=theme_blank(),
+                                   axis.text.x=theme_blank()) +
+                                     scale_color_manual(values=c("forestgreen", "darkgreen", "firebrick3", "darkred"))}
 #current pdf is "~/s2/analysis/features/plots/tfo_omp_hmc_mc_pointrange.pdf"
 
 #For cells hmc/mc split by d3a ko/wt loss of 5hmC BF greater 10
@@ -77,3 +79,9 @@ gg.box2 <- function(data) {
   gg.box <- ggplot(drop.levels(data[as.character(data$mk4.hmc)!="MID" & as.character(data$variable)!="ngn", ]), aes(factor(mk4.hmc), log(value,2), fill=factor(mk4.hmc)))
   gg.box + geom_boxplot(outlier.shape=NA) + facet_grid(.~variable)  + opts(strip.background=theme_blank(), strip.text.x=theme_blank())
 }
+
+#For OMP/ICAM RNA dotplot
+#RNA is ~/s2/analysis/rna/summaries/omp_ngn_icam_mrna_dup_nozero_log2
+#gg <- ggplot(rna, aes(icam, omp))
+#colorMan <- scale_color_manual(values=c("black", "#D55E00", "#0072B2"))
+#gg + geom_point(aes(color=factor(diff)), alpha=I(1/5)) + colorMan + opts(legend.position="none")
