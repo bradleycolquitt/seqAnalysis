@@ -41,8 +41,8 @@ ggplot.box <- function(data, thresh) {
 #tfo_iqr is output of statSummary.allIQR(set="tfo", value_type="unnorm/mean", transf="sqrt")
 #gg_tfo_iqr <- ggplot(tfo_iqr, aes(feature_fac, median, ymin=low, ymax=up, fill=celltype))
 gg_point <- function(gg) {
-gg + geom_pointrange(aes(color=variable)) +
-  facet_grid(ip~celltype) + opts(strip.background=theme_blank(),
+gg + geom_pointrange(aes(color=sample)) +
+  facet_grid(ip~geno) + opts(strip.background=theme_blank(),
                                    strip.text.x=theme_blank(), strip.text.y=theme_blank(),
                                    axis.text.x=theme_blank()) +
                                      scale_color_manual(values=c("forestgreen", "darkgreen", "firebrick3", "darkred"))}

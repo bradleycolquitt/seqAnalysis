@@ -20,6 +20,8 @@ feature_toplot2 <- factor(1:9, labels=c("refgene_1to3kb_up_chr", "cgi_chr", "Ref
                                   "Refgene_intron_chr", "omp_mk4_intergenic_inter_cons.bed_chr",
                                   "phastCons30way_intergenic_merge500_thresh500_chr"))
 
+featureScaleFill <- scale_fill_manual(values=brewer.pal(4, "Set1"))
+
 makeFeatureMatrix <- function(feature, set="cells", value_type = "raw", write=TRUE) {
   if (set=="cells") {
     samples <- samples.cells
@@ -33,14 +35,14 @@ makeFeatureMatrix <- function(feature, set="cells", value_type = "raw", write=TR
   }
  
  vals <- foreach (sample=samples, .combine="cbind") %dopar% {
-    data <- read.delim(paste(feature2.path, sample, feature, sep="/"), header=FALSE)
+    data <- read.delim(paste(feature_norm_path, sample, feature, sep="/"), header=FALSE)
     val <- data[, value_column]
     names(val) <- data[,4]
     return(val)
   }
   
  colnames(vals) <- samples
- if (write) write.table(vals, file=paste(feature2.path, "summaries", paste(set, feature, value_type, sep="_"), sep="/"),
+ if (write) write.table(vals, file=paste(feature_norm_path, "summaries", paste(set, feature, value_type, sep="_"), sep="/"),
                         quote=FALSE, sep="\t")
  return(vals)
 }
@@ -50,7 +52,7 @@ makeFeatureMatrix.all <- function(set="cells", value_type="raw") {
   files <- files[grep("chr", files)]
   for(file in files) {
     print(file)
-    if (file.exists(paste(feature2.path, "summaries", paste(set, file, value_type, sep="_"), sep="/"))) {
+    if (file.exists(paste(feature_norm_path, "summaries", paste(set, file, value_type, sep="_"), sep="/"))) {
       print("File exists")
       next
     }  
@@ -122,18 +124,16 @@ statCollect <- function(set, value_type, feature, transf=NULL) {
                            paste(set, feature, sep="_"), sep="/"),
                      header=TRUE, row.names=NULL)
   data_melt <- melt(data)
+  colnames(data_melt)[1] <- "obs"
   data_melt$feature <- feature
   labels <- sapply(colnames(data)[2:ncol(data)], str_split, "_")
   celltype <- unique(unlist(lapply(labels, function(x) x[1])))
   ip <- unique(unlist(lapply(labels, function(x) x[2])))
-#  print(celltype)
-#  print(ip)
   data_melt$celltype <- rep(celltype, each=nrow(data))
-  data_melt$ip <- rep(ip, each=nrow(data) * 2)
+  data_melt$ip <- rep(ip, each=nrow(data) * length(celltype))
   if (!is.null(transf)) data_melt <- transform(data_melt, value=do.call(transf, list(value)))
   return(data_melt)
 }
-
 
 statSummary <- function(set, value_type, feature, transf=NULL, FUN, ...) {
   data <- read.delim(paste(feature_norm_path, value_type, "summaries",
@@ -222,6 +222,22 @@ statSummary.allIQR <- function(set, value_type, transf=NULL, ...) {
   return(stat_ci)
 }
 
+## Normalize values of feature matrix by median value of specified feature
+statSummary.allNorm <- function(set, value_type, toplot=TRUE, transf=NULL, norm="intergenic_sub_rmsk_chr") {
+  data <- statSummary.all(set=set, value_type=value_type, toplot=toplot, action="collect", transf=transf)
+  data.norm <- data[data$feature == norm,]
+  data.norm.median <- ddply(data.norm, .(variable, celltype, ip), summarize, value.median=median(value))
+  norm_feature_name <- paste(norm, "median", sep="_")
+  data.norm.median <- data.frame(obs="X", variable=data.norm.median$variable, value=data.norm.median$value.median, feature=norm_feature_name, celltype=data.norm.median$celltype, ip=data.norm.median$ip)
+  data <- rbind(data, data.norm.median)
+  print("start norm")
+  data.split <- split(data, data$variable)
+  data.op <- lapply(data.split, function(x) {x$value = x$value/x$value[x$feature==norm_feature_name]
+                                           return(x)})
+  data <- do.call("rbind", data.op)
+  data <- ddply(data, .(variable, feature, celltype, ip), summarize, value.median=median(value), up=iqr(value, bound="upper"), low=iqr(value, bound="lower"))
+  return(data)
+}
 sem <- function(vals) {
   return(sd(vals)/(length(vals - 1)))
 }

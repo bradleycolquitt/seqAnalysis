@@ -29,7 +29,7 @@ class gaussian_kde_covfact(gaussian_kde):
     if self.covfact in ['sc', 'scotts']:
       return self.scotts_factor()
     if self.covfact in ['si', 'silverman']:
-      return self.silverman_factor()
+        return self.silverman_factor()
     elif self.covfact:
       return float(self.covfact)
 
