@@ -13,7 +13,7 @@ from string import *
 #bam_dir = "/media/storage2/data/rna/tophat"
 bam_dir = "/media/storage2/data/bam"
 wig_dir = "/media/storage2/data/wig/rpkm"
-tdf_dir = "/media/storage2/data/tdf"
+tdf_dir = "/media/storage2/data/tdf/rpkm"
 
 class windower:
     def __init__(self, bamname, wigname, window_size, extend, pe):
@@ -125,7 +125,7 @@ def main(argv):
         wi = windower(bam_path, wig_file, args.window, args.extend, args.paired_end)
         wi.window()
         wi.wigfile.close()
-        #wi.tdf()
+        wi.tdf()
         
             
     

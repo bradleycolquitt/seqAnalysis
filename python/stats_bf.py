@@ -157,16 +157,14 @@ def import_data(dname):
 def import_features(set, feature, samples, data_type):
   d = {}
   sample_name = ""
+  path = ""
   if data_type == "norm":
     path = SUMMARY_PATH_NORM
-    sample_name = "/".join([path, "_".join([set, feature])])
   elif data_type == "raw":
     path = SUMMARY_PATH_RAW
-    #sample_name = "/".join([path, "_".join([set, feature, data_type])])
-    sample_name = "/".join([path, "_".join([set, feature])])
-  #print sample_name
+  sample_name = "/".join([path, "_".join([set, feature])])
+  
   sample_data = open(sample_name)
-  #d = {}
   cnames = sample_data.readline().split()
 
   indices = [cnames.index(sample) + 1 for sample in samples]

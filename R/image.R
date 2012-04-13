@@ -89,6 +89,7 @@ MP.image <- function(vals) {
 }
 
 MP.heat <- function(data, density="none", range=NULL, average=NULL, fname=NULL) {
+  require(gplots)
   if (is.null(fname)) {
     x11()
   } else {

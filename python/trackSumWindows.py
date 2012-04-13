@@ -24,6 +24,11 @@ class trackProcess:
             self.norm_factor = 1.0 / curr_min 
         return np.round(np.multiply(input_array[:], self.norm_factor)).astype(np.int16)
     
+    def sum_windows(self, input_array, step):
+        ind = np.arange(0, len(input_array), step)
+        out_array = 
+        for i in ind:
+            
     def run(self):
         out_track_name = self.in_track._v_name
         print out_track_name

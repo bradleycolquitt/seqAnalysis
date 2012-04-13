@@ -8,15 +8,22 @@ import tables as tb
 import matplotlib.pyplot as mp
 import itertools as it
 
+
+        
+
 class normCompare:
     def __init__(self, h5_track_name, cpg_track_name):
         self.h5_track = tb.openFile(h5_track_name)
         self.cpg_track = tb.openFile(cpg_track_name)
+        #self.track_cals = 
         self.vals = {}
         self.n_bins = {}
         
-    def processSamples(self):
-        [self.collectValues(sample) for sample in self.h5_track.iterNodes("/")]
+    def processSamples(self, name):
+        if name == "all":
+            [self.collectValues(sample) for sample in self.h5_track.iterNodes("/")]
+        else:
+            self.collectValues(self.h5_track.getNode("/", name))
         
     def collectValues(self, sample):
         vals = self.vals
@@ -48,7 +55,7 @@ class normCompare:
 def main(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('--sample_data')
-    parser.add_arguemnt('--cpg_data')
+    parser.add_argument('--cpg_data')
     args = parser.parse_args()
     
     normObj = normCompare(args.sample_data, args.cpg_data)

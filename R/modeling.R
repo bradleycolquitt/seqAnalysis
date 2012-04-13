@@ -1,5 +1,5 @@
 library(MASS)
-
+registerDoMC(cores=4)
 fitNormal <- function(vals, plot=TRUE) {
   normfit <- fitdistr(vals, "normal")
   if (plot) {
@@ -25,11 +25,37 @@ fitCauchy <- function(vals, plot=TRUE) {
 fitT <- function(vals, plot=TRUE) {
    dfit <- fitdistr(vals, "t")
   if (plot) {
-    x <- seq(min(vals), max(vals), length=100)
-    y <- dt(x, dfit$estimate[1], dfit$estimate[2])
+    plotDistModel(vals, dfit)
+  }
+}
+
+fitPois <- function(vals, plot=TRUE) {
+  dfit <- fitdistr(vals, "poisson")
+  if (plot) {
+      step <- round((max(vals) - min(vals)) / 500)
+      x <- seq(min(vals), max(vals), by=step)
+    y <- dpois(x, dfit$estimate[1])
     plot(density(vals))
     lines(x, y, col="red")
   }
+}
+
+fitExp <- function(vals, plot=TRUE) {
+  dfit <- fitdistr(vals, "exponential")
+  if (plot) {
+      step <- round((max(vals) - min(vals)) / 500)
+      x <- seq(min(vals), max(vals), by=step)
+    y <- dexp(x, dfit$estimate[1])
+    plot(density(vals))
+    lines(x, y, col="red")
+  }
+}
+plotDistModel <- function(vals, dfit) {
+  step <- round((max(vals) - min(vals)) / 100)
+  x <- seq(min(vals), max(vals), by=step)
+  y <- dt(x, dfit$estimate[1], dfit$estimate[2])
+  plot(density(vals))
+  lines(x, y, col="red")
 }
 
 getNormQ <- function(fit.param, q) {
@@ -70,7 +96,6 @@ permutationTest <- function(x, y, N=1000) {
 
 ## Accepts two matrices, tests pairwise by column
 permutationTest.mat <- function(d1, d2, chunkSize=5, N=10000, adjust="BH") {
-  registerDoMC(cores=10)
   ncols <- ncol(d1)
   i <- 0
   out <- foreach(column=isplitIndices(ncols, chunkSize=chunkSize), .combine="c") %dopar% {
@@ -94,7 +119,7 @@ permutationTest.matList <- function(data, chunkSize=5, N=10000, adjust="BH") {
   comparisons_labels <- apply(comparisons, 2, paste, collapse="_")
   out <- apply(comparisons, 2, function(comparison) {
     print(comparison)
-    permutationTest.mat(data[[comparison[1]]], data[[comparison[2]]], chunkSize=chunkSize, N=N)
+    permutationTest.mat(data[[comparison[1]]], data[[comparison[2]]], chunkSize=chunkSize, N=N, adjust=adjust)
   })
   colnames(out) <- comparisons_labels
   return(out)
@@ -109,4 +134,52 @@ plotSigLine <- function(sig_values, thresh=0.05, step, yval, ...) {
   } else {
     print("No significant positions.")
   }  
+}
+
+KLdist <- function(x, y) {
+  out <- sum(x * log(x/y))
+  return(out)
+}
+
+JSdist <- function(x, y) {
+  xy_mean <- (x + y) / 2
+  out <- sqrt(KLdist(x, xy_mean) / 2 + KLdist(y, xy_mean) / 2)
+  return(out)
+}
+
+## Table factors
+## For each factor
+##     Sample N values from index vector
+##     Subtract sampled values
+## Compute median values for each sampled factor set
+## Compute fraction with given factor arrangement
+
+sampleMultipleFactors <- function(vals, blank.factor="NO") {
+  vals.table <- table(vals)
+  vals.table <- vals.table[names(vals.table)!=blank.factor]
+  curr.ind <- 1:length(vals)
+  new.vals <- c()
+  for (i in 1:length(vals.table)) {
+    ind.sample <- sample(curr.ind, vals.table[i])
+    names(ind.sample) <- rep(names(vals.table)[i], times=length(ind.sample))
+    new.vals <- c(new.vals, ind.sample)
+    curr.ind <- setdiff(curr.ind, ind.sample)
+  }
+  return(new.vals)
+}
+
+testPattern <- function(value, factor, blank.factor="NO", N=10000) {
+  out <- foreach(n=1:N, .combine="rbind") %dopar% {
+    new_values <- data.frame(value, as.character(blank.factor))
+    #print(new_values)
+    new_ind <- sampleMultipleFactors(factor, blank.factor=blank.factor)
+    print(new_ind)
+    print(names(new_ind))
+    new_values[new_ind,2] <- names(new_ind)
+    print(new_values)
+    summ <- tapply(new_values[,1], new_values[,2], median)
+    return(summ)
+  }
+  return(out)
+
 }

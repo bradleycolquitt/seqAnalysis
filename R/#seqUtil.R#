@@ -367,3 +367,5 @@ removeClusteredGenes <- function(bed, N) {
   id_mir <- grep("Mir", bed[,4])
   return(bed[-id_mir,])
 }
+
+get

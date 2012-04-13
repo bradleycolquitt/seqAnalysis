@@ -5,15 +5,17 @@ import argparse
 import pysam
 import bam2bed
 import sam
+import pdb
 from subprocess import Popen
 
-fastq_dir = "/media/storage2/data/fastq"
+fastq_dir = "/media/storage3/data/fastq"
 sam_dir = "/media/storage2/data/sam"
 bam_dir = "/media/storage2/data/bam"
 bed_dir = "/media/storage2/data/bed" 
 
 class bowtie_class:
     def __init__(self, date, sample, single_end, index):
+        #pdb.set_trace()
         self.date = date
         self.sample = sample.split("_")[1]
         self.single_end = single_end
@@ -22,10 +24,8 @@ class bowtie_class:
         self.input1 = ""
         self.input2 = ""
         if single_end:
-            self.input1 = "/".join([fastq_dir, date, "".join([sample, '.fastq'])])
-                                   
+            self.input1 = "/".join([fastq_dir, date, "".join([sample, '.fastq'])])                      
         else:
-            
             self.input1 = "/".join([fastq_dir, date, sample, index[0], 
                                     "_".join([self.sample, '1.fastq'])])
             self.input2 = "/".join([fastq_dir, date, sample, index[0], 
@@ -33,13 +33,15 @@ class bowtie_class:
             
             #self.input1 = "/".join([fastq_dir, date, sample, index[0], '1.fastq'])
             #self.input2 = "/".join([fastq_dir, date, sample, index[0], '2.fastq'])
-            
-        self.samfile = "/".join([sam_dir, self.date, "".join([self.input_prefix, ".sam"])])
-        self.errorlog = "/".join([sam_dir, self.date, "".join([self.input_prefix, "_log"])])
-        self.unmapped = "/".join([sam_dir, self.date, "".join([self.input_prefix, "_unaligned"])])
+        sam_date_dir = "/".join([sam_dir, self.date])
+        if not os.path.exists(sam_date_dir): os.mkdir(sam_date_dir)
+        self.samfile = "/".join([sam_date_dir, "".join([self.input_prefix, ".sam"])])
+        sam_date_log_dir = "/".join([sam_date_dir, "log"])
+        
+        if not os.path.exists(sam_date_log_dir): os.mkdir(sam_date_log_dir)
+        self.errorlog = "/".join([sam_date_log_dir, "".join([self.input_prefix, "_log"])])
+        #self.unmapped = "/".join([sam_date_dir, "".join([self.input_prefix, "_unaligned"])])
         self.bamfile = "/".join([bam_dir, self.date, "".join([self.input_prefix, ".bam"])])
-        sam_dir_date = "/".join([sam_dir, self.date])
-        if not os.path.exists(sam_dir_date): os.mkdir(sam_dir_date)
         
         bam_dir_date = "/".join([bam_dir, self.date])
         if not os.path.exists(bam_dir_date): os.mkdir(bam_dir_date)
@@ -47,11 +49,11 @@ class bowtie_class:
     def map(self):        
         if not os.path.exists(self.samfile):
             if not self.single_end:
-                cmd_args = ['bowtie', '-S', '-m', '5', '-p', '10', 
-                            '-I', '100', '-X', '1500', '--chunkmbs', '256', '--un', self.unmapped,
+                cmd_args = ['bowtie', '-S', '-p', '6', 
+                            '-I', '100', '-X', '1500', '--best', '--chunkmbs', '256',
                             'mm9', '-1', self.input1, '-2', self.input2, self.samfile]
             else:
-                cmd_args = ['bowtie', '-S', '-m', '1', '-p', '10', '--un', self.unmapped,
+                cmd_args = ['bowtie', '-S', '-p', '8',
                             '--chunkmbs', '256', 'mm9', self.input1, self.samfile]
             print "Mapping with bowtie: " + " ".join(cmd_args[1:])
             errorlog = open(self.errorlog, 'w')
@@ -70,6 +72,7 @@ class bowtie_class:
         
 def bowtie(date, sample, single_end, index):
     bowtie_obj = bowtie_class(date, sample, single_end, index)
+    #pdb.set_trace()
     bowtie_obj.map()
     bowtie_obj.sam2bam()
     

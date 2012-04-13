@@ -1,5 +1,5 @@
 source("~/src/seqAnalysis/R/paths.R")
-
+source("~/src/seqAnalysis/R/seqUtil.R")
 registerDoMC(cores=6)
 
 bugn <- c("dark blue", "dark green")
@@ -16,8 +16,10 @@ loadPhaseData <- function(path, filter=NULL, neg_filter=NULL) {
     if (length(ind) > 0 ) files <- files[ind]
   }
   if (!is.null(neg_filter)) {
-    ind <- grep(neg_filter, files)
-    if (length(ind) > 0) files <- files[-ind]
+    for(i in 1:length(neg_filter)) {
+      ind <- grep(neg_filter[i], files)
+      if (length(ind) > 0) files <- files[-ind]
+    }  
   }
   
   print(files)
@@ -51,6 +53,15 @@ phase.fft <- function(data, phase_ind) {
   pd_mag <- Mod(pd_fft)
   pd_mag <- pd_mag / min(pd_mag)
   return(pd_mag)
+}
+
+makeFFTmatrix <- function(data_path, filter=NULL, neg_filter=NULL, sort_ind=5, phase_ind=ind16) {
+  pd <- loadPhaseData(path=data_path, filter=filter, neg_filter=neg_filter)
+  if (sort_ind > 0) pd <- sortByName(pd, ind_pos=sort_ind)
+  pd <- normPhaseData(pd, phase_ind=phase_ind)
+  pd.fft <- lapply(pd, function(x) phase.fft(x, phase_ind=phase_ind))
+  pd.fft.mat <- do.call("rbind", pd.fft)
+  return(pd.fft.mat)
 }
 
 phase.plot.fft <- function(fft_data, step, ...) {

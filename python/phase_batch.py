@@ -6,7 +6,7 @@ import tables as tb
 from subprocess import Popen
 
 track_dir = '/media/storage2/data/h5'
-lib_dir = '/home/user/lib/for_nuc'
+lib_dir = '/media/storage2/lib/for_nuc'
 phase_dir = '/media/storage2/data/phasogram'
 
 def main(argv):

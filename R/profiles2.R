@@ -15,7 +15,7 @@ source("~/src/seqAnalysis/R/boot.R")
 source("~/src/seqAnalysis/R/plotUtil.R")
 source("~/src/MEDIPS/R/MEDIPS_mod.methylProfiling.R")
 
-registerDoMC(cores=10)
+registerDoMC(cores=4)
 
 col4 <- brewer.pal(4, "Spectral")
 col3 <- brewer.pal(3, "Dark2")
@@ -161,7 +161,7 @@ makeProfile2.allSamp <- function(anno, group2=NULL, data_type="unnorm/mean", rm.
       next 
     }
     print(sample)
-    return(makeProfile2(sample_path, sample, data_type=data_type, group2=group2,
+    return(makeProfile2(anno, sample, data_type=data_type, group2=group2,
                            rm.outliers=rm.outliers, sample_num=sample_num, write=write))
   }
 }
@@ -343,6 +343,11 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
     rows <- 2
     columns <- 1
     orient <- 2
+  } else if (set=="d3a_4") {
+    samples <- list(list("moe_d3a_wt_hmc_30M_rpkm", "moe_d3a_wt_hmc_rpkm", "moe_d3a_ko_hmc_rpkm"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
   } else if (set=="d3a_rlm") {
     samples <- list(list("moe_wt_hmc_rlm", "moe_d3a_hmc_rlm"), list("moe_wt_mc_rlm", "moe_d3a_mc_rlm"))
     rows <- 2
@@ -388,6 +393,11 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
     rows <- 2
     columns <- 1
     orient <- 2
+  } else if (set=="tfo_omp_rpkm") {
+    samples <- list(list("tfo_hmc_22M", "omp_hmc_rpkm"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
   } else if (set=="tfo_omp_d3a") {
     samples <- list(list("tfo_hmc", "omp_hmc", "moe_d3a_wt_hmc", "moe_d3a_ko_hmc"),
                     list("tfo_mc", "omp_mc", "moe_d3a_wt_mc", "moe_d3a_ko_mc"))
@@ -397,6 +407,18 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
   } else if (set=="nuc") {
     samples <- list(list("omp_nuc_0123", "icam_nuc_01234"))
     rows <- 1
+    columns <- 1
+    orient <- 2
+  } else if (set=="tt3") {
+    samples <- list(list("o.tt3.1_hmc_rpkm", "o.tt3.2_hmc_rpkm"),
+                    list("o.tt3.1_mc_rpkm", "o.tt3.2_mc_rpkm"))
+    rows <- 2
+    columns <- 1
+    orient <- 2
+  } else if (set=="tt3_2") {
+    samples <- list(list("omp_hmc_rpkm", "o.tt3.2_hmc_rpkm"),
+                    list("omp_mc_rpkm", "o.tt3.2_mc_rpkm"))
+    rows <- 2
     columns <- 1
     orient <- 2
   }

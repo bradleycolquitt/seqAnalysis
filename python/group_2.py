@@ -16,7 +16,7 @@ from scipy import stats
 from string import atoi, atof
 from multiprocessing import Pool
 
-ANNO_PATH = '/home/user/lib/annotations_hires'
+ANNO_PATH = '/media//lib/annotations_hires'
 FEATURE_PATH = '/home/user/lib/features_general'
 SAMPLE_PATH = '/media/storage2/data/h5'
 ANNO_OUT_PATH = '/media/storage2/analysis/profiles/norm'
@@ -29,17 +29,20 @@ class tab:
         self.fun = fun
         self._type = type
         self.split_anno = split_anno
+        self.window_size = 0
         self.out_path = ""
         if type == "anno":
             self.out_path = "/".join([ANNO_OUT_PATH, data_type, fun, os.path.basename(anno)])
         elif type == "feature":
-            self.out_path = "/".join([FEATURE_OUT_PATH, data_type, fun, os.path.basename(anno)])
-        if split_anno:
-            self.out_path = self.out_path + "_split"
+            if not split_anno:
+                self.out_path = "/".join([FEATURE_OUT_PATH, data_type, fun, os.path.basename(anno)])
+            else:
+                self.out_path = "/".join([FEATURE_OUT_PATH, data_type, "split", os.path.basename(anno)])    
         if not os.path.exists(self.out_path): os.makedirs(self.out_path)
         
     def run(self):
         anno = self.anno
+        #pdb.set_trace()
         for sample in self.h5.iterNodes("/"):
             if os.path.exists(self.out_path + "/" + sample._v_name):
                 print "File exists. Skipping..."
@@ -82,14 +85,14 @@ class tab:
         sample_data = sample._f_getChild(chr_tbp)
         anno_out_path = tmp_path + "/" + chr_tbp
         anno_out = open(anno_out_path, 'w')
-        window_size = int(sample_data.getAttr('Resolution'))
+        self.window_size = int(sample_data.getAttr('Resolution'))
         anno_line = anno_data.readline().strip().split()
         #print fun    
         for line in anno_data:
             line = line.strip()
             sline = line.split()
-            start = atoi(sline[1]) / window_size
-            end = atoi(sline[2]) / window_size
+            start = atoi(sline[1]) / self.window_size
+            end = atoi(sline[2]) / self.window_size
             vals = sample_data[start:end]
             if len(vals) > 0:
                 #pdb.set_trace()
@@ -121,7 +124,10 @@ class tab:
             
     def file_combine(self, tmp_path, sample_name):
         anno = self.anno
-        out = open("/".join([self.out_path, sample_name]), 'w')
+        if self.split_anno:
+            out = open("/".join([self.out_path, sample_name + "_" + str(self.window_size)]), 'w')
+        else:
+            out = open("/".join([self.out_path, sample_name]), 'w')
         files_tmp = os.listdir(tmp_path)
         for file_tmp in files_tmp:
             a = open(tmp_path + "/" + file_tmp)
@@ -183,6 +189,7 @@ def worker(anno, sample, chrs_tbp, tmp_path, fun):
     
 def tab_worker(anno, h5, fun, type, data_type, split_anno):
     print anno
+    #db.set_trace()
     obj = tab(anno, h5, fun, type, data_type, split_anno)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -223,7 +230,8 @@ def main(argv):
         features = [FEATURE_PATH + "/" + f for f in os.listdir(FEATURE_PATH) if re.search("chr", f)]
         #print features
         [tab_worker(feature, h5, fun, "feature", args.data_type, args.split_anno) for feature in features]
-    elif args.annotation:       
+    elif args.annotation:
+        #pdb.set_trace()
         tab_worker(ANNO_PATH + "/" + args.annotation, h5, fun, "anno", args.data_type, args.split_anno)
         #obj = tab(ANNO_PATH + "/" + args.annotation, h5, fun, "anno", args.data_type, args.split_anno)
         

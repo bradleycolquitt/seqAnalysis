@@ -1,4 +1,5 @@
 
+
 library(itertools)
 library(foreach)
 library(boot)
@@ -12,40 +13,15 @@ library(gplots)
 library(plyr)
 library(reshape)
 library(ggplot2)
+library(proxy)
+library(amap)
 source("~/src/R/boot.R")
 source("~/src/R/plotUtil.R")
+source("~/src/seqAnalysis/R/paths.R")
 source("~/src/MEDIPS/R/MEDIPS_mod.methylProfiling.R")
-registerDoMC(cores=12)
+registerDoMC(cores=4)
 
-mp.classes <- c('character','character', rep('numeric', times=18))
-samples.hmc <- c("omp_hmedip_ngn_hmedip", "omp_hmedip_icam_hmedip", "ngn_hmedip_icam_hmedip")
-samples.mc <- c("omp_medip_ngn_medip", "omp_medip_icam_medip", "ngn_medip_icam_medip")
-#samples.hmc <- c("moe_wt_hmc_moe_dnmt3a_hmc")
-#samples.mc <- c("moe_wt_mc_moe_dnmt3a_mc")
-samples.sc <- c("cv_hmc_cd_hmc", "iv_hmc_id_hmc")
-samples.ac3 <- c("moe_hmedip_moe_ac3_hmedip")
-samples.d3a <- c("moe_wt_hmc_moe_d3a_hmc", "moe_wt_mc_moe_d3a_mc")
-feature.path <- "~/lib/features_general"
-feature.path.moe <- "~/lib/features_moe"
-mp.path <- "~/storage/analysis/mprofiles/features/norm"
-cluster.path <- "~/s2/analysis/cluster"
-plot.path <- "~/storage/analysis/mprofiles/features/plots"
-gene.features <- c("refgene_10to20kb_upstream", "refgene_2to10kb_upstream",
-                   "refgene_1to3kb_up", "Refgene_1kb_up", "cgi", "Refgene_5_UTR",
-                   "Refgene_exons",
-                   "Refgene_intron", "Refgene_CDS", "Refgene_3_UTR", "Refgene_1kb_down",
-                   "refgene_2to10kb_downstream", "refgene_10to20kb_downstream",
-                   "intergenic_sub_rmsk")
-moe.features <- c(gene.features, "MACS_DNaseHS_bed4.bed", "ngn_mk4_intergenic_inter_cons.bed4",
-                  "omp_mk4_intergenic_inter_cons.bed4")
-rmsk.features <- c("rmsk_DNA", "rmsk_LINE", "rmsk_LTR", "rmsk_rRNA",
-                   "rmsk_SINE", "rmsk_snRNA")
-
-
-cell.names <- c("icam", "ngn", "omp")
-dip.names <- c("5hmC", "5mC")
-
-mean.cols <- c(brewer.pal(9, "Blues")[c(5,7,9)], brewer.pal(9, "Reds")[c(5,7,9)])
+#mean.cols <- c(brewer.pal(9, "Blues")[c(5,7,9)], brewer.pal(9, "Reds")[c(5,7,9)])
 
 MP.feature <- function(data1, data2=NULL, feature=NULL, select=2, transf=FALSE, write=FALSE) {
   feature.data <- read.delim(feature,
@@ -250,7 +226,8 @@ MP.heatmap.2 <- function(vals, rowv=NULL, trim_dist=FALSE, lab=NULL, fname=NULL,
   if (trim_dist) {
     distfun <- distfun_trim
   } else {
-    distfun <- dist
+    distfun <- function(x) {dist(x, method="Euclidean")}
+    #distfun <- dist
   }
   if (!is.null(rowv)) {
     print("rowv")
@@ -267,9 +244,9 @@ MP.heatmap.2 <- function(vals, rowv=NULL, trim_dist=FALSE, lab=NULL, fname=NULL,
             #labCol=colnames(vals),
             labCol=lab,
             labRow="",
-            density.info="none",
+            density.info="density",
             keysize=.75,
-            margins=c(10,10), ...)
+            margins=c(5,5), ...)
   if(!is.null(fname)) {dev.off()}        
 }
 
@@ -350,3 +327,4 @@ MP.clusterAMS.hopach <- function(vals) {
   vals.obj <- hopach(vals, dmat=vals.dist)
   return(list(vals.dist,vals.obj))
 }
+

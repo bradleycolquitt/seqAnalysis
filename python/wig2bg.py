@@ -3,7 +3,7 @@
 
 # Input fixedStep wig
 # Output bed file with: chr start stop 0[dummy name] value[from wig] "+"[dumm strand]
-
+# 
 import re, os, shutil, time, sys
 from string import *
 from optparse import OptionParser
@@ -15,6 +15,7 @@ def main(argv):
 
 	parser.add_option("-i", "--input", action="store", type="string", dest="input", metavar="<str>")
 	parser.add_option("-o",action="store",type="string",dest="output",metavar="<str>")
+	parser.add_option("-s", action="store", type="int", dest="style")
 	
 	(opt, args) = parser.parse_args(argv)
 	
@@ -26,7 +27,7 @@ def main(argv):
 	curr_end = 0
 	step = 0
 	step_pattern = re.compile("Step")
-	
+	out_line = ""
 	for line in infile:
 		if step_pattern.search(line):
 			sline = line.split()
@@ -37,7 +38,14 @@ def main(argv):
 			print chrom
 			continue
 		value = line.strip()
-		out_line = "\t".join([chrom, str(curr_start), str(curr_end), "0", value, "+"]) + "\n"
+		if opt.style == 4 and float(value) == 0.0:
+			curr_start = curr_start + step
+			curr_end = curr_start + step - 1
+			continue
+		if opt.style == 6:
+			out_line = "\t".join([chrom, str(curr_start), str(curr_end), "0", value, "+"]) + "\n"
+		elif opt.style == 4:
+			out_line = "\t".join([chrom, str(curr_start), str(curr_end), value]) + "\n"
 		outfile.write(out_line)
 		curr_start = curr_start + step
 		curr_end = curr_start + step - 1

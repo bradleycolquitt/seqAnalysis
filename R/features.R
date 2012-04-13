@@ -9,19 +9,40 @@ registerDoMC(cores=10)
 feature.path <- "~/lib/features_general"
 feature_norm_path <- "~/s2/analysis/features/norm"
 
-features_toplot <- factor(1:10, labels=c("refgene_1to3kb_up_chr", "cgi_chr", "Refgene_5_UTR_chr",
+features_toplot <- factor(1:21, labels=c("refgene_1to3kb_up_chr", "cgi_chr", "Refgene_5_UTR_chr",
                                   "Refgene_CDS_chr", "Refgene_3_UTR_chr", "Refgene_exons_chr",
                                   "Refgene_intron_chr", "omp_mk4_intergenic_inter_cons.bed_chr",
                                   "phastCons30way_intergenic_merge500_thresh500_chr",
+                                  "rmsk_LTR_chr", "rmsk_RNA_chr", "rmsk_rRNA_chr", "rmsk_snRNA_chr",
+                                  "rmsk_DNA_chr",
+                                  "rmsk_LINE_chr", "rmsk_SINE_chr", "rmsk_Satellite_chr", "rmsk_tRNA_chr",
+                                  "rmsk_srpRNA_chr", "rmsk_scRNA_chr",
                                   "intergenic_sub_rmsk_chr"))
+
+features_rmsk <- factor(1:11, labels=c("rmsk_LTR_chr", "rmsk_RNA_chr", "rmsk_rRNA_chr", "rmsk_snRNA", "rmsk_DNA_chr",
+                                  "rmsk_LINE_chr", "rmsk_SINE_chr", "rmsk_Satellite_chr", "rmsk_tRNA_chr",
+                                  "rmsk_srpRNA_chr", "rmsk_scRNA_chr"))
+
+features_toplot_nochr <- factor(1:12, labels=c("refgene_1to3kb_up", "cgi", "Refgene_5_UTR",
+                                  "Refgene_CDS", "Refgene_3_UTR", 
+                                  "Refgene_intron",
+                                  "phastCons30way_intergenic_sorted_merge500_thresh500_inter_omp_h3k4me1_default.bed",
+                                  "phastCons30way_intergenic_merge500_thresh500",
+                                  "rmsk_LINE", "rmsk_SINE", "rmsk_Satellite",
+                                  "intergenic_sub_rmsk"))
 
 feature_toplot2 <- factor(1:9, labels=c("refgene_1to3kb_up_chr", "cgi_chr", "Refgene_5_UTR_chr",
                                   "Refgene_CDS_chr", "Refgene_3_UTR_chr", "Refgene_exons_chr",
                                   "Refgene_intron_chr", "omp_mk4_intergenic_inter_cons.bed_chr",
                                   "phastCons30way_intergenic_merge500_thresh500_chr"))
 
-featureScaleFill <- scale_fill_manual(values=brewer.pal(4, "Set1"))
+featureScaleFill5 <- scale_fill_manual(values=brewer.pal(5, "Set1"))
+featureScaleFill4 <- scale_fill_manual(values=brewer.pal(4, "Set1"))
+featureScaleFill3 <- scale_fill_manual(values=brewer.pal(3, "Set1"))
 
+
+featureClasses <- factor(1:4, labels=c("Upstream", "Exons", "Transcript", "Intergenic"))
+featureClasses5 <- factor(1:5, labels=c("Upstream", "Exons", "Transcript", "Intergenic", "Repeat"))
 makeFeatureMatrix <- function(feature, set="cells", value_type = "raw", write=TRUE) {
   if (set=="cells") {
     samples <- samples.cells
@@ -61,11 +82,15 @@ makeFeatureMatrix.all <- function(set="cells", value_type="raw") {
 }
 
 ## Make summaries
-makeFeatureMatrix2 <- function(feature, set = "all", value_type, write=TRUE) {
+makeFeatureMatrix2 <- function(feature, set = "all", value_type, transf=NULL, write=TRUE) {
   if (set=="cells_norm" | set=="cells") {
     samples <- samples.cells_norm
   } else if (set=="unnorm") {
     samples <- samples.cells_raw
+  } else if (set=="cells_rpkm") {
+    samples <- samples.cells_rpkm
+  } else if (set=="cells_noM") {
+    samples <- samples.cells_noM
   } else if (set=="medips_rf_1" | set=="medips_rf_2") {
     samples <- samples.medips_rf
   } else if (set=="rpm_avg_2") {
@@ -82,27 +107,31 @@ makeFeatureMatrix2 <- function(feature, set = "all", value_type, write=TRUE) {
   } else if (set=="all") {
     samples <- list.files(paste(feature_norm_path, feature, sep="/")) 
   } else if (set=="d3a_mrna") {
-    samples <- c("moe_d3a_wt_mrna_rpkm", "moe_d3a_ko_mrna_rpkmc")
-  }
+    samples <- c("moe_d3a_wt_mrna_rpkm", "moe_d3a_ko_mrna_rpkm")
+  } else if (set=="tt3") {
+    samples <- c("omp_hmc_rpkm", "o.tt3.1_hmc_rpkm", "o.tt3.2_hmc_rpkm", "ngn_hmc_rpkm", "icam_hmc_rpkm",
+                 "omp_mc_rpkm", "o.tt3.1_mc_rpkm", "o.tt3.2_mc_rpkm", "ngn_mc_rpkm", "icam_mc_rpkm")
+  } 
+  
   print(samples)
   vals <- foreach (sample=samples, .combine="cbind") %dopar% {
     print(paste(feature_norm_path, value_type, feature, sample, sep="/"))
     data <- read.delim(paste(feature_norm_path, value_type, feature, sample, sep="/"), header=FALSE)
-    val <- data[,5]
+    val <- data[,ncol(data)]
+    if (!is.null(transf)) val <- do.call(transf, list(val))
     names(val) <- data[,4]
     return(val)
   }
   colnames(vals) <- samples
   out_path <- paste(feature_norm_path, value_type, "summaries", sep="/")
   if (!file.exists(out_path)) dir.create(out_path)
-  
-  if (write) write.table(vals, file=paste(feature_norm_path, value_type, "summaries",
-                                 paste(set, feature, sep="_"), sep="/"),
-                        quote=FALSE, sep="\t")
+  fname <- paste(feature_norm_path, value_type, "summaries", paste(set, feature, sep="_"), sep="/")
+  if (!is.null(transf)) fname <- paste(fname, transf, sep="_")
+  if (write) write.table(vals, file=fname, quote=FALSE, sep="\t")
   return(vals)
 }
 
-makeFeatureMatrix2.all <- function(set, value_type) {
+makeFeatureMatrix2.all <- function(set, value_type, transf=NULL) {
   files <- list.files(feature.path)
   files <- files[grep("chr", files)]
   for(file in files) {
@@ -111,7 +140,7 @@ makeFeatureMatrix2.all <- function(set, value_type) {
       print("File exists")
       next
     }  
-    a <- makeFeatureMatrix2(file, set=set, value_type=value_type, write=TRUE)
+    a <- makeFeatureMatrix2(file, set=set, value_type=value_type, transf=transf, write=TRUE)
   }
 }
 
@@ -403,3 +432,8 @@ compareFeatures <- function(feature, sample_list, value_type="raw") {
   sem <- sd(vals)/sqrt(length(vals) - 1)
   return(sem)
 }
+
+#readBFsave <- function(bf, data_type="unnorm/mean", cutoff=3) {
+#  data <- read.delim(paste(feature_norm_path, data_type, "bf", bf, sep="/", header=FALSE
+#}
+

@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-import sys, os
+import sys, os, re
 import argparse
 import bowtie
 import datetime
@@ -15,30 +15,31 @@ def main(argv):
     args = parser.parse_args()
     manifest = open(args.manifest)
     now = datetime.datetime.now()
-    errorlog = open("bowtie_log" + "_" + str(now.year) + str(now.month) +
-                    str(now.day) + "_" + str(now.hour) + str(now.minute), 'w')
+    errorlog = open("logs/bowtie_log" + "_" + str(now.year) + str(now.month) +
+                    str(now.day), 'wa')
     
     for line in manifest:
-        line = line.split()
-        date = line[0]  ## date of sequencing
-        lane = line[1]  ## lane of flow cell
-        single_end = line[2] ## single or paired end
-        indices_names = line[3:] ## list of indices to process
-        indices = []
+        if not re.search("#", line):
+            line = line.split()
+            date = line[0]  ## date of sequencing
+            lane = line[1]  ## lane of flow cell
+            single_end = line[2] ## single or paired end
+            indices_names = line[3:] ## list of indices to process
+            indices = []
+            
+            for index_name in indices_names:
+                index_name = index_name.split("-")
+                indices.append((index_name[0], index_name[1]))
         
-        for index_name in indices_names:
-            index_name = index_name.split("-")
-            indices.append((index_name[0], index_name[1]))
-    
-        for index in indices:
-            print line
-            if single_end == "PE": single_end = ""
-            try:
-                bowtie.bowtie(date, lane, bool(single_end), index)
-            except:
-                errorlog.write(str(sys.exc_info()[0]) + " ".join([str(index[0]), index[1]]) + "\n")
-                continue
-        errorlog.close()   
+            for index in indices:
+                print line
+                if single_end == "PE": single_end = ""
+                try:
+                    bowtie.bowtie(date, lane, bool(single_end), index)
+                except:
+                    errorlog.write(str(sys.exc_info()[0]) + " ".join([str(index[0]), index[1]]) + "\n")
+                    continue
+    errorlog.close()   
 
 if __name__ == "__main__":
     main(sys.argv)

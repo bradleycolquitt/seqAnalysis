@@ -85,3 +85,19 @@ gg.box2 <- function(data) {
 #gg <- ggplot(rna, aes(icam, omp))
 #colorMan <- scale_color_manual(values=c("black", "#D55E00", "#0072B2"))
 #gg + geom_point(aes(color=factor(diff)), alpha=I(1/5)) + colorMan + opts(legend.position="none")
+
+#For feature barplots
+#tfo.2 object at ~/s2/analysis/features/norm/unnorm/mean/summaries/tfo_feature_toplot_norm_intergenic_sub_rmsk_sqrt_obj
+#gg.tfo.2 <- ggplot(droplevels(tfo.2[tfo.2$ip=="hmc",]), aes(celltype, value.median, ymax=up, ymin=low, fill=class))
+                                        #gg.tfo.2 + geom_bar(position="dodge") + geom_linerange(position="dodge")  + facet_grid(ip~feature) + featureScaleFill
+
+#For TT3 refgene plot split by omp_hmc/ott3_2_hmc Bayes Factor GT/LT 3
+#tt3.melt object at ~/s2/analysis/features/norm/rpkm/mean/summaries/tt3_omp_ngn_icam_hmc_mc_refgene_chr_tt3_omp_2_hmc_bf.Rdata
+#gg.tt3 <- ggplot(droplevels(tt3.melt[tt3.melt$sample!="ott3.1",]), aes(sample, value.sqrt))
+#gg.tt3 + geom_boxplot(aes(fill=omp.2.hmc), outlier.shape=NA) + facet_grid(ip~omp.2.hmc) + coord_cartesian(ylim=c(0, 2.2)) + featureScaleFill3
+
+#For TT3 exon histograms
+#ex.in.m.trim.nd at ~/s2/analysis/features/norm/unnorm/mean/bf/tt3_omp_hmc_2_hmc_refgene_noclust10_sqrt_bf10_exon_counts_nodup.Rdata
+#gg.ex <- ggplot(droplevels(ex.in.m.trim.nd[ex.in.m.trim.nd$bf10!="GT",]), aes(value, y=..density..))
+#gg.ex + geom_histogram(aes(fill=bf10), color="black", binwidth=1) + facet_grid(bf10~variable) + coord_cartesian(xlim=c(0, 50)) + scale_fill_manual(values=col2)
+#pdf(file="~/s2/analysis/features/plots/tt3_omp_hmc_2_hmc_refgene_noclust10_sqrt_bf10_exon_counts_nodup.pdf", 5, 5)

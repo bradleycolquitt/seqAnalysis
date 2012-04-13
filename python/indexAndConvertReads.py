@@ -9,8 +9,8 @@ import periodToN
 from subprocess import Popen
 from multiprocessing import Pool
 
-qseq_dir = '/media/storage2/data/qseq'
-fastq_dir = '/media/storage2/data/fastq'
+qseq_dir = '/media/storage3/data/qseq'
+fastq_dir = '/media/storage3/data/fastq'
 
 class index_class:
     def __init__(self, date, sample, se):
