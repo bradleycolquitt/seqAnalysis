@@ -63,19 +63,21 @@ getNormQ <- function(fit.param, q) {
   return(d)
 }
 
-permutationTest <- function(x, y, N=1000) {
+permutationTest <- function(x, y, N=1000, sub=0.5, FUN="mean") {
   x_y <- c(x, y)
   t_obs <- abs(mean(x, na.rm=TRUE) - mean(y, na.rm=TRUE))
   t_perm <- vector("numeric", N)
+
+  sample_size <- length(x_y) * sub
   
   for (i in 1:N) {
-    ind <- sample(1:length(x_y), length(x_y))
+    ind <- sample(1:length(x_y), sample_size)
     #x_y_perm <- x_y[ind]
-    half_1 <- 1:(length(x_y)/2)
+    half_1 <- 1:(sample_size/2)
     #print(half_1)
-    half_2 <- (length(x_y)/2 + 1):length(x_y)
+    half_2 <- (sample_size/2 + 1):sample_size
     #print(half_2)
-    t_perm[i] <- abs(mean(x_y[ind[half_1]], na.rm=TRUE) - mean(x_y[ind[half_2]], na.rm=TRUE))
+    t_perm[i] <- abs(do.call(FUN, list(x_y[ind[half_1]], na.rm=TRUE)) - do.call(FUN, list(x_y[ind[half_2]], na.rm=TRUE)))
     #stop
   }
   #print(t_obs)
@@ -181,5 +183,29 @@ testPattern <- function(value, factor, blank.factor="NO", N=10000) {
     return(summ)
   }
   return(out)
+}
 
+testPeakIntersects <- function(summary) {
+  GENOME_SIZE <- 2E9
+  peak_basename <- str_split(summary, "/")
+  print(peak_basename)
+  peak_basename <- peak_basename[[1]][length(peak_basename[[1]]) - 1]
+  data <- read.delim(summary)
+  #return(data)
+  
+  pvalues <- apply(data, 1, function(feature) {
+    #print(feature)
+    obs <- as.numeric(feature[5])
+    total <- as.numeric(feature[2])
+    feature_fraction <- as.numeric(feature[4]) / GENOME_SIZE
+                                        #return(feature_fraction)
+    exp <- round(total * feature_fraction)
+    contig_table <- matrix(c(obs, total - obs, exp, total - exp), ncol=2)
+    chisq.test(contig_table)$p.value})
+  names(pvalues) <- data$feature
+  qvalues <- p.adjust(pvalues, method="BH")
+  out <- data.frame(chisq.pvalue=unlist(pvalues), chisq.BH=qvalues)
+  out_path <- paste("~/s2/data/homer/peaks/intersections/", peak_basename, "stats", "chisq", sep="/")
+  write.table(out, file=out_path, quote=FALSE, sep="\t")
+  return(out)            
 }

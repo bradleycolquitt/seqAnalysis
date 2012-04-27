@@ -2,7 +2,7 @@
 
 import sys, os, re
 import argparse
-import bowtie
+import bowtie2
 import datetime
 
 ## Take manifest file of fastq files to map with bowtie
@@ -36,7 +36,7 @@ def main(argv):
                 print line
                 if single_end == "PE": single_end = ""
                 try:
-                    bowtie.bowtie(date, lane, bool(single_end), index)
+                    bowtie2.bowtie(date, lane, bool(single_end), index)
                 except:
                     errorlog.write(str(sys.exc_info()[0]) + " ".join([str(index[0]), index[1]]) + "\n")
                     continue

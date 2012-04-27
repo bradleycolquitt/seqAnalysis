@@ -101,3 +101,10 @@ gg.box2 <- function(data) {
 #gg.ex <- ggplot(droplevels(ex.in.m.trim.nd[ex.in.m.trim.nd$bf10!="GT",]), aes(value, y=..density..))
 #gg.ex + geom_histogram(aes(fill=bf10), color="black", binwidth=1) + facet_grid(bf10~variable) + coord_cartesian(xlim=c(0, 50)) + scale_fill_manual(values=col2)
 #pdf(file="~/s2/analysis/features/plots/tt3_omp_hmc_2_hmc_refgene_noclust10_sqrt_bf10_exon_counts_nodup.pdf", 5, 5)
+
+#For feature-peak intersects
+#cell is "~/s2/data/homer/peaks/intersections/Rdata/cells_hmc_pairwise_peaks_feature_intersects_F3.Rdata"
+#theme_set(theme_bw())
+#pdf(file="~/s2/analysis/features/plots/feature_peaks_intersects_cells_hmc_pairwise_F3.pdf", 6, 8)
+#cell.gg <- ggplot(cell, aes(peak_set.fac, internal_norm, fill=feature.factor))
+#cell.gg + geom_bar() + scale_fill_hue(l=40, labels=features_merge_toplot_short)  + opts(legend.title=theme_blank())

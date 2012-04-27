@@ -2,7 +2,7 @@
 
 import sys, os
 import argparse
-import tophat
+import tophat2
 
 def main(argv):
     parser = argparse.ArgumentParser()
@@ -10,7 +10,7 @@ def main(argv):
     args = parser.parse_args()
     manifest = open(args.manifest)
     for line in manifest:
-        print line
+        #print line
         line = line.split()
         date = line[0]
         sample = line[1]
@@ -26,13 +26,13 @@ def main(argv):
             print index_name
             index_name = index_name.split("-")
             indices.append((index_name[0], index_name[1]))
-        errorlog = open("tophat_log", 'a')
+        errorlog = open("tophat_log", 'w')
         for index in indices:
-            print index
+            #print index
             #line_args = ['-d', date, '-s', sample, '-i', index]
             if single_end == "PE": single_end = ""
             try:
-                tophat.tophat(date, sample, bool(single_end), index, mean, sd, gtf, library_type, species)
+                tophat2.tophat(date, sample, bool(single_end), index, mean, sd, gtf, library_type, species)
             except:
                 errorlog.write(str(sys.exc_info()[0]) + " ".join([str(index[0]), index[1]]) + "\n")
                 raise

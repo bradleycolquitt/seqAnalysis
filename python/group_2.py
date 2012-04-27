@@ -16,7 +16,7 @@ from scipy import stats
 from string import atoi, atof
 from multiprocessing import Pool
 
-ANNO_PATH = '/media//lib/annotations_hires'
+ANNO_PATH = '/media/storage2/lib/annotations_hires'
 FEATURE_PATH = '/home/user/lib/features_general'
 SAMPLE_PATH = '/media/storage2/data/h5'
 ANNO_OUT_PATH = '/media/storage2/analysis/profiles/norm'
@@ -226,7 +226,7 @@ def main(argv):
         #pool.close()
         #pool.join()
     elif args.feature_set:
-        print args.split_anno
+        
         features = [FEATURE_PATH + "/" + f for f in os.listdir(FEATURE_PATH) if re.search("chr", f)]
         #print features
         [tab_worker(feature, h5, fun, "feature", args.data_type, args.split_anno) for feature in features]

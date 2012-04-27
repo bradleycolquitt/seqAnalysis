@@ -5,7 +5,7 @@ import argparse
 from subprocess import Popen
 
 feature_path = "/home/user/lib/features_trim"
-out_path = "/media/storage2/data/homer/peaks/intersections"
+out_path = "/media/storage2/data/homer/peaks/coverage"
 
 def main(argv):
     

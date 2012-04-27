@@ -1,7 +1,12 @@
 library(BSgenome)
-library(BSgenome.Mmusculus.UCSC.mm9)
+#library(BSgenome.Mmusculus.UCSC.mm9)
 library(foreach)
 library(itertools)
+library(doMC)
+
+registerDoMC(cores=6)
+
+bedClasses <- c("character", "numeric", "numeric", "character", "numeric", "character")
 
 shiftBedPositions <- function(bed, shift, pos="start", direction="up") {
   
@@ -60,6 +65,40 @@ batchShift <- function(path, shift, pos="start", direction="up") {
     bed_out <- shiftBedPositions(bed, shift=shift, pos=pos, direction=direction)
     write.table(bed_out, file=paste(path, paste(file, pos, direction, shift, sep="_"), sep="/"),
                 quote=FALSE, sep="\t", row.names=FALSE, col.names=FALSE)
+  }
+}
+
+randomizeBed <- function(bed, name) {
+  data <- read.delim(bed, header=F, colClasses=bedClasses)
+
+  #for each bed record
+  #choose chr based with probability based on chromosome size fraction
+  #choose random position within chromosome
+  #define new window based on size of old window
+  #write out
+  chr_lengths <- read.delim("/seq/lib/mm9_chromosome_sizes", header=F, colClasses=c("character", "numeric", "numeric"))
+  chr_lengths <- chr_lengths[-nrow(chr_lengths),]
+  #print(chr_lengths)
+  out <- foreach (record=isplitRows(data, chunks=6), .combine="rbind") %dopar% {
+    subout <- foreach (i=isplitRows(record, chunkSize=1), .combine="rbind") %do% {
+      chr <- sample(chr_lengths[,1], 1, prob=chr_lengths[,3])
+      start <- sample(1:chr_lengths[grep(chr, chr_lengths[,1]), 3], 1)
+      span <- i[,3] - i[,2]    
+      end <- start + span
+      return(c(chr, start, end, i[,4], i[,5], i[,6]))
+    }  
+    return(subout)
+  }   
+  output_dir <- paste(bed, "random", sep="_")
+  dir.create(output_dir, showWarnings=FALSE)
+  write.table(out, file=paste(output_dir, name, sep="/"), quote=F, sep="\t", row.names=F, col.names=F)
+}
+
+randomizeBed.batch <- function(bed, N=100) {
+  pb <- txtProgressBar(min = 0, max = length(seq), style=3)
+  for (i in 1:N) {
+    setTxtProgressBar(pb, i) 
+    randomizeBed(bed, i)
   }
 }
 
@@ -367,3 +406,5 @@ removeClusteredGenes <- function(bed, N) {
   id_mir <- grep("Mir", bed[,4])
   return(bed[-id_mir,])
 }
+
+get

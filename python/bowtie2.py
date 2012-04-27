@@ -9,7 +9,8 @@ import pdb
 from subprocess import Popen
 
 fastq_dir = "/media/storage3/data/fastq"
-sam_dir = "/media/storage2/data/sam"
+#sam_dir = "/media/storage2/data/sam"
+sam_dir = "/home/user/data/sam"
 bam_dir = "/media/storage2/data/bam"
 bed_dir = "/media/storage2/data/bed" 
 
@@ -17,8 +18,8 @@ class bowtie_class:
     def __init__(self, date, sample, single_end, index):
         #pdb.set_trace()
         self.date = date
-        #self.sample = sample.split("_")[1]
-        self.sample = sample
+        self.sample = sample.split("_")[1]
+        #self.sample = sample
         self.single_end = single_end
         self.index = index
         self.input_prefix = index[1]
@@ -52,22 +53,32 @@ class bowtie_class:
     def map(self):        
         if not os.path.exists(self.samfile):
             if not self.single_end:
-                cmd_args = ['bowtie', '-S', '-p', '6', 
-                            '-I', '100', '-X', '1500', '--best', '--chunkmbs', '256',
-                            'mm9', '-1', self.input1, '-2', self.input2, self.samfile]
+                cmd_args = ['bowtie2',
+                            '-p', '6', 
+                            '-I', '50', '-X', '1500',
+                            '--end-to-end',
+                            '-x', 'mm9',
+                            '-1', self.input1,
+                            '-2', self.input2,
+                            '|', 'samtools', 'view', '-Sb', '-o', self.bamfile, '-']
+                cmd_args2 = ['samtools', 'view', '-u', '-F', '4', self.bamfile, '|',
+                             'samtools', 'sort', '-', self.input_prefix + "_sort"]
+                            
             else:
-                cmd_args = ['bowtie', '-S', '-p', '8', '-m', '1',
+                cmd_args = ['bowtie', '-S', '-p', '8',
                             '--chunkmbs', '256', 'mm9', self.input1, self.samfile]
             print "Mapping with bowtie: " + " ".join(cmd_args[1:])
             errorlog = open(self.errorlog, 'w')
             bowtie = Popen(cmd_args, stderr=errorlog)
             bowtie.wait()
-            errorlog.close()
+            samtools = Popen(cmd_args, stderr=errorlog)
+            #errorlog.close()
             
     def sam2bam(self):
         if not os.path.exists(self.bamfile):
             sam.sam2bam(self.samfile, self.bamfile)
-            sam.proc([self.bamfile, "True"])
+            ret = sam.proc([self.bamfile, "False"])
+            if ret == 0: os.remove(self.samfile)
             #print "sam2bam"
             #sam.proc_sam([self.samfile, "True"])
             #samfile = self.samfile.split(".sam")[0]
@@ -77,12 +88,15 @@ def bowtie(date, sample, single_end, index):
     bowtie_obj = bowtie_class(date, sample, single_end, index)
     #pdb.set_trace()
     bowtie_obj.map()
-    bowtie_obj.sam2bam()
+    #bowtie_obj.sam2bam()
+    
     
 def main(argv):
     parser = argparse.ArgumentParser(description="Map fastq files.")
     parser.add_argument('-d', required=True, dest='date', help='sample date')
     parser.add_argument('-s', dest='sample', required=True, help='sample name')
+    parser.add_argument('-1', dest='fastq1')
+    parser.add_argument('-2', dest='fastq2')
     parser.add_argument('--single-end', action='store_true', dest='single_end', default=False)
     parser.add_argument('-n', '--index', dest='index', required=True, help='index number of library')
     args = parser.parse_args()

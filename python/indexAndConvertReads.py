@@ -13,9 +13,10 @@ qseq_dir = '/media/storage3/data/qseq'
 fastq_dir = '/media/storage3/data/fastq'
 
 class index_class:
-    def __init__(self, date, sample, se):
+    def __init__(self, date, sample, demult, se):
         self.date = date
         self.sample = sample
+        self.demult = demult
         self.se = se
         self.qseq_dir = "/".join([qseq_dir, date])
         self.fastq_dir = "/".join([fastq_dir, date])
@@ -43,12 +44,25 @@ class index_class:
             #pool.apply_async(convert_worker, (arg,))
         #pool.close()
         #pool.join()
-        #    qseq.convertToFastq(arg)    
-        for index in range(0, 13):
+        #    qseq.convertToFastq(arg)
+        if self.demult:
+            for index in range(0, 13):
+                cmd_args = ['qseq2fastq', 
+                        '-i', self.input_dir + "/" + str(index), 
+                        '-o', "/".join([self.fastq_dir, self.sample, str(index)]),
+                        '--preserve', '--threads', '6', '--filterpf', '--filterminqval', '20']
+                """
+                cmd_args = ['perl', '/home/user/src/perl/qseq2fastq.pl',
+                            "/".join([self.input_dir, str(index), str(read)]),
+                            "/".join([self.fastq_dir, self.sample, str(index), "".join([str(read), ".fastq"])])]
+                """       
+                p = Popen(cmd_args)
+                p.wait()
+        else: 
             cmd_args = ['qseq2fastq', 
-                    '-i', self.input_dir + "/" + str(index), 
-                    '-o', "/".join([self.fastq_dir, self.sample, str(index)]),
-                    '--preserve', '--threads', '6', '--filterpf', '--filterminqval', '20']
+                        '-i', self.input_dir, 
+                        '-o', "/".join([self.fastq_dir, self.sample]),
+                        '--preserve', '--threads', '6', '--filterpf', '--filterminqval', '20']
             """
             cmd_args = ['perl', '/home/user/src/perl/qseq2fastq.pl',
                         "/".join([self.input_dir, str(index), str(read)]),
@@ -56,17 +70,33 @@ class index_class:
             """       
             p = Popen(cmd_args)
             p.wait()
-        
+                
     def pToN(self):
-        for index in range(0, 13):
+        if self.demult:
+            for index in range(0, 13):
+                skip = False
+                files = os.listdir("/".join([self.output_dir, str(index)]))
+                for file in files:
+                    if re.search("fastqc", file): skip = True
+                if skip: continue    
+                for file in files:
+                    if not re.search("count", file):
+                        input = "/".join([self.output_dir, str(index), file])
+                        print input
+                        periodToN.main(['',input])
+                        os.rename(input + "_Nconvert", input)
+                        cmd_args = ['/seq/FastQC/fastqc', '--threads', '6', input]
+                        p = Popen(cmd_args)
+                        p.wait()
+        else:
             skip = False
-            files = os.listdir("/".join([self.output_dir, str(index)]))
-            for file in files:
-                if re.search("fastqc", file): skip = True
-            if skip: continue    
+            files = os.listdir("/".join([self.output_dir]))
+            files = [f for f in files if not re.search("fastqc", f)]
+            #for file in files:
+            #    if re.search("fastqc", file): skip = True    
             for file in files:
                 if not re.search("count", file):
-                    input = "/".join([self.output_dir, str(index), file])
+                    input = "/".join([self.output_dir, file])
                     print input
                     periodToN.main(['',input])
                     os.rename(input + "_Nconvert", input)
@@ -75,10 +105,11 @@ class index_class:
                     p.wait()
     
         
-def index(date, sample, se):
-    index_obj = index_class(date, sample, se)
-    print "Splitting samples by indices..."
-    index_obj.split()
+def index(date, sample, demult, se):
+    index_obj = index_class(date, sample, demult, se)
+    if demult:
+        print "Splitting samples by indices..."
+        index_obj.split()
     print "Converting to fastq..."
     index_obj.convert()
     print ". to N ..."
@@ -94,16 +125,17 @@ def main(argv):
     parser.add_argument('-i', '--qseq', required=False, 
                         dest='qseq', help='qseq file')
     parser.add_argument('-d', required=True, dest="date", help='sample date')
-    parser.add_argument('--single-end', dest="se", default=False, action="store_true", )
+    parser.add_argument('--dont-demultiplex', dest="demult", required=False, action="store_false")
+    parser.add_argument('--single-end', dest="se", default=False, action="store_true")
     args = parser.parse_args()
     
     if args.date and not args.qseq:
         qseqs = os.listdir(qseq_dir + "/" + args.date)
         for qseq in qseqs:
             print "Processing: " + qseq
-            index(args.date, qseq, args.se)
+            index(args.date, qseq, args.demult, args.se)
     else:
-        index(args.date, args.qseq, args.se)
+        index(args.date, args.qseq, args.demult, args.se)
 
 if __name__ == "__main__":
     main(sys.argv)

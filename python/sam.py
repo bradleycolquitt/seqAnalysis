@@ -13,44 +13,44 @@ bed_dir = "/media/storage2/data/bed/"
 def sam2bam(sam, bam):
     
     ## Remove poorly formatted records
-    print "Removing poorly formatted reads..."
-    sam_in = open(sam, 'r')
-    log_path = "/".join([os.path.dirname(sam), "log", "sam2bam"])
-    if not os.path.exists(log_path): os.makedirs(log_path)
-    sam_error = open("/".join([log_path, os.path.basename(sam)]), 'a')
-    sam_out_name = sam + "_tmp"
-    sam_out = open(sam_out_name, 'w')
-    header_flag = re.compile("@")
-    sline = []
-    cigar_len = 0
-    seq_len = 0
+  #  print "Removing poorly formatted reads..."
+  #  sam_in = open(sam, 'r')
+  #  log_path = "/".join([os.path.dirname(sam), "log", "sam2bam"])
+  #  if not os.path.exists(log_path): os.makedirs(log_path)
+  #  sam_error = open("/".join([log_path, os.path.basename(sam)]), 'a')
+   # sam_out_name = sam + "_tmp"
+   # sam_out = open(sam_out_name, 'w')
+   # header_flag = re.compile("@")
+   # sline = []
+   # cigar_len = 0
+   # seq_len = 0
     
-    try:
-        for line in sam_in:
-            if not header_flag.search(line):
-                sline = line.split()
-                #if len(sline) < 14:
-                #    sam_error.write(line)
-                #    continue
-                if sline[5] != '*':
-                    cigar_len = int(sline[5].split("M")[0])
-                    seq_len = len(sline[9])
-                    if cigar_len != seq_len: 
-                        #pdb.set_trace()
-                        sam_error.write(line)
-                        continue
+    #try:
+    #    for line in sam_in:
+    #        if not header_flag.search(line):
+    #            sline = line.split()
+    #            #if len(sline) < 14:
+    #            #    sam_error.write(line)
+    #            #    continue
+    #            if sline[5] != '*':
+    #                cigar_len = int(sline[5].split("M")[0])
+    #                seq_len = len(sline[9])
+    #                if cigar_len != seq_len: 
+    #                    #pdb.set_trace()
+    #                    sam_error.write(line)
+    #                    continue
                
                     
-            sam_out.write(line)
-    except:
-        sam_error.write(str(sys.exc_info()[0]) + "\n")
+    #        sam_out.write(line)
+    #except:
+    #    sam_error.write(str(sys.exc_info()[0]) + "\n")
     
-    sam_in.close()
-    sam_error.close()
-    sam_out.close()
+    #sam_in.close()
+    #sam_error.close()
+    #sam_out.close()
     #os.rename(sam_out_name, sam)
     
-    samfile = pysam.Samfile(sam_out_name, "r")
+    samfile = pysam.Samfile(sam, "r")
     bamfile = pysam.Samfile(bam, 'wb', template=samfile)
     print "SAM -> BAM"
     for read in samfile:
@@ -62,6 +62,7 @@ def proc(arg):
     bamfile = arg[0]
     #rmdup = arg[1]
     rmdup = arg[1]
+    if rmdup == "False": rmdup = False
     #se = arg[2]
     
     bam_dir = "/".join(bamfile.split("/")[:-1]) + "/"
@@ -136,7 +137,7 @@ def proc(arg):
     #    sort_bam_fs.write(line)
     #sort_bam_fs.close()
     #os.remove(bamfile)
-
+    return 0
 def proc_sam(arg):
     samfile = arg[0]
     rmdup = arg[1]
@@ -340,7 +341,6 @@ def extractInsertSizes(sam, output, track_name):
     #h5_file.flush()
     #h5_file.close()
 
-    
 def main(argv):
     if argv[1] == "sam2bam":
         sam2bam(argv[2], argv[3])

@@ -28,7 +28,6 @@ class tophat_class:
             self.input1 = "/".join([fastq_dir, date, sample, index[0],
                                     "_".join([self.sample, '1.fastq'])])
         else:
-            #print self.sample
             self.input1 = "/".join([fastq_dir, date, sample, index[0], 
                                     "_".join([self.sample, '1.fastq'])])
             self.input2 = "/".join([fastq_dir, date, sample, index[0], 
@@ -74,17 +73,20 @@ class tophat_class:
                         '-G', self.gtf, '--library-type', self.library_type, 
                         self.species, self.input1, self.input2]
                 else:
-                    cmd_args = ['tophat', '-p', '10', '-o', self.output, 
-                        '-r', self.mean, '--mate-std-dev', self.sd,
-                        '--library-type', self.library_type,
-                        self.species, self.input1, self.input2]
+                    cmd_args = ['tophat2',
+                                '-o', self.output,
+                                '-p', '6',
+                                '-r', self.mean,
+                                '--mate-std-dev', self.sd,
+                                '--library-type', self.library_type,
+                                self.species, self.input1, self.input2]
             #print self.errorlog
             print "Mapping with tophat: " + " ".join(cmd_args[1:])
-            errorlog = open(self.errorlog, 'a')
+            errorlog = open(self.errorlog, 'w')
             tophat = Popen(cmd_args, stderr=errorlog)
             tophat.wait()
             errorlog.close()
-            #bam.proc([self.output + "/accepted_hits.bam", "False"])
+            sam.proc([self.output + "/accepted_hits.bam", "False"])
             
     def wig(self):
         window_size = str(200)
@@ -102,10 +104,9 @@ class tophat_class:
         
 def tophat(date, sample, single_end, index, mean, sd, gtf, library_type, species):
     #print "here"
-    print sample
     tophat_obj = tophat_class(date, sample, single_end, index, mean, sd, gtf, library_type, species)
     tophat_obj.map()
-    #tophat_obj.wig()
+    tophat_obj.wig()
     #tophat_obj.sam2bam()
     
 def main(argv):

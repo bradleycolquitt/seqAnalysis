@@ -4,24 +4,38 @@ source("~/src/seqAnalysis/R/profiles2.R")
 source("~/src/seqAnalysis/R/boot.R")
 source("~/src/seqAnalysis/R/modeling.R")
 
+library(Brobdingnag)
+
 registerDoMC(cores=10)
 
 feature.path <- "~/lib/features_general"
 feature_norm_path <- "~/s2/analysis/features/norm"
 
-features_toplot <- factor(1:21, labels=c("refgene_1to3kb_up_chr", "cgi_chr", "Refgene_5_UTR_chr",
+features_toplot <- factor(1:10, labels=c("refgene_1to3kb_up_chr", "cgi_chr", "Refgene_5_UTR_chr",
                                   "Refgene_CDS_chr", "Refgene_3_UTR_chr", "Refgene_exons_chr",
-                                  "Refgene_intron_chr", "omp_mk4_intergenic_inter_cons.bed_chr",
+                                  "Refgene_intron_chr",
+                                  "phastCons30way_intergenic_sorted_merge500_thresh500_inter_omp_h3k4me1_default.bed_merged",
                                   "phastCons30way_intergenic_merge500_thresh500_chr",
-                                  "rmsk_LTR_chr", "rmsk_RNA_chr", "rmsk_rRNA_chr", "rmsk_snRNA_chr",
-                                  "rmsk_DNA_chr",
-                                  "rmsk_LINE_chr", "rmsk_SINE_chr", "rmsk_Satellite_chr", "rmsk_tRNA_chr",
-                                  "rmsk_srpRNA_chr", "rmsk_scRNA_chr",
                                   "intergenic_sub_rmsk_chr"))
 
-features_rmsk <- factor(1:11, labels=c("rmsk_LTR_chr", "rmsk_RNA_chr", "rmsk_rRNA_chr", "rmsk_snRNA", "rmsk_DNA_chr",
-                                  "rmsk_LINE_chr", "rmsk_SINE_chr", "rmsk_Satellite_chr", "rmsk_tRNA_chr",
-                                  "rmsk_srpRNA_chr", "rmsk_scRNA_chr"))
+features_merge_toplot <- factor(1:9, labels=c("refgene_1to3kb_up_merged", "cgi_merged", "Refgene_5_UTR_merged",
+                                  "Refgene_CDS_merged", "Refgene_3_UTR_merged",
+                                  "Refgene_intron_merged", "phastCons30way_intergenic_sorted_merge500_thresh500_inter_omp_h3k4me1_default.bed_merged",
+                                  "phastCons30way_intergenic_merge500_thresh500_merged", "intergenic_sub_rmsk_merged"))
+
+features_merge_toplot_short <- c("1 to 3 kb upstream", "CGI", "5' UTR", "CDS", "3' UTR", "Intron",
+                                 "mOSN enhancer", "Intergenic conserved", "Intergenic")
+
+features_rmsk <- factor(1:10, labels=c("rmsk_LTR_chr", "rmsk_LINE_chr", "rmsk_SINE_chr",
+                               "rmsk_DNA_chr", "rmsk_RNA_chr",
+                                "rmsk_rRNA_chr", "rmsk_snRNA_chr", "rmsk_tRNA_chr", "rmsk_srpRNA_chr",
+                               "rmsk_Satellite_chr"))
+features_rmsk_short <- c("LTR", "LINE", "SINE", "DNA", "RNA", "rRNA", "snRNA", "tRNA","srpRNA", "Satellite")
+
+features_merged_rmsk <- factor(1:10, labels=c("rmsk_LTR_merged", "rmsk_LINE_merged", "rmsk_SINE_merged",
+                               "rmsk_DNA_merged", "rmsk_RNA_merged",
+                                "rmsk_rRNA_merged", "rmsk_snRNA_merged", "rmsk_tRNA_merged", "rmsk_srpRNA_merged",
+                               "rmsk_Satellite_merged"))
 
 features_toplot_nochr <- factor(1:12, labels=c("refgene_1to3kb_up", "cgi", "Refgene_5_UTR",
                                   "Refgene_CDS", "Refgene_3_UTR", 
@@ -104,12 +118,14 @@ makeFeatureMatrix2 <- function(feature, set = "all", value_type, transf=NULL, wr
     samples <- samples.d3a_norm
   } else if (set=="d3a_unnorm") {
     samples <- samples.d3a_norm
+  } else if (set=="d3a_rpkm") {
+    samples <- samples.d3a_rpkm
   } else if (set=="all") {
     samples <- list.files(paste(feature_norm_path, feature, sep="/")) 
   } else if (set=="d3a_mrna") {
     samples <- c("moe_d3a_wt_mrna_rpkm", "moe_d3a_ko_mrna_rpkm")
   } else if (set=="tt3") {
-    samples <- c("omp_hmc_rpkm", "o.tt3.1_hmc_rpkm", "o.tt3.2_hmc_rpkm", "ngn_hmc_rpkm", "icam_hmc_rpkm",
+    samples <- c("omp_hmc_rpkm", "o.tt3.1_hmc_rpkm", "o.tt3.2_hmc_rpkm", "o.tt3.2_hmc_21M_rpkm", "ngn_hmc_rpkm", "icam_hmc_rpkm",
                  "omp_mc_rpkm", "o.tt3.1_mc_rpkm", "o.tt3.2_mc_rpkm", "ngn_mc_rpkm", "icam_mc_rpkm")
   } 
   
@@ -136,11 +152,17 @@ makeFeatureMatrix2.all <- function(set, value_type, transf=NULL) {
   files <- files[grep("chr", files)]
   for(file in files) {
     print(file)
-    if (file.exists(paste(feature_norm_path, value_type, "summaries", paste(set, file, sep="_"), sep="/"))) {
+    if (file.exists(paste(feature_norm_path, value_type, "summaries", paste(set, file, transf, sep="_"), sep="/"))) {
       print("File exists")
       next
-    }  
-    a <- makeFeatureMatrix2(file, set=set, value_type=value_type, transf=transf, write=TRUE)
+    }
+    tryCatch(makeFeatureMatrix2(file, set=set, value_type=value_type, transf=transf, write=TRUE), error = function(e) {
+            print(paste("Skipping", file, sep=" "))
+                  print(e)
+                  return
+          })
+    
+    #a <- makeFeatureMatrix2(file, set=set, value_type=value_type, transf=transf, write=TRUE)
   }
 }
 
@@ -148,10 +170,11 @@ makeFeatureMatrix2.all <- function(set, value_type, transf=NULL) {
 threshMatByQ <- function(data, q) {
   
 }
-statCollect <- function(set, value_type, feature, transf=NULL) {
-  data <- read.delim(paste(feature_norm_path, value_type, "summaries",
-                           paste(set, feature, sep="_"), sep="/"),
-                     header=TRUE, row.names=NULL)
+statCollect <- function(set, value_type, feature, transf_name, transf=NULL) {
+  data_path <- paste(feature_norm_path, value_type, "summaries",
+                           paste(set, feature, sep="_"), sep="/")
+  if (!is.null(transf_name)) data_path <- paste(data_path, transf_name, sep="_")
+  data <- read.delim(data_path, header=TRUE, row.names=NULL)
   data_melt <- melt(data)
   colnames(data_melt)[1] <- "obs"
   data_melt$feature <- feature
@@ -164,36 +187,40 @@ statCollect <- function(set, value_type, feature, transf=NULL) {
   return(data_melt)
 }
 
-statSummary <- function(set, value_type, feature, transf=NULL, FUN, ...) {
-  data <- read.delim(paste(feature_norm_path, value_type, "summaries",
-                           paste(set, feature, sep="_"), sep="/"),
-                     header=TRUE, row.names=NULL)
+statSummary <- function(set, value_type, feature, transf_name=NULL, transf=NULL, FUN, ...) {
+  data_path <- paste(feature_norm_path, value_type, "summaries",
+                           paste(set, feature, sep="_"), sep="/")
+  if (!is.null(transf_name)) data_path <- paste(data_path, transf_name, sep="_")
+  data <- read.delim(data_path, header=TRUE, row.names=NULL)
   if (!is.null(transf)) {
     data[,2:ncol(data)] <- apply(data[, 2:ncol(data)], 2, function(x) do.call(transf, list(x)))
   }
   return(apply(data[,2:ncol(data)], 2, FUN, ...))
 }
 
-statSummary.all <- function(set, value_type, toplot=TRUE, action="summary", transf=NULL, FUN=mean, ...) {
-  if (toplot) {
-    features <- as.character(features_toplot)
-  } else {
+statSummary.all <- function(set, value_type, toplot="general", action="summary", transf_name="sqrt", transf=NULL, FUN=mean, ...) {
+    features <- ""
+    if (toplot=="general") {
+      features <- as.character(features_toplot)
+    } else if (toplot=="rmsk") {
+      features <- as.character(features_rmsk)
+    } else {
 
   
-    features <- list.files(paste(feature_norm_path, value_type, "summaries", sep="/"))
+      features <- list.files(paste(feature_norm_path, value_type, "summaries", sep="/"))
                                         #print(features)
-    features <- lapply(features, str_split, paste(set, "_", sep=""))
+      features <- lapply(features, str_split, paste(set, "_", sep=""))
                                         #print(features)
-    features <- na.omit(unlist(lapply(features, function(x) x[[1]][2])))
+      features <- na.omit(unlist(lapply(features, function(x) x[[1]][2])))
                                         #print(features)
-  }
+    }
   
   out <- foreach (feature=features, .combine="rbind") %dopar% {
     print(feature)
     if (action=="summary") {
-      result <- statSummary(set, value_type, feature, transf=transf, FUN, ...)
+      result <- statSummary(set, value_type, feature, transf_name=transf_name, transf=transf, FUN, ...)
     } else if (action=="collect") {
-      result <- statCollect(set, value_type, feature)
+      result <- statCollect(set, value_type, feature, transf_name=transf_name)
     }
     return(result)
   }
@@ -236,12 +263,13 @@ statSummary.allSD <- function(set, value_type, trim=.05, ...) {
   return(merge(stat, sd, all.y=TRUE))
 }
 
-statSummary.allIQR <- function(set, value_type, transf=NULL, ...) {
-  stat <- melt(statSummary.all(set=set, value_type=value_type, transf=transf, FUN=median, ...))
+statSummary.allIQR <- function(set, value_type, toplot="general", transf_name="sqrt", transf=NULL, ...) {
+  stat <- melt(statSummary.all(set=set, value_type=value_type, toplot=toplot, transf_name=transf_name, transf=transf, FUN=median, ...))
  
-  up <- melt(statSummary.all(set=set, value_type=value_type, transf=transf,
+  up <- melt(statSummary.all(set=set, value_type=value_type, toplot=toplot, transf_name=transf_name, transf=transf,
                                FUN=iqr, bound="upper" ))
-  low <- melt(statSummary.all(set=set, value_type=value_type, transf=transf,
+  low <- melt(statSummary.all(set=set, value_type=value_type, toplot=toplot,
+                              transf_name=transf_name, transf=transf,
                                 FUN=iqr, bound="lower"))
   colnames(stat) <- c("feature", "sample", "median")
   colnames(up) <- c("feature", "sample", "up")
@@ -266,6 +294,26 @@ statSummary.allNorm <- function(set, value_type, toplot=TRUE, transf=NULL, norm=
   data <- do.call("rbind", data.op)
   data <- ddply(data, .(variable, feature, celltype, ip), summarize, value.median=median(value), up=iqr(value, bound="upper"), low=iqr(value, bound="lower"))
   return(data)
+}
+
+processIntersectSummary <- function(summary, features=features_merge_toplot) {
+  data <- read.delim(summary)
+  data$internal_norm <- with(data, fraction_norm/sum(fraction_norm))
+  data$feature.factor <- features[match(data$feature, as.character(features))]
+  return(data)
+}
+
+processIntersectSummary.batch <- function(set, features=features_merge_toplot) {
+  path <- "~/s2/data/homer/peaks/intersections"
+  set_path <- paste(path, set, sep="/")
+  peak_sets <- list.files(set_path)
+  out <- foreach(peak_set=peak_sets, .combine="rbind") %do% {
+    summary_file <- paste(set_path, peak_set, "summary", sep="/")
+    data <- processIntersectSummary(summary_file, features)
+    data$peak_set <- peak_set
+    return(data)
+  }
+  return(out)
 }
 sem <- function(vals) {
   return(sd(vals)/(length(vals - 1)))
@@ -304,6 +352,31 @@ feature_wilcox <- function(test, ref) {
   return(wilcox.test(test, ref)$p.value)
 }
 
+feature_ks_batch <- function(collect_df, key_col, reference_key) {
+  sub <- ddply(collect_df, c("feature", "ip"), function(values, ind) {cell_compare(values, ind, key_col, reference_key)})
+  return(sub)
+}
+
+cell_compare <- function(values, ind, key_col, reference_key) {
+  print(dim(values))
+  #print(names(values))
+  #sub_values <- values[,ind]
+  #print(dim(sub_values))
+  keys <- unique(values[,key_col])
+  sub <- unlist(lapply(keys, function(key) ks_pvalue(values[values[,key_col]==key,"value"],
+                                                     values[values[,key_col]==reference_key, "value"])))
+  #sub <- unlist(lapply(keys, function(key) permutationTest(values[values[,key_col]==key,"value"],
+  #                                                   values[values[,key_col]==reference_key, "value"], FUN="median")))
+  names(sub) <- keys
+  #sub <- ddply(values, c("celltype"), summarize,
+  #             ks_pvalue=ks_pvalue(value, values[values$key_col==reference_key,value]))
+  return(sub)
+}
+
+ks_pvalue <- function(data1, data2) {
+  return(wilcox.test(data1, data2)$p.value)
+}
+
 trimOutliers <- function(mat, trim) {
   out <- apply(mat, 2, function(x) {
     q <- quantile(x, probs=c(trim, 1-trim))
@@ -336,6 +409,7 @@ splitSummaryByQ <- function(data, q, fname=NULL) {
   names(out) <- q
   return(out)
 }
+
 
 saveBedBySubset <- function(data, bed, fname=NULL) {
   lapply(1:length(data), function(x) {
