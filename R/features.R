@@ -125,7 +125,7 @@ makeFeatureMatrix2 <- function(feature, set = "all", value_type, transf=NULL, wr
   } else if (set=="d3a_mrna") {
     samples <- c("moe_d3a_wt_mrna_rpkm", "moe_d3a_ko_mrna_rpkm")
   } else if (set=="tt3") {
-    samples <- c("omp_hmc_rpkm", "o.tt3.1_hmc_rpkm", "o.tt3.2_hmc_rpkm", "o.tt3.2_hmc_21M_rpkm", "ngn_hmc_rpkm", "icam_hmc_rpkm",
+    samples <- c("omp_hmc_120424_rpkm", "o.tt3.1_hmc_rpkm", "o.tt3.2_hmc_rpkm", "o.tt3.2_hmc_21M_rpkm", "ngn_hmc_rpkm", "icam_hmc_rpkm",
                  "omp_mc_rpkm", "o.tt3.1_mc_rpkm", "o.tt3.2_mc_rpkm", "ngn_mc_rpkm", "icam_mc_rpkm")
   } 
   

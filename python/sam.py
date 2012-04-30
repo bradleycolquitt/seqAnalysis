@@ -11,59 +11,54 @@ from subprocess import Popen
 bed_dir = "/media/storage2/data/bed/"
 
 def sam2bam(sam, bam):
-    
+    #pdb.set_trace()
     ## Remove poorly formatted records
-  #  print "Removing poorly formatted reads..."
-  #  sam_in = open(sam, 'r')
-  #  log_path = "/".join([os.path.dirname(sam), "log", "sam2bam"])
-  #  if not os.path.exists(log_path): os.makedirs(log_path)
-  #  sam_error = open("/".join([log_path, os.path.basename(sam)]), 'a')
+   # print "Removing poorly formatted reads..."
+   # sam_in = pysam.Samfile(sam, 'r')
+   # log_path = "/".join([os.path.dirname(sam), "log", "sam2bam"])
+   # if not os.path.exists(log_path): os.makedirs(log_path)
+   # sam_error = open("/".join([log_path, os.path.basename(sam)]), 'a')
    # sam_out_name = sam + "_tmp"
-   # sam_out = open(sam_out_name, 'w')
+   # sam_out = pysam.Samfile(sam_out_name, 'w', template=sam_in)
    # header_flag = re.compile("@")
-   # sline = []
-   # cigar_len = 0
-   # seq_len = 0
-    
-    #try:
-    #    for line in sam_in:
-    #        if not header_flag.search(line):
-    #            sline = line.split()
-    #            #if len(sline) < 14:
-    #            #    sam_error.write(line)
-    #            #    continue
-    #            if sline[5] != '*':
-    #                cigar_len = int(sline[5].split("M")[0])
-    #                seq_len = len(sline[9])
-    #                if cigar_len != seq_len: 
-    #                    #pdb.set_trace()
-    #                    sam_error.write(line)
-    #                    continue
-               
-                    
-    #        sam_out.write(line)
-    #except:
-    #    sam_error.write(str(sys.exc_info()[0]) + "\n")
-    
-    #sam_in.close()
-    #sam_error.close()
-    #sam_out.close()
-    #os.rename(sam_out_name, sam)
-    
+   ## sline = []
+   ## cigar_len = 0
+   ## seq_len = 0
+   # 
+   # try:
+   #     for line in sam_in:
+   #         if not header_flag.search(line):
+   #             sline = line.split()
+   # #            #if len(sline) < 14:
+   # #            #    sam_error.write(line)
+   # #            #    continue
+   #             if sline[5] != '*':
+   #                 cigar_len = int(sline[5].split("M")[0])
+   #                 seq_len = len(sline[9])
+   #                 if cigar_len != seq_len: 
+   #                     #pdb.set_trace()
+   #                     sam_error.write(line)
+   #                     continue                
+   #         sam_out.write(line)
+   # except:
+   #     sam_error.write(str(sys.exc_info()[0]) + "\n")
+   # #sam_out.close()
+   # finally:
+   #     sam_in.close()
+   #     sam_error.close()
+   #     os.rename(sam_out_name, sam)
+    #pdb.set_trace()
     samfile = pysam.Samfile(sam, "r")
     bamfile = pysam.Samfile(bam, 'wb', template=samfile)
     print "SAM -> BAM"
     for read in samfile:
         bamfile.write(read)
     bamfile.close()
-    #os.remove(sam)
     
 def proc(arg):
     bamfile = arg[0]
-    #rmdup = arg[1]
     rmdup = arg[1]
     if rmdup == "False": rmdup = False
-    #se = arg[2]
     
     bam_dir = "/".join(bamfile.split("/")[:-1]) + "/"
     bam_prefix = os.path.basename(bamfile).split(".bam")[0]
@@ -93,7 +88,10 @@ def proc(arg):
                     "=".join(["SORT_ORDER", "coordinate"])]
         p = Popen(cmd_args)
         p.wait()
+        print "Indexing..."
+        pysam.index(sort_bam)
         #pysam.sort(rmdup_bam, sort_bam)
+    
     if not os.path.exists(rmdup_bam) and rmdup:   
         print "Removing duplicates..."
         #cmd_args = ['samtools', 'rmdup', mapped_bam, rmdup_bam]
@@ -114,30 +112,23 @@ def proc(arg):
         #rmdup_fs.close()
         
         #os.remove(rmdup_bam)
+        #print "Indexing..."
+        #pysam.index(rmdup_bam)
+    
+    if not rmdup and not os.path.exists(sort_bam + ".bam.bai"):
+        print "Indexing..."
+        pysam.index(sort_bam)
+    elif rmdup and not os.path.exists(rmdup_bam + ".bai"):
         print "Indexing..."
         pysam.index(rmdup_bam)
-    else:
-        print "Indexing..."
-        sort_bam = sort_bam + ".bam"
-        pysam.index(sort_bam)
-    #else:
-    #    print "Sorting..."
-    #    pysam.sort(mapped_bam, sort_bam)
-    #    #os.remove(mapped_bam)
-    
-    
-    #pysam.flagstat(bamfile)
+
     bamfile_fs = open(bam_dir + "stat/" + bam_prefix + "_stat", 'w')
     for line in pysam.flagstat(bamfile):
         bamfile_fs.write(line)
     bamfile_fs.close
     
-    #sort_bam_fs = open(sort_bam + "_stat", 'w')
-    #for line in pysam.flagstat(sort_bam):
-    #    sort_bam_fs.write(line)
-    #sort_bam_fs.close()
-    #os.remove(bamfile)
     return 0
+
 def proc_sam(arg):
     samfile = arg[0]
     rmdup = arg[1]

@@ -7,6 +7,7 @@ import bam2bed
 import sam
 import pdb
 from subprocess import Popen
+from subprocess import PIPE
 
 fastq_dir = "/media/storage3/data/fastq"
 #sam_dir = "/media/storage2/data/sam"
@@ -18,8 +19,8 @@ class bowtie_class:
     def __init__(self, date, sample, single_end, index):
         #pdb.set_trace()
         self.date = date
-        self.sample = sample.split("_")[1]
-        #self.sample = sample
+        #self.sample = sample.split("_")[1]
+        self.sample = sample
         self.single_end = single_end
         self.index = index
         self.input_prefix = index[1]
@@ -40,55 +41,65 @@ class bowtie_class:
         sam_date_dir = "/".join([sam_dir, self.date])
         if not os.path.exists(sam_date_dir): os.mkdir(sam_date_dir)
         self.samfile = "/".join([sam_date_dir, "".join([self.input_prefix, ".sam"])])
-        sam_date_log_dir = "/".join([sam_date_dir, "log"])
-        
-        if not os.path.exists(sam_date_log_dir): os.mkdir(sam_date_log_dir)
-        self.errorlog = "/".join([sam_date_log_dir, "".join([self.input_prefix, "_log"])])
+#        pdb.set_trace()
         #self.unmapped = "/".join([sam_date_dir, "".join([self.input_prefix, "_unaligned"])])
         self.bamfile = "/".join([bam_dir, self.date, "".join([self.input_prefix, ".bam"])])
         
-        bam_dir_date = "/".join([bam_dir, self.date])
-        if not os.path.exists(bam_dir_date): os.mkdir(bam_dir_date)
+        bam_date_dir = "/".join([bam_dir, self.date])
+        if not os.path.exists(bam_date_dir): os.mkdir(bam_date_dir)
+        bam_date_log_dir = "/".join([bam_date_dir, "log"])
+        #pdb.set_trace()
+        if not os.path.exists(bam_date_log_dir): os.mkdir(bam_date_log_dir)
+        self.runlog = open("/".join([bam_date_log_dir, "".join([self.input_prefix, "_run_log"])]), 'w+')
+        self.errorlog = open("/".join([bam_date_log_dir, "".join([self.input_prefix, "_error_log"])]), 'w+')
 
-    def map(self):        
+    def map(self):
+        #pdb.set_trace()
         if not os.path.exists(self.samfile):
             if not self.single_end:
                 cmd_args = ['bowtie2',
-                            '-p', '6', 
-                            '-I', '50', '-X', '1500',
+                            '-p', '8', 
+                            '-I', '50', '-X', '1500', '-t',
                             '--end-to-end',
                             '-x', 'mm9',
                             '-1', self.input1,
-                            '-2', self.input2,
-                            '|', 'samtools', 'view', '-Sb', '-o', self.bamfile, '-']
-                cmd_args2 = ['samtools', 'view', '-u', '-F', '4', self.bamfile, '|',
-                             'samtools', 'sort', '-', self.input_prefix + "_sort"]
+                            '-2', self.input2, 
+                            '-S', self.samfile]
+                self.errorlog.write(" ".join(cmd_args) + "\n")                    
+                #cmd_args2 = ['samtools', 'view', '-Sb', '-o', self.bamfile']
+                p1 = Popen(cmd_args, stderr=self.errorlog)
+                #pdb.set_trace()
+                #p2 = Popen(cmd_args2, stdin=p1.stdout, stderr=self.errorlog)
+                p1.wait()
+                #p2.wait()
+                #cmd_args3 = ['samtools', 'view', '-u', '-F', '4', self.bamfile]
+                #cmd_args4 = ['samtools', 'sort', '-', self.input_prefix + "_sort"]
                             
             else:
                 cmd_args = ['bowtie', '-S', '-p', '8',
                             '--chunkmbs', '256', 'mm9', self.input1, self.samfile]
-            print "Mapping with bowtie: " + " ".join(cmd_args[1:])
-            errorlog = open(self.errorlog, 'w')
-            bowtie = Popen(cmd_args, stderr=errorlog)
-            bowtie.wait()
-            samtools = Popen(cmd_args, stderr=errorlog)
-            #errorlog.close()
-            
+            #print>>self.runlog, "Mapping with bowtie: " + " ".join(cmd_args[1:])
+            #errorlog = open(self.errorlog, 'w')
+            #bowtie = Popen(cmd_args, stderr=errorlog)
+            #bowtie.wait()
+            #samtools = Popen(cmd_args2, stderr=errorlog)
+            self.errorlog.close()
+            self.runlog.close
     def sam2bam(self):
         if not os.path.exists(self.bamfile):
             sam.sam2bam(self.samfile, self.bamfile)
-            ret = sam.proc([self.bamfile, "False"])
-            if ret == 0: os.remove(self.samfile)
-            #print "sam2bam"
-            #sam.proc_sam([self.samfile, "True"])
-            #samfile = self.samfile.split(".sam")[0]
-            #sam.sam2bam(samfile + "_sort.sam", self.bamfile)
-        
+        ret = sam.proc([self.bamfile, "False"])
+        if ret == 0: os.remove(self.samfile)
+            
+    def proc(self):
+        ret = sam.proc([self.bamfile, "False"])
+
 def bowtie(date, sample, single_end, index):
     bowtie_obj = bowtie_class(date, sample, single_end, index)
     #pdb.set_trace()
     bowtie_obj.map()
-    #bowtie_obj.sam2bam()
+    #bowtie_obj.proc()
+    bowtie_obj.sam2bam()
     
     
 def main(argv):

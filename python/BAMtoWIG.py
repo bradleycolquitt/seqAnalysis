@@ -12,6 +12,7 @@ from string import *
 
 bam_dir = "/home/user/data/rna/tophat"
 #bam_dir = "/media/storage2/data/bam"
+#bam_dir = "/media/storage2/data/rna/tophat"
 wig_dir = "/media/storage2/data/wig/rpkm"
 tdf_dir = "/media/storage2/data/tdf"
 
