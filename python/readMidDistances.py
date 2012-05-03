@@ -83,11 +83,14 @@ class desc_file:
             self.file.write("Nucleosome advanced by draw from normal distribution with mean 300, sd %s\n" % str(jitter_advance))
 
 # Simulate B multiple nucleosome BAMs over given set of jitters (jitter_range)         
-def simulate_nuc_range_multiple(jitter_range, set_no, total_reads=10000,
+def simulate_nuc_range_multiple(set_no, jitter_range=(8,16,32,64), total_reads=10000,
                                  B=100, insert_sd=10, advance=300, jitter_advance=0):
 
     read_path = "/".join([SIM_NUC_PATH, "set" + str(set_no)])
     if not os.path.exists(read_path): os.makedirs(read_path)
+    else:
+        dec = raw_input("set exists. Overwrite [y/n]? ")
+        if dec == "n": return
     desc = desc_file(read_path)
     desc.write(total_reads, B, jitter_range, insert_sd, jitter_advance)
     
@@ -95,7 +98,7 @@ def simulate_nuc_range_multiple(jitter_range, set_no, total_reads=10000,
         print jitter
         jitter_path = "/".join([read_path, str(jitter)])
         if not os.path.exists(jitter_path): os.mkdir(jitter_path)
-        pool = multiprocessing.Pool(processes=8)    
+        pool = multiprocessing.Pool(processes=4)    
         args = []
         for b in xrange(B):
             out_bam = "/".join([jitter_path, "sim" + str(b)])
@@ -111,9 +114,10 @@ def sim_measure_worker(args):
     #print "Sim run"
     sim.run()
     #print "Extend"
+    #pdb.set_trace()
     extend_bam(args[5] + ".bam")
     #print "Distance"
-    calc_distance_score(args[5] + "_frag_sort.bam", args[5] + "_frag", 1, False)
+    calc_distance_score(args[5] + "_ex.bam", args[5] + "_ex", 1, False)
           
 def construct_read(count, ref, pos, isize, is_read1):
     a = pysam.AlignedRead()
@@ -142,38 +146,106 @@ def construct_read(count, ref, pos, isize, is_read1):
     a.isize = isize
     a.tlen = isize
     return a
-       
-def extend_bam(bam):
-    bam_prefix = bam.split(".bam")[0]
-    # bedtools bamToBed to convert to Bed
 
-    #bed_name = bam_prefix + ".bed"
-    #bed_file = open(bed_name, 'w')
-    bam_frag_name = bam_prefix + "_frag.bam"
-    bam_frag_file = open(bam_frag_name, 'w')
-    cmd_args1 = ['bamToBed', '-i', bam, '-bedpe']
-    cmd_args2 = ['cut', '-f', '1-2,6-9']
-    cmd_args3 = ['bedToBam', '-i', 'stdin', '-g', '/seq/lib/mouse.mm9.genome_norand']
-    p1 = Popen(cmd_args1, stdout=PIPE)
-    p2 = Popen(cmd_args2, stdin=p1.stdout, stdout=PIPE)
-    p3 = Popen(cmd_args3, stdin=p2.stdout, stdout=bam_frag_file)
-    p3.wait()
-    bam_frag_file.close()
-    pysam.sort(bam_frag_name, bam_prefix + "_frag_sort")
+# Take bed of queryname sorted paired end reads
+# Output bed records with start = start of read1 , end = end of read2
+# Workaround of failing -bedpe flag of bamToBed 
+def stitchBed(infile, outfile):
+    #pdb.set_trace()
+    first = ""
+    for line in infile:
+        line = line.split()
+        id = line[3].split("/")
+        if id[1] == "1": first = {id[0]: line}
+        elif id[1] == "2":
+            if first.keys()[0] != id[0]: continue
+            ind = (1, 2)
+            if line[5] == "+": ind = (2, 1)
+            out = "\t".join([line[0], first[id[0]][ind[0]], line[ind[1]], id[0], line[4], "+"]) + "\n"
+            outfile.write(out)
+
+def bamToFragmentBed(infile, outfile):
+    out = ""
+    start = 0
+    end = 0
+    for read in infile:
+        if read.is_read1:
+            if read.is_reverse and read.isize < 0:
+                start = read.pos + read.isize
+                end = read.pos
+                strand = "-"
+            elif not read.is_reverse and read.isize > 0:
+                end = read.pos + read.isize
+                start = read.pos
+                strand = "+"
+            else: continue
+            if start >= end: continue
+            out = "\t".join([infile.getrname(read.tid), str(start), str(end),
+                             read.qname, '0', strand]) + "\n"
+            outfile.write(out)
+    #print "Done"
+# Convert paired bed BAM to BAM with extended reads
+# In effect, convert pairs of reads to fragments of given insert size
+# Use to prep for calc_distance_score
+def extend_bam(bam):
     
+    bam_prefix = bam.split(".bam")[0]
+    bam_file = pysam.Samfile(bam, 'rb')
+    tmp_name = bam_prefix + ".bed"
+    tmp_bed = open(tmp_name, 'w')
+    out_name = bam_prefix + "_ex.bam"
+    out_bam = open(out_name, 'w')
+    #pdb.set_trace()
+    ## Convert BAM to temporary BED
+    try:
+        print "BAM to BED..."
+        bamToFragmentBed(bam_file, tmp_bed)
+    except:
+        print "BAM to BED conversion failed."
+        tmp_bed.close()
+        out_bam.close()
+        os.remove(tmp_name)
+        return
+    else:
+        print "BAM to BED conversion successful."
+        tmp_bed.close()
+        out_bam.close()
+    
+    ## Convert tmp bed to bam
+    try:
+        cmd_args = ['bedToBam', '-i', tmp_name, '-g', '/seq/lib/mouse.mm9.genome_norand']
+        p1 = Popen(cmd_args, stdout=out_bam)
+        p1.wait()
+    except:
+        print "Failed to convert BED to BAM."
+        out_bam.close()
+        return
+    else:
+        os.remove(tmp_name)
+    
+    ## Replace header
     cmd_args1 = ['samtools', 'view', '-h', bam]
-    cmd_args2 = ['samtools', 'reheader', '-', bam_prefix + "_frag_sort.bam"]
-    tmp = open(bam_prefix + "_tmp", 'w')
+    cmd_args2 = ['samtools', 'reheader', '-', out_name]
+    tmp_name = bam_prefix + "_tmp"
+    tmp = open(tmp_name, 'w')
     try:
         p1 = Popen(cmd_args1, stdout=PIPE)
         p2 = Popen(cmd_args2, stdin=p1.stdout, stdout=tmp)
         p2.wait()
+    except:
+        print "Failed reheader"
         tmp.close()
-    finally:
-        os.remove(bam)
-        os.rename(bam_prefix + "_tmp", bam_prefix + "_frag_sort.bam")
-        pysam.index(bam_prefix + "_frag_sort.bam")
-
+        os.remove(tmp_name)
+        return
+    else:
+        #os.remove(bam)
+        tmp.close()
+        os.rename(tmp_name, out_name)
+        pysam.sort(out_name, out_name + "_sort")
+        os.rename(out_name + "_sort.bam", out_name)
+        pysam.index(out_name)
+    
+    
 def combineWigs(wig):
     out_wig = open(wig + ".wig", 'w')
     cmd_args = 'cat ' + wig + '/*'
@@ -190,8 +262,9 @@ def calc_distance_score_worker(args):
     sam_file = pysam.Samfile(bam, 'rb')
     resolution = args[1]
     curr_ref = args[2]
-    curr_length = args[3]
+    curr_length = args[3] / resolution
     wig_prefix = args[4].split(".wig")[0]
+    report = args[5]
     if not os.path.exists(wig_prefix): os.mkdir(wig_prefix)
     values = np.zeros(curr_length)
     distances = np.zeros(1000)
@@ -211,35 +284,32 @@ def calc_distance_score_worker(args):
     value_out = 0
     #first_pos = True
     #read_ind = 0
-    wig_file = open("/".join([wig_prefix, curr_ref]), 'w')
-    out = "fixedStep chrom={0} start=1 step={1} span={1}\n".format(curr_ref, resolution)
-    wig_file.write(out)
-    
+    wig_file = 0
+    if not report:
+        wig_file = open("/".join([wig_prefix, curr_ref]), 'w')
+        out = "fixedStep chrom={0} start=1 step={1} span={1}\n".format(curr_ref, resolution)
+        wig_file.write(out)
+    #pdb.set_trace()
     ## Create pileup iterator
-    it = sam_file.pileup(reference=curr_ref)
-    
+    it = 0
+    if report:
+        it = sam_file.pileup(region=curr_ref)
+    else:
+        it = sam_file.pileup(reference=curr_ref)
+    positions = 0
     ## Loop through each position in iterator
-    #print "Computing variances"
     for proxy in it:
-        position = proxy.pos
-        #if first_pos:
-        value_ind = position / resolution
-        #    first_pos = False
-        #if res_count == 0: value_ind = value_ind + 1
-        #assert(value_ind < curr_length)
-        
         #pdb.set_trace()
+        #positions = positions + 1
+        position = proxy.pos
+        #value_ind = position / resolution
+       
         ## Loop through each read at current position
         for pread in proxy.pileups:
-            #insert_size = pread.alignment.isize
             read_len = pread.alignment.alen
-            #if insert_size > 50:
             if read_len > 50:
-                #mid_distance = abs((pread.alignment.pos + (insert_size/2)) - position)
                 mid_distance = abs((pread.alignment.pos + (read_len/2)) - position)
                 distances[num_reads] = mid_distance
-                #distances.append(mid_distance)
-                #sum_distances = sum_distances + abs(read_mid)
                 num_reads = num_reads + 1
                 if num_reads == distances_array_len: break
             
@@ -250,21 +320,16 @@ def calc_distance_score_worker(args):
             total_num_reads = total_num_reads + num_reads
         sum_position_mean = sum_position_mean + position_mean
         sum_position_var = sum_position_var + position_var
-        #pdb.set_trace()
-        #values[position] = position_var
-        #print position_mean, position_var
-        #wig_file.write(str(value) + "\n")
-        #distances = []
+        
         num_reads = 0
-        #value_ind = value_ind + 1
         position_mean = 0
         position_var = 0
         res_count = res_count + 1   
         if res_count == resolution:
-            #pdb.set_trace()
             if sum_position_var > 0:
                 #value_out = (sum_position_mean / sum_position_var) / resolution
                 #value_out = 1 / ((1 + sum_position_mean) * sum_position_var * resolution) 
+                #value_out = 1 / (sum_position_var * resolution)
                 value_out = total_num_reads / (sum_position_var * resolution)
                 #value_out = sum_position_mean / resolution
                 #value_out = sum_position_var / resolution
@@ -275,26 +340,25 @@ def calc_distance_score_worker(args):
             sum_position_mean = 0
             sum_position_var = 0
             total_num_reads = 0       
-    
-    max_value = np.max(values)
+        value_ind = value_ind + 1
+        if value_ind == len(values):
+            break
     scores = [0]
-    
+    max_value = np.max(values)
+    #print positions
     if max_value > 0:
-        scores = values
-    #    scores = (max_value - values) / max_value
-    
-    #print "Writing scores"
-    #for value in values:
-    #    print>>wig_file, str(value)
-    for score in scores:
-        print>>wig_file, str(score)
-        #wig_file.write(str(score) + "\n")
-    wig_file.close()
+        scores = values / np.sum(values)
+    #pdb.set_trace()
+    if report:
+        return scores
+    else:
+        for score in scores:
+            print>>wig_file, str(score)
+        wig_file.close()
     
 def calc_distance_score(bam, wig, resolution, multi):
     #pdb.set_trace()
     sam_file = pysam.Samfile(bam, 'rb')
-    #wig_file = open(wig, 'w')
     if not os.path.exists(wig): os.mkdir(wig)
     refs = sam_file.references
     ref_lengths = sam_file.lengths
@@ -310,7 +374,7 @@ def calc_distance_score(bam, wig, resolution, multi):
         curr_length = ref_lengths[chr_index]
         if resolution > 1:
             curr_length = curr_length / resolution
-        arg = [bam, resolution, curr_ref, curr_length, wig]
+        arg = [bam, resolution, curr_ref, curr_length, wig, False]
         if multi:
             pool.apply_async(calc_distance_score_worker, (arg,))
         else:
@@ -322,7 +386,40 @@ def calc_distance_score(bam, wig, resolution, multi):
     
     combineWigs(wig)
 
+def calc_distance_score_feature(feature, bam, resolution, multi):
+    feature_path = "/".join(["/home/user/lib/features_general", feature])
+    feature_file = open(feature_path)
+    sam_file = pysam.Samfile(bam, 'rb')
+    out_path = "/".join(["/home/user/data/nuc/cv2", os.path.basename(bam)])
+    if not os.path.exists(out_path): os.makedirs(out_path)
+    out_file = open("/".join([out_path, feature]), 'w')
     
+    pool = ""
+    if multi:
+        pool = multiprocessing.Pool(processes=6)
+    #num_features = 0
+    for feature in feature_file:
+        #num_features = num_features + 1
+        #pdb.set_trace()
+        feature_split = feature.split()
+        curr_length = int(feature_split[2]) - int(feature_split[1])
+        curr_region = "{0}:{1}-{2}".format(feature_split[0], feature_split[1], feature_split[2])
+        if resolution > 1:
+            curr_length = curr_length / resolution
+        arg = [bam, resolution, curr_region, curr_length, "none", True]
+        scores = 0
+        if multi:
+            scores = pool.apply_async(calc_distance_score_worker, (arg,)).get()
+        else:
+            scores = calc_distance_score_worker(arg)
+            #pool.apply(calc_distance_score_worker, (arg,))
+        score_mean = np.sum(scores) / len(scores)
+        out = " ".join([feature.strip(), str(score_mean)]) + "\n"
+        out_file.write(out)
+    if multi:
+        pool.close()
+        pool.join()
+
 def compute_mean_score(wig):
     N = 0
     sum_values = 0
@@ -349,7 +446,6 @@ def compute_mean_score_set(set_name):
         jitter = str(jitter)
         print jitter
         #pdb.set_trace()
-        #if jitter == "desc": continue
         path1 = "/".join([path0, jitter])
         rind = 0
         files = os.listdir(path1)

@@ -1,11 +1,9 @@
 cuffdiff.path <- "~/s2/analysis/rna/cuffdiff"
 
-CL.thresh <- function(de.file, FPKM=4, ratio=2, sig=TRUE, N=NULL, FDR=0) {
+CL.thresh <- function(de.file, FPKM=1, ratio=2, sig=TRUE, N=NULL, FDR=0) {
   de.data <- read.delim(de.file)
   
-  ## Select signficants
-
-  
+  ## Select signficants  
   if (sig & FDR == 0) {de.data <- subset(de.data, de.data$significant=="yes")
   } else if (!sig & FDR == 0) {de.data <- subset(de.data, de.data$significant=="no")
   } else {
@@ -13,9 +11,9 @@ CL.thresh <- function(de.file, FPKM=4, ratio=2, sig=TRUE, N=NULL, FDR=0) {
     #de.data$FDR <- q
     #de.data <- de.data[de.data$FDR <= FDR, ]
     de.data <- de.data[de.data$q_value <= FDR,]
-  }                         
+  }
   ## Select genes with log2 FPKM above given value
-  de.data <- de.data[log(de.data$value_1, 2) >= FPKM | log(de.data$value_2, 2) >= FPKM, ]
+  de.data <- de.data[log(de.data$value_1 + 1, 2) >= FPKM | log(de.data$value_2 + 1, 2) >= FPKM, ]
   
   ## Select genes with absolute ratio above given value
   #de.data <- transform(de.data, log2.FC = log(exp(ln.fold_change.), 2))

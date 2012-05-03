@@ -23,18 +23,17 @@ class indexer:
         self.read2 = os.path.abspath(read2)
         self.readInd = os.path.abspath(readInd)
         self.path_prefix = os.path.dirname(self.read1)
-        #self.basename = os.path.basename(read1)
         self.read1f = open(read1)
         self.read2f = open(read2)
         self.readIndf = open(readInd)
         self.indices = {}
         self.outfiles = {}
-        #pdb.set_trace()
+        
         indicesf = open("/seq/lib/illumina_index_sequences")
         for index in indicesf:
             index = index.split()
             self.indices[int(index[0])] = index[1]
-        #self.indices[0] = ""
+        
         self.outpath = os.path.abspath(outpath)
         
         for index in self.indices.iterkeys():
@@ -48,18 +47,17 @@ class indexer:
         self.outfiles[0] = [open("/".join([self.outpath, str(0), os.path.basename(read1)]), 'w'),
                                     open("/".join([self.outpath, str(0), os.path.basename(read2)]), 'w'),
                                     open("/".join([self.outpath, str(0), os.path.basename(readInd)]), 'w')]   
-        #pdb.set_trace()
+        
             
     def split(self):
         rInd_seq = ""
         seq_dist1 = (0,)*12
         min1 = (0,)*2
         index = 0
-        read_count = 0
-        #pdb.set_trace()
+        read_count = 0 
         for r1, r2, rInd in itertools.izip(seq.parse(self.read1f, "fastq"), seq.parse(self.read2f, "fastq"), seq.parse(self.readIndf, "fastq")):
             read_count = read_count + 1
-            if read_count % 1000000 == 0: print "Reads processed: " + str(read_count)
+            if read_count % 1000000 == 0: print>>sys.stderr, "Reads processed: " + str(read_count)
         #for r1, r2, rInd in zip(self.read1f, self.read2f, self.readIndf):
         #    if re.search(r1, "^@QSEQ"):
                 

@@ -10,54 +10,73 @@ from subprocess import Popen
 
 bed_dir = "/media/storage2/data/bed/"
 
-def sam2bam(sam, bam):
+def sam2bam(sam, bam, errorlog):
     #pdb.set_trace()
     ## Remove poorly formatted records
-   # print "Removing poorly formatted reads..."
-   # sam_in = pysam.Samfile(sam, 'r')
-   # log_path = "/".join([os.path.dirname(sam), "log", "sam2bam"])
-   # if not os.path.exists(log_path): os.makedirs(log_path)
-   # sam_error = open("/".join([log_path, os.path.basename(sam)]), 'a')
-   # sam_out_name = sam + "_tmp"
-   # sam_out = pysam.Samfile(sam_out_name, 'w', template=sam_in)
-   # header_flag = re.compile("@")
-   ## sline = []
-   ## cigar_len = 0
-   ## seq_len = 0
-   # 
-   # try:
-   #     for line in sam_in:
-   #         if not header_flag.search(line):
-   #             sline = line.split()
-   # #            #if len(sline) < 14:
-   # #            #    sam_error.write(line)
-   # #            #    continue
-   #             if sline[5] != '*':
-   #                 cigar_len = int(sline[5].split("M")[0])
-   #                 seq_len = len(sline[9])
-   #                 if cigar_len != seq_len: 
-   #                     #pdb.set_trace()
-   #                     sam_error.write(line)
-   #                     continue                
-   #         sam_out.write(line)
-   # except:
-   #     sam_error.write(str(sys.exc_info()[0]) + "\n")
-   # #sam_out.close()
-   # finally:
-   #     sam_in.close()
-   #     sam_error.close()
-   #     os.rename(sam_out_name, sam)
-    #pdb.set_trace()
-    samfile = pysam.Samfile(sam, "r")
+    #errorlog.write("Removing poorly formatted reads...\n")
+    #sam_in = open(sam, 'r')
+    #log_path = "/".join([os.path.dirname(sam), "log", "sam2bam"])
+    #if not os.path.exists(log_path): os.makedirs(log_path)
+    #sam_error = open("/".join([log_path, os.path.basename(sam)]), 'a')
+    #sam_out_name = sam + "_tmp"
+    #sam_out = open(sam_out_name, 'w')
+    #header_flag = re.compile("@")
+    #sline = []
+    #cigar_len = 0
+    #seq_len = 0
+    #line_number = 0
+    #try:
+    #    for line in sam_in:
+    #        line_number = line_number + 1
+    #        if not header_flag.search(line):
+    #            sline = line.split()
+    #            #if len(sline) < 14:
+    #            #    sam_error.write(line)
+    #            #    continue
+    #            if sline[5] != '*':
+    #                cigar_len = int(sline[5].split("M")[0])
+    #                seq_len = len(sline[9])
+    #                if cigar_len != seq_len: 
+    #                    #pdb.set_trace()
+    #                    sam_error.write(line)
+    #                    continue
+    #           
+    #                
+    #        sam_out.write(line)
+    #except:
+    #    error_log.write(">> Error cleaning SAM: line {0}\n".format(line_number))
+    #else:
+    #    error_log.write(">> Successfully cleaned SAM.\n")
+    #finally:
+    #    sam_in.close()
+    #    sam_error.close()
+    #    sam_out.close()
+    ##os.rename(sam_out_name, sam)
+    
+    #samfile = pysam.Samfile(sam_out_name, "r")
+    samfile = pysam.Samfile(sam, 'r')
     bamfile = pysam.Samfile(bam, 'wb', template=samfile)
-    print "SAM -> BAM"
-    for read in samfile:
-        bamfile.write(read)
-    bamfile.close()
+    if errorlog == "stderr":
+        errorlog = sys.stderr
+    print>>errorlog, "SAM -> BAM"
+    read_number = 0
+    try:
+        for read in samfile:
+            read_number = read_number + 1
+            bamfile.write(read)
+        bamfile.close()
+    except:
+        raise("Error converting SAM to BAM: read {0}\n".format(read_number))
+    else:
+        os.remove(sam)
+        #os.remove(sam_out_name)
     
 def proc(arg):
     bamfile = arg[0]
     rmdup = arg[1]
+    errorlog = arg[2]
+    if errorlog == "stderr":
+        errorlog = sys.stderr
     if rmdup == "False": rmdup = False
     
     bam_dir = "/".join(bamfile.split("/")[:-1]) + "/"
@@ -70,28 +89,42 @@ def proc(arg):
     if not os.path.exists(stat_dir): os.makedirs(stat_dir)
     
     if not os.path.exists(mapped_bam):
-        print "Removing unmapped..."
+        print>>errorlog, "Removing unmapped..."
+        mapped = 0
+        unmapped = 0
         bam = pysam.Samfile(bamfile, 'rb')
         mb = pysam.Samfile(mapped_bam, 'wb', template=bam)
-        for read in bam:
-            if not read.is_unmapped:
-                mb.write(read)
+        try:
+            for read in bam:
+                if not read.is_unmapped:
+                    mapped = mapped + 1
+                    mb.write(read)
+                else:
+                    unmapped = unmapped + 1
+        except:
+            errorlog.write("Failed to remove unmapped reads: read number {0}\n".format(mapped + unmapped))
+            raise
+        else:
+            errorlog.write("Unmapped read removal successful: Mapped {0}/Unmapped {1}\n".format(mapped, unmapped))
+
+        bam.close()
         mb.close()
     
     if not os.path.exists(sort_bam + ".bam"):
         #pdb.set_trace()
-        print "Sorting..."
+        print>>errorlog, "Sorting..."
         #cmd_args = ['samtools', 'sort', mapped_bam, sort_bam]
-        cmd_args = ['java', '-Xmx2g', '-jar', '/seq/picard/SortSam.jar',
-                    "=".join(["INPUT", mapped_bam]),
-                    "=".join(["OUTPUT", sort_bam + ".bam"]),
-                    "=".join(["SORT_ORDER", "coordinate"])]
-        p = Popen(cmd_args)
-        p.wait()
-        print "Indexing..."
-        pysam.index(sort_bam)
+        try:
+            cmd_args = ['java', '-Xmx2g', '-jar', '/seq/picard/SortSam.jar',
+                        "=".join(["INPUT", mapped_bam]),
+                        "=".join(["OUTPUT", sort_bam + ".bam"]),
+                        "=".join(["SORT_ORDER", "coordinate"])]
+            p = Popen(cmd_args, stdout=errorlog, stderr=errorlog)
+            p.wait()
+        except:
+            errorlog.write("Sorting failed.\n")
+            raise
         #pysam.sort(rmdup_bam, sort_bam)
-    
     if not os.path.exists(rmdup_bam) and rmdup:   
         print "Removing duplicates..."
         #cmd_args = ['samtools', 'rmdup', mapped_bam, rmdup_bam]
@@ -102,31 +135,37 @@ def proc(arg):
                     "=".join(["METRICS_FILE", rmdup_metrics]),
                     "=".join(["REMOVE_DUPLICATES", "true"]),
                     "=".join(["ASSUME_SORTED", "true"])]
-        p = Popen(cmd_args)
-        p.wait()
-        #pysam.rmdup(mapped_bam, rmdup_bam)
-        #os.remove(mapped_bam)
-        #rmdup_fs = open(rmdup_bam, 'w')
-        #for line in pysam.flagstat(rmdup_bam):
-        #    rmdup_fs.write(line)
-        #rmdup_fs.close()
+        try:
+            p = Popen(cmd_args, stdout=errorlog, stderr=errorlog)
+            p.wait()
+        except:
+            errorlog.write("Failed to remove duplicates.\n")
+            raise
         
-        #os.remove(rmdup_bam)
-        #print "Indexing..."
-        #pysam.index(rmdup_bam)
+        try:
+            print>>errorlog, "Indexing..."
+            pysam.index(rmdup_bam)
+        except SamtoolsError as detail:
+            print>>errorlog, "Indexing failed: ",detail
+    else:
+        try:
+            print>>errorlog, "Indexing..."
+            sort_bam = sort_bam + ".bam"
+            pysam.index(sort_bam)
+        except SamtoolsError as detail:
+            print>>errorlog, "Indexing failed: ", detail
     
-    if not rmdup and not os.path.exists(sort_bam + ".bam.bai"):
-        print "Indexing..."
-        pysam.index(sort_bam)
-    elif rmdup and not os.path.exists(rmdup_bam + ".bai"):
-        print "Indexing..."
-        pysam.index(rmdup_bam)
-
+ 
     bamfile_fs = open(bam_dir + "stat/" + bam_prefix + "_stat", 'w')
     for line in pysam.flagstat(bamfile):
         bamfile_fs.write(line)
-    bamfile_fs.close
+    bamfile_fs.close()
     
+    #sort_bam_fs = open(sort_bam + "_stat", 'w')
+    #for line in pysam.flagstat(sort_bam):
+    #    sort_bam_fs.write(line)
+    #sort_bam_fs.close()
+    #os.remove(bamfile)
     return 0
 
 def proc_sam(arg):
@@ -334,7 +373,7 @@ def extractInsertSizes(sam, output, track_name):
 
 def main(argv):
     if argv[1] == "sam2bam":
-        sam2bam(argv[2], argv[3])
+        sam2bam(argv[2], argv[3], argv[4])
     elif argv[1] == "proc":
         proc(argv[2:])
     elif argv[1] == "splitStrands":

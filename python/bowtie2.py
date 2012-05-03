@@ -6,6 +6,7 @@ import pysam
 import bam2bed
 import sam
 import pdb
+import datetime
 from subprocess import Popen
 from subprocess import PIPE
 
@@ -47,56 +48,71 @@ class bowtie_class:
         
         bam_date_dir = "/".join([bam_dir, self.date])
         if not os.path.exists(bam_date_dir): os.mkdir(bam_date_dir)
-        bam_date_log_dir = "/".join([bam_date_dir, "log"])
+        fastq_date_log_dir = "/".join([fastq_date_dir, "log"])
         #pdb.set_trace()
-        if not os.path.exists(bam_date_log_dir): os.mkdir(bam_date_log_dir)
-        self.runlog = open("/".join([bam_date_log_dir, "".join([self.input_prefix, "_run_log"])]), 'w+')
-        self.errorlog = open("/".join([bam_date_log_dir, "".join([self.input_prefix, "_error_log"])]), 'w+')
+        if not os.path.exists(fastq_date_log_dir): os.mkdir(fastq_date_log_dir)
+        #self.runlog = open("/".join([bam_date_log_dir, "".join([self.input_prefix, "_run_log"])]), 'w+')
+        #pdb.set_trace()
+        self.errorlog = open("/".join([fastq_date_log_dir, "".join([self.input_prefix, "_error_log"])]), 'a', 0)
+        now = datetime.datetime.now()
+        header = "[{0}/{1}/{2} {3}:{4}:{5}]\n".format(now.month, now.day,
+                                                      now.year, now.hour,
+                                                      now.minute, now.second)
+        self.errorlog.write(header)
+                          
 
     def map(self):
         #pdb.set_trace()
         if not os.path.exists(self.samfile):
             if not self.single_end:
                 cmd_args = ['bowtie2',
-                            '-p', '8', 
-                            '-I', '50', '-X', '1500', '-t',
+                            '-p', '8',
+                            '-I', '50', '-X', '1500',
                             '--end-to-end',
                             '-x', 'mm9',
                             '-1', self.input1,
                             '-2', self.input2, 
                             '-S', self.samfile]
-                self.errorlog.write(" ".join(cmd_args) + "\n")                    
-                #cmd_args2 = ['samtools', 'view', '-Sb', '-o', self.bamfile']
-                p1 = Popen(cmd_args, stderr=self.errorlog)
-                #pdb.set_trace()
-                #p2 = Popen(cmd_args2, stdin=p1.stdout, stderr=self.errorlog)
-                p1.wait()
-                #p2.wait()
-                #cmd_args3 = ['samtools', 'view', '-u', '-F', '4', self.bamfile]
-                #cmd_args4 = ['samtools', 'sort', '-', self.input_prefix + "_sort"]
-                            
             else:
-                cmd_args = ['bowtie', '-S', '-p', '8',
+                cmd_args = ['bowtie', '-S', '-p', '6',
                             '--chunkmbs', '256', 'mm9', self.input1, self.samfile]
-            #print>>self.runlog, "Mapping with bowtie: " + " ".join(cmd_args[1:])
-            #errorlog = open(self.errorlog, 'w')
-            #bowtie = Popen(cmd_args, stderr=errorlog)
-            #bowtie.wait()
-            #samtools = Popen(cmd_args2, stderr=errorlog)
-            self.errorlog.close()
-            self.runlog.close
+            self.errorlog.write(" ".join(cmd_args) + "\n")
+            try:
+                p1 = Popen(cmd_args, stderr=self.errorlog)
+                p1.wait()
+            except:
+                return
+            #self.errorlog.close()
+            
+            #self.runlog.close()
     def sam2bam(self):
         if not os.path.exists(self.bamfile):
-            sam.sam2bam(self.samfile, self.bamfile)
-        ret = sam.proc([self.bamfile, "False"])
-        if ret == 0: os.remove(self.samfile)
+            try:
+                sam.sam2bam(self.samfile, self.bamfile, self.errorlog)
+            except IOError:
+                self.errorlog.write("Can\'t open SAM for conversion.\n")
+                return
+            except:
+                #pdb.set_trace()
+                self.errorlog.write("SAM to BAM conversion failed\n")
+                return
+            else:
+                self.errorlog.write("SAM to BAM completed successfully.\n")
+                #self.errorlog.write("Removing SAM...")
+                #os.remove(self.samfile)
+            
+            try:
+                sam.proc([self.bamfile, "False", self.errorlog])
+            except IOError:
+                self.errorlog.write("BAM processing failed: IOError.\n")
+            else:
+                self.errorlog.write("BAM processing completed successfully.\n")
             
     def proc(self):
         ret = sam.proc([self.bamfile, "False"])
 
 def bowtie(date, sample, single_end, index):
     bowtie_obj = bowtie_class(date, sample, single_end, index)
-    #pdb.set_trace()
     bowtie_obj.map()
     #bowtie_obj.proc()
     bowtie_obj.sam2bam()
