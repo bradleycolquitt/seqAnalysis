@@ -112,7 +112,18 @@ findMaxMin <- function(x) {
   }
   return(c(val.min, val.max))
 }
-computeAxis <- function(data, lab) {
+
+baselineNorm <- function(data) {
+  starts <- unlist(lapply(data, function(x) mean(x[[1]][[1]][1:10])))
+  norm_val <- mean(starts)
+  ind_norm_vals <- starts - norm_val
+  data <- lapply(1:length(data), function(x) {
+    lapply(data[[x]], function(y) y - ind_norm_vals[[x]])
+  })
+  return(data)
+}
+
+computeAxis <- function(data, wsize, lab) {
   lab.l <- length(lab)
   lab.data <- NULL
   l <- length(data)
@@ -121,13 +132,13 @@ computeAxis <- function(data, lab) {
   if (lab.l == 1) {
     b <- l / 2 + 1
     c <- l
-    lab_dist <- l / 2 * 200 / 1000
+    lab_dist <- l / 2 * wsize / 1000
     lab.data <- list(pos=c(a, b, c), dist=lab_dist)
   } else if (lab.l == 2) {
     b <- round(l - 1, digits=-2) / 2  + 1 
     c <- b + l - (b-1) * 2
     d <- l
-    lab_dist <- (b - 1) * 200 / 1000
+    lab_dist <- (b - 1) * wsize / 1000
     lab.data <- list(pos=c(a, b, c, d), dist=lab_dist)
  #   print(lab.data)
   }

@@ -2,6 +2,9 @@
 
 import sys
 
+def convert(fname, oname):
+    file = open(fname)
+
 def main(argv):
 
     infile = open(argv[1], 'r')

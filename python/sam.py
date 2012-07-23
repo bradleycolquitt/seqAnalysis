@@ -124,6 +124,8 @@ def proc(arg):
         except:
             errorlog.write("Sorting failed.\n")
             raise
+        else:
+            os.remove(mapped_bam)
         #pysam.sort(rmdup_bam, sort_bam)
     if not os.path.exists(rmdup_bam) and rmdup:   
         print "Removing duplicates..."
@@ -141,7 +143,7 @@ def proc(arg):
         except:
             errorlog.write("Failed to remove duplicates.\n")
             raise
-        
+         
         try:
             print>>errorlog, "Indexing..."
             pysam.index(rmdup_bam)
@@ -168,6 +170,21 @@ def proc(arg):
     #os.remove(bamfile)
     return 0
 
+def filterISize(inbam, outbam, imin, imax):
+    inbam_file = pysam.Samfile(inbam, "rb")
+    outbam_file = pysam.Samfile(outbam, "wb", template=inbam_file)
+    curr_ref = -1
+    isize = 0
+    for read in inbam_file.fetch():
+        if read.tid != curr_ref:
+            curr_ref = read.tid
+            print curr_ref
+        isize = abs(read.isize)   
+        if isize > imin and isize < imax: 
+            outbam_file.write(read)
+    inbam_file.close()
+    outbam_file.close()
+    
 def proc_sam(arg):
     samfile = arg[0]
     rmdup = arg[1]

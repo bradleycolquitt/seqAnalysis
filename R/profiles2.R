@@ -132,11 +132,14 @@ makeProfile2 <- function(anno, samples, group2=NULL, data_type="unnorm/mean", rm
           group2_out <- str_split(group2, "/")
           group2_out <- group2_out[length(group2_out)]
         }
-
+        
         writeModule(out.path=out.path, sample=sample, group2=group2_out,
                     rm.outliers=rm.outliers, profile=profile, CI=CI)   
       }
-  })       
+      rm(profile)
+      gc()
+  })
+ 
 }
 
 ## Wrapper to run makeProfile2 on all samples within a given profile direction
@@ -148,7 +151,7 @@ makeProfile2.allSamp <- function(anno, group2=NULL, data_type="unnorm/mean", rm.
   ind <- grep("profiles", samples)
   if (length(ind) > 0) samples <- samples[-ind]
   out_path = paste(sample_path, "profiles", sep="/")
-  data <- foreach(sample=samples) %dopar% {
+  data <- foreach(sample=samples) %do% {
     out_name <- sample
     if (!is.null(group2)) {
       out_name <- paste(out_name, group2, sep="_")
@@ -213,7 +216,7 @@ plotProfiles <- function(profile=NULL, ci_1=NULL, ci_2=NULL, cols=NULL,
 }
 
 ## Establishes plot area
-plotAnno <- function(data, annotation, cols=NULL, lab=NULL,
+plotAnno <- function(data, annotation, wsize, cols=NULL, lab=NULL,
                         y.val=NULL, combine=FALSE,
                         stack=FALSE, ...) {
   lab.data <- NULL
@@ -245,11 +248,11 @@ plotAnno <- function(data, annotation, cols=NULL, lab=NULL,
           plotProfiles(profile=data.val[,i], ci_1=data.ci1[,i], ci_2=data.ci2[,i],
                           smooth=FALSE, cols=cols[i])  
         }
-        lab.data <- computeAxis(data.val[,1], lab)
+        lab.data <- computeAxis(data.val[,1], wsize, lab)
       } else {
         plotProfiles(profile=data.val[,1], ci_1=data.ci1[,1], ci_2=data.ci2[,1],
                           smooth=FALSE, cols=cols[i])
-        lab.data <- computeAxis(data.val[,1], lab)
+        lab.data <- computeAxis(data.val[,1], wsize, lab)
       }
     }
   
@@ -263,14 +266,14 @@ plotAnno <- function(data, annotation, cols=NULL, lab=NULL,
   axis(2, at=y.val)
   #axis(2, at=seq(round(y.val[1], 1), round(y.val[2],1), round(diff(y.val)/3, 2)), cex.axis=1)
   abline(v=lab.data$pos[2], lty=2, col="grey")
-  abline(v=lab.data$pos[3], lty=2, col="grey")
+  if (length(lab) == 2) abline(v=lab.data$pos[3], lty=2, col="grey")
 }
 
 ##############################################################
 ## Primary interface for drawing profile of a single sample ##
 ##############################################################
 plot2 <- function(annotation, sample, orient=2, data_type = "unnorm/mean", group2=NULL,
-                     cols=NULL, lab=c("",""), y.vals=NULL, range=NULL, type="range", fname=NULL) {
+                     cols=NULL, lab=c("",""), y.vals=NULL, wsize=25, range=NULL, type="range", fname=NULL) {
 
   ## make profile path
   if (!is.null(group2)) {
@@ -298,15 +301,22 @@ plot2 <- function(annotation, sample, orient=2, data_type = "unnorm/mean", group
   } else if (fname=="manual") {
     # do nothing, device has already been set
   } else {
+    if (fname=="auto")
+      if (!is.null(group2)) {
+        fname <- paste(annotation, sample, group2, sep="_")
+      } else {
+        fname <- paste(annotation, sample, sep="_")        
+      }
+    fname <- paste(fname, ".pdf", sep="")
     pdf(file=paste(profile2.path, "norm", "plots", fname, sep="/"), 6, 4.5)
   }
-
+  
   ## If y.vals not provided, determine y axis range from the data
   if (is.null(y.vals)) y.vals <- getRange(list(data), buffer=0)
   
   ## Send data to plotAnno
   plotAnno(list(data), annotation, cols=cols, lab=lab,
-                y.val=y.vals) 
+                y.val=y.vals, wsize=wsize) 
   
   ## Label axes
   #mtext("AMS", at=.775, side=2, outer=T, line=-1, cex=1.6)
@@ -323,7 +333,7 @@ plot2 <- function(annotation, sample, orient=2, data_type = "unnorm/mean", group
   }
 }
 
-plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2=NULL, cols=NULL, lab=c("",""), y.vals=NULL, standard=FALSE, fname=NULL) {
+plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2=NULL, cols=NULL, lab=c("",""), y.vals=NULL, wsize=25, standard=FALSE, range=NULL, baseline=FALSE, fname=NULL) {
   samples <- NULL
   orient <- 1
   rows <- 1
@@ -344,8 +354,9 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
     columns <- 1
     orient <- 2
   } else if (set=="d3a_4") {
-    samples <- list(list("moe_d3a_wt_hmc_30M_rpkm", "moe_d3a_wt_hmc_rpkm", "moe_d3a_ko_hmc_rpkm"))
-    rows <- 1
+    samples <- list(list("moe_d3a_wt_hmc_30M_rpkm",  "moe_d3a_ko_hmc_rpkm"),
+                    list("moe_d3a_wt_mc_rpkm", "moe_d3a_ko_mc_rpkm"))
+    rows <- 2
     columns <- 1
     orient <- 2
   } else if (set=="d3a_rlm") {
@@ -371,6 +382,15 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
   } else if (set=="cells_norm") {
     samples <- list(list("omp_hmc", "ngn_hmc", "icam_hmc"),
                     list("omp_mc", "ngn_mc", "icam_mc"))
+    columns <- 1
+    #if (!is.null(group2)) {
+    #  columns <- 3
+    #}
+    rows <- 2
+    orient <- 2
+  } else if (set=="cells_rpkm") {
+    samples <- list(list("omp_hmc_rpkm", "ngn_hmc_rpkm", "icam_hmc_rpkm"),
+                    list("omp_mc_rpkm", "ngn_mc_rpkm", "icam_mc_rpkm"))
     columns <- 1
     #if (!is.null(group2)) {
     #  columns <- 3
@@ -421,6 +441,11 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
     rows <- 2
     columns <- 1
     orient <- 2
+  } else if (set=="d3a_nuc") {
+    samples <- list(list("d3xog_wt_nuc_478_rmdup", "d3xog_ko_nuc_256_rmdup"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
   }
 
   if (is.null(fname))  {x11("", 10, 5)
@@ -429,7 +454,7 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
       pdf(file=paste(profile2.path, "norm", "plots", fname, sep="/"), 6 * columns, 4.5 * rows)
     }  
   }                      
-  par(mfrow=c(rows, columns), mar=c(2,4,1,1) + 0.1, oma=c(1, 5, 1, 1))
+  par(mfrow=c(rows, columns), mar=c(2,4,1,1) + 0.1, oma=c(1, 1, 1, 1))
   if (orient==1) {
     data <- lapply(samples,
                  function(sample) lapply(sample, function(s)
@@ -441,9 +466,17 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
                         profileRead(paste(profile2.path, "norm",
                                           data_type, annotation, "profiles", sep="/"), s, group2)))
   }  
-
+  ## If baseline is specified, normalize by mean start and end valuee
   #return(data)
-
+  if (baseline) {
+    data <- list(baselineNorm(data[[1]]))
+  }  
+#  return(data)
+  
+  if (!is.null(range)) {
+      data <- list(lapply(data[[1]], function(x) lapply(x, function(y) as.matrix(y[range[1]:range[2],]))))
+  }
+ # return(data)
   if (is.null(y.vals)) {
     y.vals <- lapply(data, getRange)
     if (standard) {
@@ -459,21 +492,19 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
   
   y_label_pos <- c(0.75, 0.25)
   lapply(c(1:length(samples)), function(x) {
-    plotAnno(data[[x]], annotation, cols=cols, lab=lab, y.val=y.vals[[x]], stack=TRUE)
-    mtext("Normalized read count", at=y_label_pos[x], side=2, outer=TRUE, line=-1, cex=1)
+    plotAnno(data[[x]], annotation, cols=cols, lab=lab, y.val=y.vals[[x]], wsize=wsize, stack=TRUE)
+    #mtext("Normalized read count", at=y_label_pos[x], side=2, outer=TRUE, line=-1, cex=1)
     name <- lapply(samples[[x]], function(y) unlist(str_split(y[1], "_")))
     name <- unlist(lapply(name, function(y) y[-length(y)]))
     #legend(0, y=(y.vals[[x]][2] - (y.vals[[x]][2] / 20)), legend=legend, col=cols, bty="n", lty=1, horiz=TRUE)
   })
   par(las=1)
-  mtext("5hmC", at=.775, side=2, outer=T, line=1, cex=1.6)
-  mtext("5mC", at=.275, side=2, outer=T, line=1, cex=1.6)
-  mtext(annotation, side=3, outer=TRUE, cex=1.6)
+  mtext(annotation, side=3, outer=TRUE, cex=.8)
   if (!is.null(fname))
     if (fname!="manual") dev.off()
 }
 
-MP.plot2.horiz <- function(annotation, set="d3a", data_type = "raw", group2=NULL, cols=NULL, lab=c("",""), y.vals=NULL, standard=TRUE, fname=NULL) {
+MP.plot2.horiz <- function(annotation, set="d3a", data_type = "raw", group2=NULL, cols=NULL, lab=c("",""), y.vals=NULL, wsize=25, standard=TRUE, fname=NULL) {
   orient <- 2
   if (set == "cells_pair") {
     samples <- list(list("icam_hmedip.bed", "icam_medip.bed"),
@@ -551,7 +582,7 @@ MP.plot2.horiz <- function(annotation, set="d3a", data_type = "raw", group2=NULL
     for(i in 2:length(data)) y.vals <- c(y.vals, list(tmp_vals))
   }  
   lapply(c(1:length(samples)), function(x) {
-    plotAnno(data[[x]], annotation, cols=cols, lab=lab, y.val=y.vals[[x]], stack=TRUE)
+    plotAnno(data[[x]], annotation, cols=cols, lab=lab, y.val=y.vals[[x]], wsize=wsize, stack=TRUE)
     #legend(0, y=(y.vals[[x]][2] - (y.vals[[x]][2] / 20)), legend=legend, col=cols, bty="n", lty=1, horiz=TRUE)
   })
   mtext("Normalized read count", at=.5, side=2, outer=TRUE, line=-1, cex=1)
@@ -683,7 +714,7 @@ saveRoiByChr.all <- function(anno_set="std") {
       cat(file)
       cat("\n")
       result <- try(saveRoiByChr(paste(anno.path, file, sep="/")))
-      if (class(result) == "try-error") next
+      if (class(result) == "try-error") return
     }
 }
 }

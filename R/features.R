@@ -6,25 +6,39 @@ source("~/src/seqAnalysis/R/modeling.R")
 
 library(Brobdingnag)
 
-registerDoMC(cores=10)
+registerDoMC(cores=3)
 
 feature.path <- "~/lib/features_general"
 feature_norm_path <- "~/s2/analysis/features/norm"
 
-features_toplot <- factor(1:10, labels=c("refgene_1to3kb_up_chr", "cgi_chr", "Refgene_5_UTR_chr",
+features_toplot <- factor(1:11, labels=c("refgene_1to3kb_up_chr", "Refgene_1kb_up_chr", "cgi_chr", "Refgene_5_UTR_chr",
                                   "Refgene_CDS_chr", "Refgene_3_UTR_chr", "Refgene_exons_chr",
                                   "Refgene_intron_chr",
-                                  "phastCons30way_intergenic_sorted_merge500_thresh500_inter_omp_h3k4me1_default.bed_merged",
+                                  "phastCons30way_intergenic_sorted_merge500_thresh500_inter_omp_h3k4me1_default.bed_chr",
                                   "phastCons30way_intergenic_merge500_thresh500_chr",
                                   "intergenic_sub_rmsk_chr"))
 
-features_merge_toplot <- factor(1:9, labels=c("refgene_1to3kb_up_merged", "cgi_merged", "Refgene_5_UTR_merged",
-                                  "Refgene_CDS_merged", "Refgene_3_UTR_merged",
-                                  "Refgene_intron_merged", "phastCons30way_intergenic_sorted_merge500_thresh500_inter_omp_h3k4me1_default.bed_merged",
-                                  "phastCons30way_intergenic_merge500_thresh500_merged", "intergenic_sub_rmsk_merged"))
+features_merge_toplot <- factor(1:10, labels=c("refgene_1to3kb_up_merged",
+                                       "Refgene_1kb_up_merged",
+                                       "cgi_merged",
+                                       "Refgene_5_UTR_merged",
+                                       "Refgene_CDS_merged",
+                                       "Refgene_3_UTR_merged",
+                                       "Refgene_intron_merged",
+                                       "phastCons30way_intergenic_sorted_merge500_thresh500_inter_omp_h3k4me1_default.bed_merged",
+                                       "phastCons30way_intergenic_merge500_thresh500_merged",
+                                       "intergenic_sub_rmsk_merged"))
 
-features_merge_toplot_short <- c("1 to 3 kb upstream", "CGI", "5' UTR", "CDS", "3' UTR", "Intron",
-                                 "mOSN enhancer", "Intergenic conserved", "Intergenic")
+features_merge_toplot_short <- c("1 to 3 kb upstream",
+                                 "1kb upstream",
+                                 "CGI",
+                                 "5' UTR",
+                                 "CDS",
+                                 "3' UTR",
+                                 "Intron",
+                                 "mOSN enhancer",
+                                 "Intergenic conserved",
+                                 "Intergenic")
 
 features_rmsk <- factor(1:10, labels=c("rmsk_LTR_chr", "rmsk_LINE_chr", "rmsk_SINE_chr",
                                "rmsk_DNA_chr", "rmsk_RNA_chr",
@@ -120,13 +134,25 @@ makeFeatureMatrix2 <- function(feature, set = "all", value_type, transf=NULL, wr
     samples <- samples.d3a_norm
   } else if (set=="d3a_rpkm") {
     samples <- samples.d3a_rpkm
+  } else if (set=="d3a_2") {
+    samples <- samples.d3a_2
   } else if (set=="all") {
     samples <- list.files(paste(feature_norm_path, feature, sep="/")) 
   } else if (set=="d3a_mrna") {
     samples <- c("moe_d3a_wt_mrna_rpkm", "moe_d3a_ko_mrna_rpkm")
-  } else if (set=="tt3") {
-    samples <- c("omp_hmc_120424_rpkm", "o.tt3.1_hmc_rpkm", "o.tt3.2_hmc_rpkm", "o.tt3.2_hmc_21M_rpkm", "ngn_hmc_rpkm", "icam_hmc_rpkm",
-                 "omp_mc_rpkm", "o.tt3.1_mc_rpkm", "o.tt3.2_mc_rpkm", "ngn_mc_rpkm", "icam_mc_rpkm")
+  } else if (set=="d3a_mrna_2") {
+    samples <- c("moe_d3a_wt_mrna", "moe_d3a_ko_mrna")
+  } else if (set=="d3a_nuc") {
+    samples <- samples.d3a_nuc
+  } else if (set=="d3a_nuc_sub") {
+    samples <- samples.d3a_nuc_sub
+  } else if (set=="tt3_min") {
+    #samples <- c("omp_hmc_120424_rpkm", "ott3_1_hmc_rpkm", "ott3_2_hmc_rpkm", "ott3_2_hmc_21M_rpkm", "ngn_hmc_rpkm", "icam_hmc_rpkm",
+    #             "omp_mc_rpkm", "ott3_1_mc_rpkm", "ott3_2_mc_rpkm", "ott3_2_mc_rmdup_17M_rpkm", "ngn_mc_rpkm", "icam_mc_rpkm")
+    samples <- c("omp_hmc_120424_rpkm", "ott3_1_hmc_rpkm", "ott3_2_hmc_rpkm",
+                 "omp_mc_rpkm", "ott3_1_mc_rpkm", "ott3_2_mc_rpkm")
+  } else if (set=="tt3_sub") {
+    samples <- c("ott3_2_hmc_21M_rpkm_sub_omp_hmc_120424_rpkm")
   } 
   
   print(samples)
@@ -174,6 +200,7 @@ statCollect <- function(set, value_type, feature, transf_name, transf=NULL) {
   data_path <- paste(feature_norm_path, value_type, "summaries",
                            paste(set, feature, sep="_"), sep="/")
   if (!is.null(transf_name)) data_path <- paste(data_path, transf_name, sep="_")
+  print(data_path)
   data <- read.delim(data_path, header=TRUE, row.names=NULL)
   data_melt <- melt(data)
   colnames(data_melt)[1] <- "obs"
@@ -280,8 +307,8 @@ statSummary.allIQR <- function(set, value_type, toplot="general", transf_name="s
 }
 
 ## Normalize values of feature matrix by median value of specified feature
-statSummary.allNorm <- function(set, value_type, toplot=TRUE, transf=NULL, norm="intergenic_sub_rmsk_chr") {
-  data <- statSummary.all(set=set, value_type=value_type, toplot=toplot, action="collect", transf=transf)
+statSummary.allNorm <- function(set, value_type, toplot=TRUE, transf_name=NULL, transf=NULL, norm="intergenic_sub_rmsk_chr") {
+  data <- statSummary.all(set=set, value_type=value_type, toplot=toplot, action="collect", transf_name=transf_name, transf=transf)
   data.norm <- data[data$feature == norm,]
   data.norm.median <- ddply(data.norm, .(variable, celltype, ip), summarize, value.median=median(value))
   norm_feature_name <- paste(norm, "median", sep="_")
@@ -300,8 +327,10 @@ processIntersectSummary <- function(summary, features=features_merge_toplot) {
   data <- read.delim(summary)
   data$internal_norm <- with(data, fraction_norm/sum(fraction_norm))
   data$feature.factor <- features[match(data$feature, as.character(features))]
+  data$feature.pretty <- features_merge_toplot_short[as.numeric(data$feature.factor)]
   return(data)
 }
+
 
 processIntersectSummary.batch <- function(set, features=features_merge_toplot) {
   path <- "~/s2/data/homer/peaks/intersections"

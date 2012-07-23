@@ -17,7 +17,7 @@ def main(argv):
     features = os.listdir(feature_path)
     
     #Prepare output directory
-    reference_out_path = "/".join([out_path, args.reference_bed])
+    reference_out_path = "/".join([out_path, os.path.basename(args.reference_bed)])
     if not os.path.exists(reference_out_path): os.mkdir(reference_out_path)
     
     #Get total count

@@ -25,7 +25,8 @@ def main(argv):
             date = line[0]  ## date of sequencing
             lane = line[1]  ## lane of flow cell
             single_end = line[2] ## single or paired end
-            indices_names = line[3:] ## list of indices to process
+            style = line[3]
+            indices_names = line[4:] ## list of indices to process
             indices = []
             
             for index_name in indices_names:
@@ -36,7 +37,7 @@ def main(argv):
                 print line
                 if single_end == "PE": single_end = ""
                 try:
-                    bowtie2.bowtie(date, lane, bool(single_end), index)
+                    bowtie2.bowtie(date, lane, bool(single_end), index, style)
                 except:
                     errorlog.write(str(sys.exc_info()[0]) + " ".join([str(index[0]), index[1]]) + "\n")
                     continue

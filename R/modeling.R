@@ -127,6 +127,15 @@ permutationTest.matList <- function(data, chunkSize=5, N=10000, adjust="BH") {
   return(out)
 }
 
+permutationTest.quantile <- function(x, y, N=1000, quantile) {
+  qs <- foreach (i=1:N, .combine=c) %do% {
+    ind <- sample(1:length(y), length(y))
+    ratio <- log2(x / y[ind])
+    return(quantile(ratio, probs=quantile))
+  }
+  return(mean(qs))
+}
+
 plotSigLine <- function(sig_values, thresh=0.05, step, yval, ...) {
   sig_positions <- which(sig_values <= thresh)
   if (length(sig_positions > 0)) {
@@ -146,9 +155,31 @@ KLdist <- function(x, y) {
 JSdist <- function(x, y) {
   xy_mean <- (x + y) / 2
   out <- sqrt(KLdist(x, xy_mean) / 2 + KLdist(y, xy_mean) / 2)
+  if (is.nan(out)) out <- 0
   return(out)
 }
 
+funOnColPairs <- function(data, FUN) {
+  #print(ncol(data))
+  nc <- ncol(data)
+  if (!is.null(nc)) {
+  ind <- seq(1,ncol(data), 2)
+  tmp <- unlist(lapply(ind, function(x) do.call(FUN, list(data[,x], data[,x+1]))))
+  return(tmp)
+}
+  #return(do.call("rbind", tmp))
+}
+
+# data is data.frame with paired columns of values and column for splitting
+# key indicates which column to split by
+# ind is the column indices of data to be processed
+JScounts <- function(data, key, ind) {
+  data.s <- split(data, data[,'key']) 
+  data.norm <- lapply(data.s, function(x) apply(x[,ind], 2, function(y) y/sum(y)))
+  out <- lapply(data, function(x) funOnColPairs(x, JSdist))
+  return(do.call("rbind", out))
+  
+}
 ## Table factors
 ## For each factor
 ##     Sample N values from index vector

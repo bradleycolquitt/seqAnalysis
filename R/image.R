@@ -1,3 +1,6 @@
+source("~/src/seqAnalysis/R/paths.R")
+library(itertools)
+
 ## Generates matrix of samples values with annotations observations as rows and
 ##    positions as columns
 ##    Arguments:  data - profile data with [chr start stop name position strand value]
@@ -110,20 +113,21 @@ MP.heat <- function(data, density="none", range=NULL, average=NULL, fname=NULL) 
 
   if (!is.null(average)) {
     #ind <- rep(seq(1, nrow(data)/average), each=average)
-    data <- foreach(group=isplitRows(data, chunkSize=average), .combine="rbind") %dopar% {
-      apply(group, 2, mean, na.rm=TRUE)
+    data <- foreach(group=isplitRows(data, chunkSize=average), .combine="rbind", .inorder=TRUE) %dopar% {
+      apply(group, 2, mean, trim=.2, na.rm=TRUE)
     }
   }
+  #return(data)
   rgb.palette <- colorRampPalette(c("yellow", "black", "blue"), space="rgb")
   lab.palette <- colorRampPalette(brewer.pal(5,"YlGnBu"), space="Lab")
-  heatmap.2(data, Rowv=TRUE, Colv=FALSE, trace="none", dendrogram="none",
+  heatmap.2(data, Rowv=FALSE, Colv=FALSE, trace="none", dendrogram="none",
             hclustfun = .hclustWard,
             #col=blueyellow(100),
             #col=cm.colors(100),
-            col=hcl(h=240, c=30, l=seq(99,0,-1)),
+            #col=hcl(h=240, c=30, l=seq(99,0,-1)),
             #col=hcl(h = seq(60, 258, by = 2)),
             #col=rgb.palette(100),
-            #col=lab.palette(100),
+            col=lab.palette(100),
             #col=terrain.colors(100),
             #col=rainbow(100, end=.7),
             density.info=density, # "none", "density", "histogram"

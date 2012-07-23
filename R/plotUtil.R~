@@ -11,24 +11,37 @@ checkExisting <- function(input.path, output.path, select=NULL, extend=NULL) {
 
 profileRead <- function(data.path, select, select2=NULL) {
   files <- list.files(data.path)
+  #print(files)
   files <- files[grep(select, files)]
-  
+  #print(files)
   if(length(files) == 0) {
     stop("Annotation file not found")
   }
   val_files <- NULL
   ci_files_1 <- NULL
   ci_files_2 <- NULL
+  #files <- files[grep(select, files)]
   if (!is.null(select2)) {
-    files <- files[grep(select2, files)]
-    val_files <- sort(files[grep("mean$", files)])
-    ci_files_1 <- sort(files[grep("bootCI_1", files)])
-    ci_files_2 <- sort(files[grep("bootCI_2", files)])
+    #files <- files[grep(select2, files)]
+    filter <- paste(select, select2, sep="_")
+    #print(files)
+    #val_files <- sort(files[grep(paste(select, "mean$", sep="_"), files)])
+    #ci_files_1 <- sort(files[grep(paste(select, "bootCI_1", sep="_"), files)])
+    #ci_files_2 <- sort(files[grep(paste(select, "bootCI_2", sep="_"), files)])
+    val_files <- sort(files[grep(paste(filter, "mean$", sep="_"), files)])
+    ci_files_1 <- sort(files[grep(paste(filter, "mean_bootCI_1", sep="_"), files)])
+    ci_files_2 <- sort(files[grep(paste(filter, "mean_bootCI_2", sep="_"), files)])
   } else {
     val_files <- sort(files[grep(paste(select, "mean$", sep="_"), files)])
     ci_files_1 <- sort(files[grep(paste(select, "mean_bootCI_1", sep="_"), files)])
     ci_files_2 <- sort(files[grep(paste(select, "mean_bootCI_2", sep="_"), files)])
+    #val_files <- sort(files[grep("mean$", files)])
+    #ci_files_1 <- sort(files[grep("mean_bootCI_1", files)])
+    #ci_files_2 <- sort(files[grep("mean_bootCI_2", files)])
   }
+  #print(val_files)
+  #print(ci_files_1)
+  #print(ci_files_2)
   val_data <- foreach(file=val_files, .combine="cbind") %do% {
     read.delim(paste(data.path, file, sep="/"), header=F)}
   ci_data_1 <- foreach(file=ci_files_1 , .combine="cbind") %do% {
@@ -51,8 +64,8 @@ MP.getData <- function(path, filters, neg_filter=NULL, annotation, group2) {
   files <- sort(files)
   data <- lapply(files, function(x) {
     file.path <- paste(path, x, "profiles", sep="/")
-    print(file.path)
-    print(annotation)
+#    print(file.path)
+#    print(annotation)
     profileRead(file.path, annotation, group2)
   })
   return(data)
@@ -75,16 +88,42 @@ trimData <- function(data, range) {
   return(data)
 }
 getRange <- function(data, buffer=100) {
+  # print(length(data))
   ci_lower <- lapply(data, function(x) x[[2]])
   ci_upper <- lapply(data, function(x) x[[3]])
   val.max <- 0
   val.min <- 1000
+  #print(ci_lower)
+  #print(dim(ci_lower[[1]]))
   for(i in 1:length(ci_upper)) val.max <- max(val.max, max(ci_upper[[i]]))
   for(i in 1:length(ci_lower)) val.min <- min(val.min, min(ci_lower[[i]]))
   buffer <- (val.max - val.min) / 4
-  val.max <- val.max + buffer
-  val.min <- val.min - buffer
+  val.max <- round(val.max + buffer,3)
+  val.min <- round(val.min - buffer,3)
   val <- c(val.min, val.max)
+}
+
+findMaxMin <- function(x) {
+  val.max <- 0
+  val.min <- 1000
+  for (i in 1:length(x)) {
+    val.max <- max(val.max, x[[i]][2])
+    val.min <- min(val.min, x[[i]][1])
+  }
+  return(c(val.min, val.max))
+}
+
+baselineNorm <- function(data) {
+#  browser()
+  starts <- unlist(lapply(data, function(x) mean(x[1:10])))
+  print(starts)
+  ends <- unlist(lapply(data, function(x) mean(x[length(x)-10:length(x)])))
+  norm_val <- mean(c(starts, ends))
+  print(norm_val)
+  ind_norm_vals <- lapply(starts, function(x)  starts - norm_val)
+  print(ind_norm_vals)
+  data <- sapply(1:length(data), function(x) data[[x]] - ind_norm_vals[[x]])
+  return(data)
 }
 
 computeAxis <- function(data, lab) {

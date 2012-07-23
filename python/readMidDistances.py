@@ -17,6 +17,7 @@ import random
 import sequtils
 import numpy as np
 import multiprocessing
+from multiprocessing import Pool
 from subprocess import Popen
 from subprocess import PIPE
 
@@ -73,7 +74,7 @@ class desc_file:
     def __init__(self, path):
         self.path = path
         self.file = open(self.path + "/desc", 'w')
-    def write(self, total_reads, B, jitter_range, insert_size, jitter_advance):
+    def write(self, total_reads, B, jitter_range, insert_size, jitter_advance, comment):
         self.file.write("Simulated nucleosomes\n")
         self.file.write("Total number of reads: " + str(total_reads) + "\n")
         self.file.write("Number of simulations: " + str(B) + "\n")
@@ -81,10 +82,12 @@ class desc_file:
         self.file.write("Standard deviation of insert sizes (mean 145): " + str(insert_size) + "\n")
         if jitter_advance > 0:
             self.file.write("Nucleosome advanced by draw from normal distribution with mean 300, sd %s\n" % str(jitter_advance))
-
+        if comment != "none":
+            self.file.write(comment + "\n")
+            
 # Simulate B multiple nucleosome BAMs over given set of jitters (jitter_range)         
 def simulate_nuc_range_multiple(set_no, jitter_range=(8,16,32,64), total_reads=10000,
-                                 B=100, insert_sd=10, advance=300, jitter_advance=0):
+                                 B=100, insert_sd=10, advance=300, jitter_advance=0, comment="none"):
 
     read_path = "/".join([SIM_NUC_PATH, "set" + str(set_no)])
     if not os.path.exists(read_path): os.makedirs(read_path)
@@ -92,7 +95,7 @@ def simulate_nuc_range_multiple(set_no, jitter_range=(8,16,32,64), total_reads=1
         dec = raw_input("set exists. Overwrite [y/n]? ")
         if dec == "n": return
     desc = desc_file(read_path)
-    desc.write(total_reads, B, jitter_range, insert_sd, jitter_advance)
+    desc.write(total_reads, B, jitter_range, insert_sd, jitter_advance, comment)
     
     for jitter in jitter_range:
         print jitter
@@ -103,9 +106,9 @@ def simulate_nuc_range_multiple(set_no, jitter_range=(8,16,32,64), total_reads=1
         for b in xrange(B):
             out_bam = "/".join([jitter_path, "sim" + str(b)])
             args = [total_reads, jitter, insert_sd, advance, jitter_advance, out_bam]
-            pool.apply_async(sim_measure_worker, (args,))
+            #pool.apply_async(sim_measure_worker, (args,))
             #pool.apply(sim_measure_worker, (args,))
-            #sim_measure_worker(args)
+            sim_measure_worker(args)
         pool.close()
         pool.join()
         
@@ -164,56 +167,50 @@ def stitchBed(infile, outfile):
             out = "\t".join([line[0], first[id[0]][ind[0]], line[ind[1]], id[0], line[4], "+"]) + "\n"
             outfile.write(out)
 
-def bamToFragmentBed(infile, outfile):
+def bamToFragmentBed(infile, outfile, size):
     out = ""
     start = 0
     end = 0
-    for read in infile:
-        if read.is_read1:
-            if read.is_reverse and read.isize < 0:
-                start = read.pos + read.isize
+    if size == 0:
+        for read in infile:    
+            if read.is_read1:
+                if read.is_reverse and read.isize < 0:
+                    start = read.pos + read.isize
+                    if start < 0: continue
+                    end = read.pos
+                    strand = "-"
+                elif not read.is_reverse and read.isize > 0:
+                    end = read.pos + read.isize
+                    start = read.pos
+                    strand = "+"
+                else: continue
+                if start >= end: continue
+                out = "\t".join([infile.getrname(read.tid), str(start), str(end),
+                                 read.qname, '0', strand]) + "\n"
+                outfile.write(out)
+    else:
+        for read in infile:
+            if read.tid < 0: continue
+            if read.is_reverse:
+                start = read.pos - size
+                if start < 0: continue
                 end = read.pos
                 strand = "-"
-            elif not read.is_reverse and read.isize > 0:
-                end = read.pos + read.isize
+            elif not read.is_reverse:
+                end = read.pos + size
                 start = read.pos
                 strand = "+"
             else: continue
             if start >= end: continue
             out = "\t".join([infile.getrname(read.tid), str(start), str(end),
-                             read.qname, '0', strand]) + "\n"
+                            read.qname, '0', strand]) + "\n"
             outfile.write(out)
-    #print "Done"
-# Convert paired bed BAM to BAM with extended reads
-# In effect, convert pairs of reads to fragments of given insert size
-# Use to prep for calc_distance_score
-def extend_bam(bam):
-    
-    bam_prefix = bam.split(".bam")[0]
-    bam_file = pysam.Samfile(bam, 'rb')
-    tmp_name = bam_prefix + ".bed"
-    tmp_bed = open(tmp_name, 'w')
-    out_name = bam_prefix + "_ex.bam"
-    out_bam = open(out_name, 'w')
-    #pdb.set_trace()
-    ## Convert BAM to temporary BED
+
+def bedToBam(bed_name, bam_name):
     try:
-        print "BAM to BED..."
-        bamToFragmentBed(bam_file, tmp_bed)
-    except:
-        print "BAM to BED conversion failed."
-        tmp_bed.close()
-        out_bam.close()
-        os.remove(tmp_name)
-        return
-    else:
-        print "BAM to BED conversion successful."
-        tmp_bed.close()
-        out_bam.close()
-    
-    ## Convert tmp bed to bam
-    try:
-        cmd_args = ['bedToBam', '-i', tmp_name, '-g', '/seq/lib/mouse.mm9.genome_norand']
+        out_bam = open(bam_name, 'w')
+        print " ".join(["Converting", bed_name, "to", bam_name]) + "..."
+        cmd_args = ['bedToBam', '-i', bed_name, '-g', '/seq/lib/mouse.mm9.genome_norand']
         p1 = Popen(cmd_args, stdout=out_bam)
         p1.wait()
     except:
@@ -221,31 +218,136 @@ def extend_bam(bam):
         out_bam.close()
         return
     else:
-        os.remove(tmp_name)
+        print "BED to BAM successful."
+        #os.remove(bed_name)
+        
+# Convert paired bed BAM to BAM with extended reads
+# In effect, convert pairs of reads to fragments of given insert size
+# Use to prep for calc_distance_score
+
+def trimToDyad_worker(args):
+    bam = args[0]
+    ref = args[1]
+    it = bam.fetch(reference=ref)
+    bed = args[2]
+    surround = args[3]
+    for read in it:
+        if read.is_read1:
+            if read.is_reverse and read.isize < 0:
+                #pdb.set_trace()
+                mid = read.aend + (read.isize / 2)
+                if mid < 0: continue
+                #start = mid - surround
+                #end = mid + surround 
+                strand = "-"
+            elif not read.is_reverse and read.isize > 0:
+                mid = read.pos + (read.isize / 2)
+                #start = read.pos
+                strand = "+"
+            else: continue
+            start = mid - surround
+            end = mid + surround
+            out = "\t".join([bam.getrname(read.tid), str(start), str(end),
+                             read.qname, '0', strand]) + "\n"
+            bed.write(out)
+            
+def trimToDyad(bam, bed, surround):
+    out = ""
+    mid = 0
+    start = 0
+    end = 0
+    strand = ""
+#    pdb.set_trace()
+    #pool = Pool(processes=4)
+    refs = bam.references
+    for ref in refs:
+        args = [bam, ref, bed, surround]
+       # it = bam.fetch(reference=ref)
+        #pool.apply_async(trimToDyad_worker, ([it, bed, surround],))
+        #pool.apply(trimToDyad_worker, (args,))
+        trimToDyad_worker([bam, ref, bed, surround])
+    #bedToBam(bed, bam)
+    #pool.close()
+    #pool.join()
+    #for read in bam:
+    #    if read.is_read1:
+    #        if read.is_reverse and read.isize < 0:
+    #            #pdb.set_trace()
+    #            mid = read.aend + (read.isize / 2)
+    #            if mid < 0: continue
+    #            #start = mid - surround
+    #            #end = mid + surround 
+    #            strand = "-"
+    #        elif not read.is_reverse and read.isize > 0:
+    #            mid = read.pos + (read.isize / 2)
+    #            #start = read.pos
+    #            strand = "+"
+    #        else: continue
+    #        start = mid - surround
+    #        end = mid + surround
+    #        out = "\t".join([bam.getrname(read.tid), str(start), str(end),
+    #                         read.qname, '0', strand]) + "\n"
+    #        bed.write(out)
+    #
+def extend_bam(bam, type, reheader, size=0):
     
-    ## Replace header
-    cmd_args1 = ['samtools', 'view', '-h', bam]
-    cmd_args2 = ['samtools', 'reheader', '-', out_name]
-    tmp_name = bam_prefix + "_tmp"
-    tmp = open(tmp_name, 'w')
+    bam_prefix = bam.split(".bam")[0]
+    bam_file = pysam.Samfile(bam, 'rb')
+    tmp_name = bam_prefix + ".bed"
+    tmp_bed = open(tmp_name, 'w')
+    out_name = "_".join([bam_prefix, type]) + ".bam"
+    out_bam = open(out_name, 'w')
+    #pdb.set_trace()
+    ## Convert BAM to temporary BED
     try:
-        p1 = Popen(cmd_args1, stdout=PIPE)
-        p2 = Popen(cmd_args2, stdin=p1.stdout, stdout=tmp)
-        p2.wait()
+        print "BAM to BED..."
+        if type=="extend":
+            bamToFragmentBed(bam_file, tmp_bed, size)
+        elif type=="dyad":
+            trimToDyad(bam_file, tmp_bed, 20)
     except:
-        print "Failed reheader"
-        tmp.close()
+        print "BAM to BED conversion failed."
+        print ">> " + ":".join(sys.exc_info()[1])
+        tmp_bed.close()
+        out_bam.close()
         os.remove(tmp_name)
         return
     else:
-        #os.remove(bam)
-        tmp.close()
-        os.rename(tmp_name, out_name)
-        pysam.sort(out_name, out_name + "_sort")
-        os.rename(out_name + "_sort.bam", out_name)
-        pysam.index(out_name)
+        print "BAM to BED conversion successful."
+        tmp_bed.close()
+        #out_bam.close()
     
+    ## Convert tmp bed to bam
+    bedToBam(tmp_name, out_name)
     
+    ## Replace header
+    if reheader:
+        cmd_args1 = ['samtools', 'view', '-h', bam]
+        cmd_args2 = ['samtools', 'reheader', '-', out_name]
+        tmp_name = bam_prefix + "_tmp"
+        tmp = open(tmp_name, 'w')
+        try:
+            print "Reheader..."
+            p1 = Popen(cmd_args1, stdout=PIPE)
+            p2 = Popen(cmd_args2, stdin=p1.stdout, stdout=tmp)
+            p2.wait()
+        except:
+            print "Failed reheader"
+            tmp.close()
+            os.remove(tmp_name)
+            return
+        else:
+            
+            #os.remove(bam)
+            tmp.close()
+            #os.rename(tmp_name, out_name)
+    print "Sorting..."    
+    pysam.sort(out_name, out_name + "_sort")
+    os.rename(out_name + "_sort.bam", out_name)
+    pysam.index(out_name)
+
+
+        
 def combineWigs(wig):
     out_wig = open(wig + ".wig", 'w')
     cmd_args = 'cat ' + wig + '/*'
@@ -265,6 +367,7 @@ def calc_distance_score_worker(args):
     curr_length = args[3] / resolution
     wig_prefix = args[4].split(".wig")[0]
     report = args[5]
+    
     if not os.path.exists(wig_prefix): os.mkdir(wig_prefix)
     values = np.zeros(curr_length)
     distances = np.zeros(1000)
@@ -278,8 +381,12 @@ def calc_distance_score_worker(args):
     position_mean = 0
     position_var = 0
     sum_position_mean = 0
-    sum_position_var = 0
+    position_means = 0
+    position_vars = 0
+    if resolution > 1:
+        position_vars = np.zeros(resolution)
     total_num_reads = 0
+    region_read_count = 0
     value_ind = 0
     value_out = 0
     #first_pos = True
@@ -294,20 +401,23 @@ def calc_distance_score_worker(args):
     it = 0
     if report:
         it = sam_file.pileup(region=curr_ref)
+        region_read_count = sam_file.count(region=curr_ref)
     else:
         it = sam_file.pileup(reference=curr_ref)
+        region_read_count = sam_file.count(reference=curr_ref)
     positions = 0
     ## Loop through each position in iterator
     for proxy in it:
-        #pdb.set_trace()
+       # pdb.set_trace()
         #positions = positions + 1
         position = proxy.pos
-        #value_ind = position / resolution
+        if not report:
+            value_ind = position / resolution
        
         ## Loop through each read at current position
         for pread in proxy.pileups:
             read_len = pread.alignment.alen
-            if read_len > 50:
+            if read_len > 20:
                 mid_distance = abs((pread.alignment.pos + (read_len/2)) - position)
                 distances[num_reads] = mid_distance
                 num_reads = num_reads + 1
@@ -316,38 +426,57 @@ def calc_distance_score_worker(args):
         if num_reads > 10:
             #pdb.set_trace()
             position_mean = np.mean(distances[:num_reads])
-            position_var = sum(pow((distances[:num_reads] - position_mean), 2)) / (num_reads - 1)
-            total_num_reads = total_num_reads + num_reads
-        sum_position_mean = sum_position_mean + position_mean
-        sum_position_var = sum_position_var + position_var
+            #position_var = sum(pow((distances[:num_reads] - position_mean), 2)) / (num_reads - 1)
+            #position_var = np.sqrt(sum(pow((distances[:num_reads] - position_mean), 2)) / (num_reads - 1))
+            #position_var = np.sqrt(np.var(distances[:num_reads]))
+            position_var = np.std(distances[:num_reads], ddof=1)
+            #total_num_reads = total_num_reads + num_reads
+        #sum_position_mean = sum_position_mean + position_mean
+        #sum_position_var = sum_position_var + position_var
+        if resolution > 1:
+            position_means[res_count] = position_mean
+            position_vars[res_count] = position_var
+        else:
+            position_means = position_mean
+            position_vars = position_var
         
         num_reads = 0
         position_mean = 0
         position_var = 0
         res_count = res_count + 1   
         if res_count == resolution:
-            if sum_position_var > 0:
+            if resolution > 1:
+                sum_position_mean = np.sum(position_means)
+                sum_position_var = np.sum(position_vars)
+            else:
+                sum_position_mean = position_means
+                sum_position_var = position_vars
+                
+            if sum_position_var > 0 and sum_position_mean <= 100:
                 #value_out = (sum_position_mean / sum_position_var) / resolution
                 #value_out = 1 / ((1 + sum_position_mean) * sum_position_var * resolution) 
-                #value_out = 1 / (sum_position_var * resolution)
-                value_out = total_num_reads / (sum_position_var * resolution)
+                value_out = (100 - abs(sum_position_mean)) / (sum_position_var * resolution)
+                #value_out = total_num_reads / (sum_position_var * resolution)
                 #value_out = sum_position_mean / resolution
                 #value_out = sum_position_var / resolution
             values[value_ind] = value_out
-            #value_ind = value_ind + 1
+            if report:
+                value_ind = value_ind + 1
             value_out = 0
             res_count = 0
             sum_position_mean = 0
             sum_position_var = 0
             total_num_reads = 0       
-        value_ind = value_ind + 1
+        #value_ind = value_ind + 1
         if value_ind == len(values):
             break
     scores = [0]
     max_value = np.max(values)
     #print positions
     if max_value > 0:
-        scores = values / np.sum(values)
+        #pdb.set_trace()
+        #scores = values / region_read_count
+        scores = values
     #pdb.set_trace()
     if report:
         return scores
@@ -379,7 +508,8 @@ def calc_distance_score(bam, wig, resolution, multi):
             pool.apply_async(calc_distance_score_worker, (arg,))
         else:
             calc_distance_score_worker(arg)
-            #pool.apply(calc_distance_score_worker, (arg,))
+            #pool.apply(calc_distance_score_worker, (arg,)
+        
     if multi:
         pool.close()
         pool.join()
@@ -396,8 +526,9 @@ def calc_distance_score_feature(feature, bam, resolution, multi):
     
     pool = ""
     if multi:
-        pool = multiprocessing.Pool(processes=6)
+        pool = multiprocessing.Pool(processes=4)
     #num_features = 0
+    
     for feature in feature_file:
         #num_features = num_features + 1
         #pdb.set_trace()
@@ -406,16 +537,25 @@ def calc_distance_score_feature(feature, bam, resolution, multi):
         curr_region = "{0}:{1}-{2}".format(feature_split[0], feature_split[1], feature_split[2])
         if resolution > 1:
             curr_length = curr_length / resolution
-        arg = [bam, resolution, curr_region, curr_length, "none", True]
+        arg = [bam, resolution, curr_region, curr_length, "none", True, True]
         scores = 0
+        #pdb.set_trace()
         if multi:
-            scores = pool.apply_async(calc_distance_score_worker, (arg,)).get()
+            try: 
+                scores = pool.apply_async(calc_distance_score_worker, (arg,)).get()
+            except IndexError as e:
+                print "Index Error: " + " ".join(feature_split)
+            except ValueError as e:
+                print "Value Error: " + " ".join(feature_split)
+            #scores = pool.apply(calc_distance_score_worker, (arg,))
         else:
             scores = calc_distance_score_worker(arg)
-            #pool.apply(calc_distance_score_worker, (arg,))
-        score_mean = np.sum(scores) / len(scores)
-        out = " ".join([feature.strip(), str(score_mean)]) + "\n"
+            
+        score_mean = np.mean(scores)
+        out = "\t".join([feature.strip(), str(score_mean)]) + "\n"
         out_file.write(out)
+   
+        
     if multi:
         pool.close()
         pool.join()
@@ -427,6 +567,7 @@ def compute_mean_score(wig):
     wig_file.next()
     for line in wig_file:
         value = float(line.split()[0])
+        if value == 0: continue
         sum_values = sum_values + value
         N = N + 1
     wig_file.close()
@@ -440,7 +581,9 @@ def compute_mean_score_set(set_name):
     jitters = [int(x) for x in jitters]
     
     jitters.sort()
-    means = np.zeros((1000, len(jitters)))
+    #pbd.set_trace()
+    n_sim = len([f for f in os.listdir("/".join([path0, str(jitters[0])])) if re.search("wig", f)])
+    means = np.zeros((n_sim, len(jitters)), dtype=np.float32) 
     cind = 0
     for jitter in jitters:
         jitter = str(jitter)

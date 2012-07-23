@@ -88,8 +88,11 @@ gg.box2 <- function(data) {
 
 #For feature barplots
 #tfo.2 object at ~/s2/analysis/features/norm/unnorm/mean/summaries/tfo_feature_toplot_norm_intergenic_sub_rmsk_sqrt_obj
+gg.feature_bar <- function(gg) {
 #gg.tfo.2 <- ggplot(droplevels(tfo.2[tfo.2$ip=="hmc",]), aes(celltype, value.median, ymax=up, ymin=low, fill=class))
-                                        #gg.tfo.2 + geom_bar(position="dodge") + geom_linerange(position="dodge")  + facet_grid(ip~feature) + featureScaleFill
+theme_set(theme_bw())
+  gg + geom_bar(position="dodge") + geom_linerange(position="dodge")  + facet_grid(ip~feature) #+ featureScaleFill
+}
 
 #For TT3 refgene plot split by omp_hmc/ott3_2_hmc Bayes Factor GT/LT 3
 #tt3.melt object at ~/s2/analysis/features/norm/rpkm/mean/summaries/tt3_omp_ngn_icam_hmc_mc_refgene_chr_tt3_omp_2_hmc_bf.Rdata
@@ -108,3 +111,52 @@ gg.box2 <- function(data) {
 #pdf(file="~/s2/analysis/features/plots/feature_peaks_intersects_cells_hmc_pairwise_F3.pdf", 6, 8)
 #cell.gg <- ggplot(cell, aes(peak_set.fac, internal_norm, fill=feature.factor))
 #cell.gg + geom_bar() + scale_fill_hue(l=40, labels=features_merge_toplot_short)  + opts(legend.title=theme_blank())
+
+#For feature-peak intersects as ranked fractions
+#tt3.inter2 is ~/s2/data/homer/peaks/intersections/Rdata/ott3_2_hmc_gc_input_omp_hmc_gc_F3_feature_intersections2.Rdata
+#tt3.inter2.gg <- ggplot(tt3.inter2, aes(factor(rank), y=internal_norm))
+#tt3.inter2.gg + geom_bar() + scale_x_discrete(labels=feature_name)
+
+#For feature scatter plot with median point
+#cds.gg <- ggplot(cds, aes(omp_hmc_120424_rpkm, o.tt3.2_hmc_rpkm))
+#cds.gg + geom_point(alpha=I(1/40)) + coord_cartesian(xlim=c(0,4), ylim=c(0,4)) + geom_abline(intercept=0, slope=1, color="blue") + geom_point(data=cds.med, aes(omp_hmc_120424_rpkm, o.tt3.2_hmc_rpkm), color="red", size=4)
+
+#For density plots of moe d3a wt/ko hmc/mc/mrna/nuc read counts over exons
+#comb.tlen.norm.m is ~/s2/analysis/features/norm/pileup/sum/summaries/d3a_hmc_mc_mrna_nuc_pileup_Refgene_exons_split2_chr_sum_normByExonLength_normByTotalReadCount_melt.Rdata
+#comb.gg <- ggplot(comb.tlen.norm.m, aes(value, color=geno))
+#comb.gg + geom_density() + facet_grid(type~hmc.gt10, scales="free_y") + coord_cartesian(xlim=c(0, .2)) + labs(x="Normalized read counts", y="Density", colour="Genotype")
+
+#For boxplots of cells mRNA split by MOE Dnmt3a WT/KO genes with bayes factor >=10
+#cells.m is ~/s2/analysis/rna/summaries/omp_ngn_icam_mrna_dup_biasCorrect_plus1_log2_moe_d3a_wt_ko_hmc_rpkm_refgene_nodUp_extend5kb_sqrt_bf_gt10.Rdata
+#cells.gg <- ggplot(cells.m, aes(variable, value))
+#cells.gg + geom_boxplot(aes(fill=d3a.bf.gt10), outlier.shape=NA) + facet_grid(.~d3a.bf.gt10) + coord_cartesian(ylim=c(0, 9)) + ylab("log2(FPKM + 1)") + xlab("Cell type") + scale_x_discrete(labels=c("HBC", "GBC", "mOSN")) + opts(legend.position="none")
+
+#For boxplots of MOE Dnmt3a WT/KO mRNA split by MOE Dnmt3a WT/KO genes with bayes factor >=10
+#d3a.melt is ~/s2/analysis/rna/summaries/moe_d3a_wt_ko_mrna_1log2_moe_d3a_wt_ko_hmc_rpkm_refgene_nodUp_extend5kb_sqrt_bf_gt10.Rdata
+#d3a.gg <- ggplot(d3a.melt, aes(variable, value))
+#d3a.gg + geom_boxplot(aes(fill=bf.gt10), outlier.shape=NA) + facet_grid(.~bf.gt10) + coord_cartesian(ylim=c(0, 10)) + ylab("log2(FPKM + 1)") + xlab("Genotype") + scale_x_discrete(labels=c("WT", "KO")) + opts(legend.position="none")
+
+#For barplots of DIP qpcr data
+#d3.na2 is olfactome:Documents/Research/methylation/qpcr/012811/dips.Rdata
+#gg <- ggplot(d3.na[d3.na$ip!="in",], aes(cell, ct.mean))
+#gg %+% d3.na2[d3.na2$ip!="in",] + geom_bar(aes(y=ct.mean, fill=cell)) + geom_errorbar(aes(ymin=ct.min, ymax=ct.max), width=.2) + facet_grid(ip~primer, scales="free_y") + scale_fill_manual(values=rev(col3)) + opts(strip.text.y=theme_text(face="bold", size=10), legend.position="none") + xlab("Cell type") + ylab("Cts normalized by input")
+#pdf(file="olfactome:Documents/Research/methylation/qpcr/012811/hmc_mc_noClk4.pdf", 18, 9)
+
+#For barplots of FPKM data for genes associated with DIP qPCR
+#cell.melt is olfactome:Documents/Research/methylation/qpcr/012811/omp_ngn_icam_mrna_dup_biasCorrect_plus1_log2_dip_primers.Rdata
+#rna.gg <- ggplot(cell.melt, aes(variable, value))
+#rna.gg + geom_bar(aes(fill=variable)) + facet_grid(.~primer) + scale_fill_manual(values=col3) + xlab("Cell type") + ylab("log2(FPKM + 1)") + opts(legend.position="none")
+#pdf(file="olfactome:Documents/Research/methylation/qpcr/012811/rna.pdf", 8, 4)
+
+#For hmc levels versus transcriptional index
+#0to500bp comb.tss is ~/s2/analysis/profiles/norm/unnorm/mean/refGene_noRandom_order_outsides2_tss_W25F400_chr/omp_ngn_icam_hmc_FPKM_index_mean_trim05_chunk100.Rdata
+#9to11kb comb.mid is ~/s2/analysis/profiles/norm/unnorm/mean/refGene_noRandom_order_outsides2_tss_W25F400_chr/omp_ngn_icam_hmc_FPKM_index_9kbTo11kb_mean_trim05_chunk100.Rdata
+#comb.mid.gg <- ggplot(comb.mid, aes(index, value))
+#c <- comb.mid.gg + facet_grid(cell~., scales="free_y")
+#c + stat_smooth(aes(colour=cell), method="lm", se=FALSE) + geom_point(color="grey") + xlab("Transcriptional index") + opts(legend.position="none")
+#for 0to500bp, stat_smooth(aes(colour=cell), se=FALSE, fullrange=FALSE, span=.8)
+#pdf(file="omp_ngn_icam_hmc_0to500bp_ordered_by_fpkm_chunk100.pdf", 4, 8)
+#pdf(file="~/s2/analysis/profiles/plots/omp_ngn_icam_hmc_9kbto11kb_ordered_by_fpkm_chunk100.pdf", 4, 8)
+
+#For nuc str vs. hmc/mc scatter/contour plots
+#g + geom_point(alpha=.1)+ stat_density2d(geom="polygon", color="blue", aes(alpha=..level..)) +coord_cartesian(ylim=c(-3,4), xlim=c(-3, 3)) + scale_alpha_continuous(limits=c(0, .3), breaks=seq(0, .3, .025)) + theme_bw() + xlab("OMP 5mC") + ylab("OMP nucleosome stringency") + opts(legend.position="none")

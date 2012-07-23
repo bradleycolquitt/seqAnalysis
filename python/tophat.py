@@ -81,8 +81,11 @@ class tophat_class:
             #print self.errorlog
             print "Mapping with tophat: " + " ".join(cmd_args[1:])
             errorlog = open(self.errorlog, 'a')
-            tophat = Popen(cmd_args, stderr=errorlog)
-            tophat.wait()
+            try:
+                tophat = Popen(cmd_args, stderr=errorlog)
+                tophat.wait()
+            except:
+                return
             errorlog.close()
             #bam.proc([self.output + "/accepted_hits.bam", "False"])
             

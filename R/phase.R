@@ -94,8 +94,8 @@ plotPhase.pair <- function(data, phase_ind, step, fname=NULL, cols=greens, ...) 
   #}
   #par(mfrow=c(1,4))
   
-  #for(i in 1:(length(data)/2)) {
-  for (i in seq(1, length(data), 2)) {
+  for(i in 1:(length(data)/2)) {
+  #for (i in seq(1, length(data), 2)) {
     plot(phase_ind, data[[i]][phase_ind], type="l", col=cols[1],...)
     lines(phase_ind, data[[i+step]][phase_ind], col=cols[2])
     #box()
@@ -127,6 +127,19 @@ plotPhase.four <- function(data, phase_ind, step, ...) {
   }
 }
 
+reportPhasePeaks <- function(data, phase_ind, span) {
+  peaks <- c()
+  for (ind in 3:(length(phase_ind)-2)) {
+    curr_ind <- phase_ind[(ind-2):(ind+2)]
+    
+    #i2 <- phase_ind[ind + 1]
+    #i3 <- phase_ind[ind + 2]
+    if (data[curr_ind[1]] < data[curr_ind[2]] & data[curr_ind[2]] < data[curr_ind[3]])
+      if (data[curr_ind[3]] > data[curr_ind[4]] & data[curr_ind[4]] > data[curr_ind[5]]){
+        peaks <- c(peaks, curr_ind[3])}
+  }
+  return(peaks)
+}
 #total_reads <- list(omp=73284106, icam=106293504)
 total_reads <- list(omp=128485884, icam=142654159)
 loadPileupData <- function(path) {

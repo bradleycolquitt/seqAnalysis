@@ -2,6 +2,11 @@ library(BSgenome)
 library(BSgenome.Mmusculus.UCSC.mm9)
 library(foreach)
 library(itertools)
+library(doMC)
+
+registerDoMC(cores=2)
+
+bedClasses <- c("character", "numeric", "numeric", "character", "numeric", "character")
 
 shiftBedPositions <- function(bed, shift, pos="start", direction="up") {
   
@@ -63,6 +68,44 @@ batchShift <- function(path, shift, pos="start", direction="up") {
   }
 }
 
+randomizeBed <- function(bed, name, write=TRUE) {
+  data <- read.delim(bed, header=F, colClasses=bedClasses)
+
+  #for each bed record
+  #choose chr based with probability based on chromosome size fraction
+  #choose random position within chromosome
+  #define new window based on size of old window
+  #write out
+  chr_lengths <- read.delim("/seq/lib/mm9_chromosome_sizes", header=F, colClasses=c("character", "numeric", "numeric"))
+  chr_lengths <- chr_lengths[-nrow(chr_lengths),]
+  #print(chr_lengths)
+  out <- foreach (record=isplitRows(data, chunks=6), .combine="rbind") %dopar% {
+    subout <- foreach (i=isplitRows(record, chunkSize=1), .combine="rbind") %do% {
+      chr <- sample(chr_lengths[,1], 1, prob=chr_lengths[,3])
+      start <- sample(1:chr_lengths[grep(chr, chr_lengths[,1]), 2], 1)
+      span <- i[,3] - i[,2]    
+      end <- start + span
+      return(c(chr, start, end, i[,4], i[,5], i[,6]))
+    }  
+    return(subout)
+  }
+  if (write) {
+    output_dir <- paste(bed, "random", sep="_")
+    dir.create(output_dir, showWarnings=FALSE)
+    write.table(out, file=paste(output_dir, name, sep="/"), quote=F, sep="\t", row.names=F, col.names=F)
+  } else {
+    return(out)
+  }  
+}
+
+randomizeBed.batch <- function(bed, N=100) {
+  pb <- txtProgressBar(min = 0, max = length(seq), style=3)
+  for (i in 1:N) {
+    setTxtProgressBar(pb, i) 
+    randomizeBed(bed, i)
+  }
+}
+
 #take data.frame with sequence names and sequence, and generate
 #fasta file
 formatFasta <- function(data, fname=NULL) {
@@ -76,6 +119,16 @@ formatFasta <- function(data, fname=NULL) {
     cat(seq.out, file=fc)
   }
   close(fc)
+}
+
+getSeq.bed <- function(bed, extend=0) {
+  if (extend > 0) {
+    bed <- trimBed(bed, -1*extend)
+    bed <- trimBed(bed, extend, "down")
+  }
+  seq <- getSeq(Mmusculus, bed[,1], bed[,2], bed[,3], strand=bed[,6], as.character=TRUE)
+  names(seq) <- bed[,4]
+  return(seq)
 }
 
 getSeq.masked <- function(bed) {
@@ -110,6 +163,7 @@ getSeq.single <- function(seq, line) {
   line.seq <- str_replace_all(line.seq, "#", "N")
   return(line.seq)
 }
+
 trimBed <- function(bed, amt, pos="up") {
   plus.ind <- bed[,6] == "+"
   if (pos == "up") {
@@ -132,6 +186,235 @@ splitAndSave <- function(data, chunks, fname) {
     write.table(c, file=paste(fname, count, sep="_"), quote=FALSE, sep="\t", row.names=FALSE, col.names=FALSE)
   }
 }
+
+shiftGetSeq <- function(bed, extend, shift_seq = "TAATTA") {
+    seq <- getSeq(Mmusculus, bed[,1], bed[,2], bed[,3], strand=bed[,6], as.character=TRUE)
+#  return(seq)
+  #Find position of core sequence with shift_seq
+  seq.shift <- lapply(seq, function(x) matchPattern(shift_seq, x, max.mismatch=2))
+  seq.shift.mat <- lapply(seq.shift, as.matrix)
+#  return(seq.shift.mat)
+#  print("last instance")
+  #If more than one take last
+  for (i in 1:length(seq.shift.mat)) {
+    if (nrow(seq.shift.mat[[i]]) > 1) {
+      seq.shift.mat[[i]] <- seq.shift.mat[[i]][nrow(seq.shift.mat[[i]]), ]
+    }
+  }
+  
+  seq.shift.mat <- do.call("rbind", seq.shift.mat)
+  print("shift")
+  #Shift bed by offset
+  for (i in 1:nrow(seq.shift.mat)) {
+    if (bed[i,6] == "+")  {
+      bed[i, 3] <- bed[i, 3] + seq.shift.mat[i, 1]
+      bed[i,2] <- bed[i, 2] + seq.shift.mat[i, 1]
+    } else {
+      bed[i, 3] <- bed[i, 3] - seq.shift.mat[i, 1]
+      bed[i,2] <- bed[i, 2] - seq.shift.mat[i, 1]
+    }  
+  }
+  #return(bed)
+  print("extend")
+  bed <- trimBed(bed, -1*extend)
+  bed <- trimBed(bed, extend, "down")
+  #return(bed)
+  print("get seq 2")
+  seq <- getSeq(Mmusculus, bed[,1], bed[,2], bed[,3], strand=bed[,6], as.character=TRUE)
+  return(seq)
+}
+
+## Convert isodistance BED file to matrix of coded nucleotides (observation x position)
+## Input: bed (BED file)
+## Input: extend (symmetrically extend BED records)
+## Input: shift_seq (find first occurrence of given sequence and centralize it)
+## Return: observation x position matrix with nucleotides (A = 1, C = 2, G = 3, T = 4)
+bed2FaMatrix <- function(bed, extend=0, shift_seq = "TAATTA") {
+  seq <- list()
+  if (!is.null(shift_seq)) {
+    seq <- shiftGetSeq(bed, extend, shift_seq)
+  } else {
+    seq <- getSeq.bed(bed, extend)
+  }  
+  seq <- str_split(seq, "")
+  mat <- do.call("rbind", seq)
+  mat <- as.data.frame(mat[,2:ncol(mat)])
+  rownames(mat) <- as.character(bed[,4])
+  mat <- apply(mat, 2, codeDNA)
+  return(mat)
+}
+
+codeDNA <- function(data) {
+  Aind <- data == "A"
+  Cind <- data == "C"
+  Gind <- data == "G"
+  Tind <- data == "T"
+  data[Aind] = 1
+  data[Cind] = 2
+  data[Gind] = 3 
+  data[Tind] = 4
+  return(as.numeric(data))
+}
+
+
+mononuc <- expand.grid(c("A", "C", "G", "T"))
+mononuc <- apply(mononuc, 1, function(x) paste(as.character(x), collapse=""))
+mononuc <- cbind(mononuc, 1:length(mononuc))
+
+dinuc <- expand.grid(c("A", "C", "G", "T"), c("A", "C", "G", "T"))
+dinuc <- apply(dinuc, 1, function(x) paste(as.character(x), collapse=""))
+dinuc <- cbind(dinuc, 1:length(dinuc))
+
+trinuc <- expand.grid(c("A", "C", "G", "T"), c("A", "C", "G", "T"), c("A", "C", "G", "T"))
+trinuc <- apply(trinuc, 1, function(x) paste(as.character(x), collapse=""))
+trinuc <- cbind(trinuc, 1:length(trinuc))
+
+nuc_sets = list("mono"=mononuc, "di"=dinuc, "tri"=trinuc)
+
+expectedFrequencies <- function(monofreq, nuc_set) {
+  nuc_names <- lapply(str_split(nuc_set[,1], ""), function(x) x[2:length(x)])
+  freq <- lapply(nuc_names, function(x) {
+    prod(monofreq[match(x, names(monofreq))])
+  })
+  freq <- do.call("c", freq)
+  names(freq) <- nuc_set[,1]
+  return(freq)
+}
+
+## Compute frequencies of nucleotide combinations by position
+## Input: seq_list (list of sequences)
+## Input: nuc_set (matrix of all possible nucleotide combinations for given pattern length)
+## Return: Matrix of frequeicnes 
+computeFrequencies <- function(seq_list, nuc_set=trinuc, norm=TRUE, fname=NULL) {
+  mindex <- foreach (i=1:nrow(nuc_set)) %dopar% {
+    print(i)
+    ms <- lapply(seq_list, function(x) {
+      m <- matchPattern(nuc_set[i,1], x)
+      m <- as.matrix(m)[,1]
+    })
+#    m <- matchPattern(nuc_set[i,1], seq)
+#    m <- as.matrix(m)[,1]
+    ms <- do.call("c", ms)
+    ms <- factor(ms, levels=1:nchar(seq_list[[1]]))
+
+    return(ms)
+  }
+  names(mindex) <- nuc_set[,1]
+  mindex <- lapply(mindex, table)
+  mindex <- do.call("rbind", mindex)
+  mindex <- apply(mindex, 2, function(x) x/sum(x))
+  mindex <- t(na.omit(t(mindex)))
+  if (norm) {
+    print("Normalizing...")
+    mono <- computeFrequencies.count(seq_list, mononuc)
+    expfreq <- expectedFrequencies(mono, nuc_set)
+    mindex <- mindex / expfreq
+  }
+  return(mindex)
+  if (!is.null(fname)) {
+    write.table(mindex, file=paste("~/s2/analysis/nuc/sequence/", fname, sep=""), quote=F, sep="\t")
+  }
+  return(mindex)
+}
+
+computeFrequencies.set <- function(seq_list, norm=TRUE, fname=NULL) {
+  mat <- lapply(1:length(nuc_sets), function(x) {
+    gc()
+    name <- names(nuc_sets)[x]
+    nuc_set <- nuc_sets[[x]]
+    print(name)
+    fname <- paste(fname, name, sep="_")
+    if (name == "mono") norm <- FALSE
+    return(computeFrequencies(seq_list, nuc_set=nuc_set, norm=norm, fname=fname))
+  })
+  names(mat) <- names(nuc_sets)
+  return(mat)
+}
+
+computeFrequencies.count <- function(seq_list, nuc_set=trinuc) {
+  mindex <- foreach (i=1:nrow(nuc_set), .combine="cbind") %dopar% {
+    print(i)
+    ms <- lapply(seq_list, function(x) {
+      m <- countPattern(as.character(nuc_set[i,1]), x)
+      #m <- as.matrix(m)[,1]
+    })
+    ms <- do.call("c", ms)
+    #ms <- factor(ms, levels=1:nchar(seq_list[[1]]))
+    return(ms)
+  }
+  colnames(mindex) <- nuc_set[,1]
+  rownames(mindex) <- names(seq_list)
+  mindex <- t(apply(mindex, 1, function(x) x/sum(x)))
+  #mindex <- apply(mindex, 2, mean)
+ # mindex <- apply(mindex, 2, function(x) x - mean(x))
+  return(mindex)
+}
+
+prop_coeff <- data.frame(pattern=dinuc[,1],
+                         coeff=c(-17.3, -6.7, -14.3, -16.9,
+                                 -8.6, -12.8, -11.2, -8.6,
+                                 -15.1, -11.7, -12.8, -6.7,
+                                 -11.1, -15.1, -8.6, -17.3))
+
+slide_coeff <- data.frame(pattern=dinuc[,1],
+                          coeff=c(-0.03, -0.13, 0.47, -0.37,
+                                  1.46, 0.6, 0.63, 0.47,
+                                  -0.07, 0.29, 0.6, -0.13,
+                                  0.74, -0.07, 1.46, -0.03))
+
+nuc_test <- data.frame(c("AAAA", "AAAT", "AAGT", "AATA", "AATT", "AGAA", "ATAA", "ATAT", "ATTA", "GAAA", "TATA"), 1:11)
+
+# For each sequence, compute average structural features [propeller, slide]
+# using coefficients:
+#     [propeller] http://srs6.bionet.nsc.ru/srs6bin/cgi-bin/wgetz?-id+ZGe1gYjVS+-e+[PROPERTY:'P0000030']
+#     [slide] http://srs6.bionet.nsc.ru/srs6bin/cgi-bin/wgetz?-id+ZGe1gYjVS+-e+[PROPERTY:'P0000029']
+# and dinucleotide frequencies
+# Return: matrix of scores
+computeStruct <- function(seq_list) {
+  ## Compute dinucleotide frequencies
+  di <- computeFrequencies.count(seq_list, dinuc)
+  prop_scores <- di %*% prop_coeff[,2]
+  slide_scores <- di %*% slide_coeff[,2]
+  return(data.frame(prop=prop_scores, slide=slide_scores, row.names=names(seq_list)))
+}
+
+computeNucFeatures <- function(seq_list) {
+  nuc_freq <- computeFrequencies.count(seq_list, nuc_test)
+  nuc_struct <- computeStruct(seq_list)
+  gc <- computeFrequencies.count(seq_list, mononuc)
+  gc <- apply(gc, 1, function(x) sum(x[2:3]))
+  out <- cbind(gc, nuc_freq, nuc_struct)
+  rownames(out) <- names(seq_list)
+  return(out)
+}
+
+computeNucPeriod <- function(seq_list, nuc_set=trinuc, max_dist=2000) {
+  mindex <- foreach (i=1:nrow(nuc_set)) %dopar% {
+    print(i)
+    dists <- lapply(seq_list, function(x) {
+      
+      m <- matchPattern(nuc_set[i,1], x)
+      m <- as.matrix(m)[,1]
+      d <- dist(m)
+      d <- c(d)
+      return(d)
+    })
+    dists <- do.call("c", dists)
+    dists <- dists[!dists>max_dist]
+#    return(dists)
+    h <- list(breaks=0, density=0)
+    if (length(dists) > 0) {
+      h <- hist(dists, density=TRUE, breaks=1:max_dist, plot=FALSE)
+    }  
+    out <- cbind(h$breaks, h$density)
+    return(out)
+    
+  }
+  names(mindex) <- nuc_set[,1]
+  return(mindex)
+}
+  
+
 
 readSplitGetNames <- function(path, filter=NULL) {
   files <- list.files(path)

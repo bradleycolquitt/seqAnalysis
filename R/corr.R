@@ -10,6 +10,7 @@ source("~/src/R/plotUtil.R")
 source("~/src/seqAnalysis/R/profiles2.R")
 source("~/src/seqAnalysis/R/util.R")
 
+registerDoMC(cores=6)
 corrs <- function(data1, data2, method="spearman", N) {
 	index <- seq(1, length(data1) - N , by = N)
 	cors <- c()

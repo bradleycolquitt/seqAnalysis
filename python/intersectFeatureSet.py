@@ -13,17 +13,20 @@ def main(argv):
     
     parser = argparse.ArgumentParser()
     parser.add_argument('-a', dest='reference_bed')
-    parser.add_argument('-d', dest='reference_dir')
+    parser.add_argument('--type', dest='feature_type')
+    #parser.add_argument('-d', dest='reference_dir')
     args = parser.parse_args()
     
-
-        
+    if args.feature_type == "rmsk":
+        feature_path = "/home/user/lib/features_rmsk_merged"
+    else:
+        feature_path = "/home/user/lib/features_merged"
     #out_file = "/".join([out_path, "_".join([args.reference_bed, "features_general"])])
     features = os.listdir(feature_path)
     features = [f for f in features if not re.search("not_used", f)]
     
     #Prepare output directory
-    reference_out_path = "/".join([out_path, args.reference_bed])
+    reference_out_path = "/".join([out_path, os.path.basename(args.reference_bed)])
     if not os.path.exists(reference_out_path): os.mkdir(reference_out_path)
     
     #Get total count
@@ -65,7 +68,8 @@ def main(argv):
         print feature
         feature_file_path = "/".join([feature_path, feature])
         feature_out_file = open("/".join([reference_out_path, feature]), 'w')
-        cmd_args = ['intersectBed', '-a', args.reference_bed, '-b', feature_file_path, '-c']
+        cmd_args = ['intersectBed', '-a', args.reference_bed, '-b', feature_file_path, '-c',
+                    '-f', '0.5']
         p = Popen(cmd_args, stdout=feature_out_file)
         p.wait()
         feature_out_file.close()
