@@ -4,9 +4,10 @@ library(foreach)
 library(itertools)
 library(doMC)
 
-registerDoMC(cores=2)
+registerDoMC(cores=4)
 
 bedClasses <- c("character", "numeric", "numeric", "character", "numeric", "character")
+nuc_seq_path <- "/media/storage2/analysis/nuc/sequence"
 
 shiftBedPositions <- function(bed, shift, pos="start", direction="up") {
   
@@ -286,6 +287,7 @@ expectedFrequencies <- function(monofreq, nuc_set) {
 ## Input: nuc_set (matrix of all possible nucleotide combinations for given pattern length)
 ## Return: Matrix of frequeicnes 
 computeFrequencies <- function(seq_list, nuc_set=trinuc, norm=TRUE, fname=NULL) {
+  
   mindex <- foreach (i=1:nrow(nuc_set)) %dopar% {
     print(i)
     ms <- lapply(seq_list, function(x) {
@@ -296,34 +298,42 @@ computeFrequencies <- function(seq_list, nuc_set=trinuc, norm=TRUE, fname=NULL) 
 #    m <- as.matrix(m)[,1]
     ms <- do.call("c", ms)
     ms <- factor(ms, levels=1:nchar(seq_list[[1]]))
-
+    b <- gc()
     return(ms)
   }
+ 
   names(mindex) <- nuc_set[,1]
   mindex <- lapply(mindex, table)
   mindex <- do.call("rbind", mindex)
   mindex <- apply(mindex, 2, function(x) x/sum(x))
   mindex <- t(na.omit(t(mindex)))
+
   if (norm) {
     print("Normalizing...")
-    mono <- computeFrequencies.count(seq_list, mononuc)
+    mono <- na.omit(computeFrequencies.count(seq_list, mononuc))
+    mono <- apply(mono, 2, mean)
     expfreq <- expectedFrequencies(mono, nuc_set)
     mindex <- mindex / expfreq
   }
-  return(mindex)
+  #return(mindex)
   if (!is.null(fname)) {
-    write.table(mindex, file=paste("~/s2/analysis/nuc/sequence/", fname, sep=""), quote=F, sep="\t")
+    write.table(mindex, file=fname, quote=F, sep="\t")
   }
   return(mindex)
 }
 
 computeFrequencies.set <- function(seq_list, norm=TRUE, fname=NULL) {
   mat <- lapply(1:length(nuc_sets), function(x) {
-    gc()
+    a <- gc()
     name <- names(nuc_sets)[x]
     nuc_set <- nuc_sets[[x]]
     print(name)
-    fname <- paste(fname, name, sep="_")
+    fname <- paste(nuc_seq_path, paste(fname, name, sep="_"), sep="/")
+    print(paste("Saving to ", fname, sep=""))
+    if (file.exists(fname)) {
+      print("File exists. Skipping.")
+      return(0)
+    }  
     if (name == "mono") norm <- FALSE
     return(computeFrequencies(seq_list, nuc_set=nuc_set, norm=norm, fname=fname))
   })
@@ -413,7 +423,21 @@ computeNucPeriod <- function(seq_list, nuc_set=trinuc, max_dist=2000) {
   return(mindex)
 }
   
+plotNucFreq <- function(data, ...) {
+  nr <- nrow(data)
+  nc <- ncol(data)
+  names <- rownames(data)
+  cols <- rainbow(nr, s=.75, v=.75)
 
+  #x11()
+  par(mfrow=c(nr/4, 4), mar=c(2,2,2,2), oma=c(3,3,2,2))
+  a <- sapply(1:nr, function(x) {
+    plot(1:nc - (nc/2) , data[x,], type="l", col=cols[x], main=names[x], xlab="", ylab="", ...)
+    abline(v=0, lty=2)
+  })
+  mtext("Basepairs from dyad", 1, outer=TRUE, line=1)
+  mtext("Normalized frequency", 2, outer=TRUE, line=1)
+}
 
 readSplitGetNames <- function(path, filter=NULL) {
   files <- list.files(path)

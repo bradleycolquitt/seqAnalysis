@@ -2,6 +2,7 @@
 
 import sys, os, re
 import argparse
+import pdb
 from subprocess import *
 
 feature_path = "/home/user/lib/features_merged"
@@ -48,6 +49,7 @@ def main(argv):
     feature_length = 0
     span = 0
     count = 0
+    num_bed_fields = 0
     #pdb.set_trace()
     # Get average length of peaks
     #peak_lengths = np.zeros(reference_length)
@@ -55,17 +57,19 @@ def main(argv):
     reference_file = open(args.reference_bed)
     for line in reference_file:
         line = line.split()
+        num_bed_fields = len(line)
         peak_lengths_cum = peak_lengths_cum + (int(line[2]) - int(line[1]))
     peak_lengths_mean = peak_lengths_cum / reference_length 
     
     # Set up summary file
     summary_file = open("/".join([reference_out_path, "summary"]), 'w')
-    out = "feature\treference_length\tfeature_length\tfeature_span\tcount\tfraction\tfraction_norm\n"
+    out = "feature\treference_num\tfeature_num\tfeature_span\tcount\tfraction\tfraction_norm\n"
     summary_file.write(out)
     
     # run intersectBed for reference_bed against each feature in features_general
     for feature in features:
         print feature
+        #pdb.set_trace()
         feature_file_path = "/".join([feature_path, feature])
         feature_out_file = open("/".join([reference_out_path, feature]), 'w')
         cmd_args = ['intersectBed', '-a', args.reference_bed, '-b', feature_file_path, '-c',
@@ -89,12 +93,14 @@ def main(argv):
         
         #reference_[feature] = 0
         #feature_length[feature] = 0
+        count_field = 6
+        if num_bed_fields == 13: count_field = 13
         for line in feature_out_file:
             line = line.split()
             #total_overlap[feature] = total_overlap[feature] + int(line[5])
             #total_length[feature] = total_length[feature] + int(line[6])
             #feature_length = feature_length + 1
-            count = count + int(line[6])
+            count = count + int(line[count_field])
             #fraction = round(float(total_overlap[feature]) / float(total_length[feature]), 3)
         fraction = float(count) / reference_length
         fraction_norm = 1000000 * fraction / span

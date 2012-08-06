@@ -219,7 +219,7 @@ def bedToBam(bed_name, bam_name):
         return
     else:
         print "BED to BAM successful."
-        #os.remove(bed_name)
+        os.remove(bed_name)
         
 # Convert paired bed BAM to BAM with extended reads
 # In effect, convert pairs of reads to fragments of given insert size
@@ -231,18 +231,19 @@ def trimToDyad_worker(args):
     it = bam.fetch(reference=ref)
     bed = args[2]
     surround = args[3]
+    
+    #aend is aligned end of read, 3' most end for both directions
+    #pos is 0-based leftmost coordinate
     for read in it:
         if read.is_read1:
             if read.is_reverse and read.isize < 0:
                 #pdb.set_trace()
-                mid = read.aend + (read.isize / 2)
+                mid = read.aend + (read.isize / 2) 
                 if mid < 0: continue
-                #start = mid - surround
-                #end = mid + surround 
                 strand = "-"
             elif not read.is_reverse and read.isize > 0:
-                mid = read.pos + (read.isize / 2)
-                #start = read.pos
+                #pdb.set_trace()
+                mid = read.pos + (read.isize / 2)  # 3 is correction for some weird behavior in bedToBam
                 strand = "+"
             else: continue
             start = mid - surround
@@ -258,37 +259,15 @@ def trimToDyad(bam, bed, surround):
     end = 0
     strand = ""
 #    pdb.set_trace()
-    #pool = Pool(processes=4)
+
     refs = bam.references
     for ref in refs:
         args = [bam, ref, bed, surround]
-       # it = bam.fetch(reference=ref)
+
         #pool.apply_async(trimToDyad_worker, ([it, bed, surround],))
         #pool.apply(trimToDyad_worker, (args,))
         trimToDyad_worker([bam, ref, bed, surround])
-    #bedToBam(bed, bam)
-    #pool.close()
-    #pool.join()
-    #for read in bam:
-    #    if read.is_read1:
-    #        if read.is_reverse and read.isize < 0:
-    #            #pdb.set_trace()
-    #            mid = read.aend + (read.isize / 2)
-    #            if mid < 0: continue
-    #            #start = mid - surround
-    #            #end = mid + surround 
-    #            strand = "-"
-    #        elif not read.is_reverse and read.isize > 0:
-    #            mid = read.pos + (read.isize / 2)
-    #            #start = read.pos
-    #            strand = "+"
-    #        else: continue
-    #        start = mid - surround
-    #        end = mid + surround
-    #        out = "\t".join([bam.getrname(read.tid), str(start), str(end),
-    #                         read.qname, '0', strand]) + "\n"
-    #        bed.write(out)
-    #
+  
 def extend_bam(bam, type, reheader, size=0):
     
     bam_prefix = bam.split(".bam")[0]

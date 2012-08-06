@@ -20,8 +20,6 @@ def main(argv):
     ind.append('Y')
     chrs = ["".join(['chr', str(chr)]) for chr in ind]
     
-    #chr_store = ""
-    #outfile = ""
     file_dict = {}
     for chr in chrs:
         file_dict[chr] = open("/".join([outdir, chr]), 'w')
@@ -31,12 +29,6 @@ def main(argv):
         chr = sline[0]
         if chr in chrs:
             file_dict[chr].write(line)
-        #if chr != chr_store:
-        #    print chr
-        #    if outfile != "": outfile.close()
-        #    outfile = open("/".join([outdir, chr]), 'w')
-        #    chr_store = chr
-        #outfile.write(line)
         
 if __name__ == '__main__':
     main(sys.argv)
