@@ -1,14 +1,16 @@
 source("~/src/seqAnalysis/R/paths.R")
 library(itertools)
 
-## Generates matrix of samples values with annotations observations as rows and
+## Generates matrix of samples values with annotation observations as rows and
 ##    positions as columns
 ##    Arguments:  data - profile data with [chr start stop name position strand value]
 ##                data_type - directory and normalization type
 positionMatrix <- function(data, data_type="raw") {
   groups <- unique(data[,5])
   names <- unique(data[,4])
+  print("Splitting...")
   data_groups = split(data, data[,5])
+  print("Combining...")
   out <- foreach(ind=icount(length(data_groups)), .combine="cbind") %dopar% {
     data_group <- data_groups[[ind]]
     m <- match(names, data_group[,4])
@@ -38,6 +40,7 @@ positionMatrix.all <- function(anno, data_type="unnorm/mean") {
         if (!file.exists(out_path)) dir.create(out_path)
         write.table(pos_matrix, file=paste(out_path, sample, sep="/"),
                 quote=FALSE, sep="\t", col.names=FALSE)
+        a <- gc()
       }
     }
   }  

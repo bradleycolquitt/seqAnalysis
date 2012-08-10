@@ -131,10 +131,10 @@ def main(argv):
     ## Count number of reads within specified window size
     parser = argparse.ArgumentParser()
     parser.add_argument('-b', dest='bam', required=False)
-    parser.add_argument('--paired_end', action='store_true', default=False)
     parser.add_argument('-w', dest='window')
     parser.add_argument('-e', dest='extend', type=int, required=False, default=0)
     parser.add_argument('-d', dest='date', required=False)
+    parser.add_argument('--paired_end', action='store_true', default=False)
     parser.add_argument('--pseudocount', dest='pseudo', action='store_true', default=False)
     parser.add_argument('--full', action='store_true', default=False, help="Record extent of each read")
     args = parser.parse_args()

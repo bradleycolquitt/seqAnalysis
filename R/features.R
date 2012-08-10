@@ -524,6 +524,10 @@ makeFeatureDF <- function(set="cells", value_type="raw", FUN=mean) {
   
 }
 
+computeScoreRatios <- function(v1, v2) {
+  return(log((v1+1)/(v2+1))*v1)
+}
+
 compareFeatures <- function(feature, sample_list, value_type="raw") {
   data <- lapply(sample_list, function(sample) {
     read.delim(paste(feature2.path, sample, feature, sep="/"), header=FALSE)

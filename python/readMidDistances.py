@@ -192,9 +192,9 @@ def bamToFragmentBed(infile, outfile, size):
         for read in infile:
             if read.tid < 0: continue
             if read.is_reverse:
-                start = read.pos - size
+                start = read.aend - size
                 if start < 0: continue
-                end = read.pos
+                end = read.aend
                 strand = "-"
             elif not read.is_reverse:
                 end = read.pos + size

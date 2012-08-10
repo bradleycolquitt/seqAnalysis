@@ -9,7 +9,7 @@ checkExisting <- function(input.path, output.path, select=NULL, extend=NULL) {
   return(files.tbp)
 }
 
-profileRead <- function(data.path, select, select2=NULL) {
+profileRead <- function(data.path, fun, select, select2=NULL) {
   files <- list.files(data.path)
   #print(files)
   files <- files[grep(select, files)]
@@ -28,13 +28,19 @@ profileRead <- function(data.path, select, select2=NULL) {
     #val_files <- sort(files[grep(paste(select, "mean$", sep="_"), files)])
     #ci_files_1 <- sort(files[grep(paste(select, "bootCI_1", sep="_"), files)])
     #ci_files_2 <- sort(files[grep(paste(select, "bootCI_2", sep="_"), files)])
-    val_files <- sort(files[grep(paste(filter, "mean$", sep="_"), files)])
-    ci_files_1 <- sort(files[grep(paste(filter, "mean_bootCI_1", sep="_"), files)])
-    ci_files_2 <- sort(files[grep(paste(filter, "mean_bootCI_2", sep="_"), files)])
+    #val_files <- sort(files[grep(paste(filter, "mean$", sep="_"), files)])
+    #ci_files_1 <- sort(files[grep(paste(filter, "mean_bootCI_1", sep="_"), files)])
+    #ci_files_2 <- sort(files[grep(paste(filter, "mean_bootCI_2", sep="_"), files)])
+    val_files <- sort(files[grep(paste(filter, paste(fun, "$", sep=""), sep="_"), files)])
+    ci_files_1 <- sort(files[grep(paste(filter, fun, "bootCI_1", sep="_"), files)])
+    ci_files_2 <- sort(files[grep(paste(filter, fun, "bootCI_2", sep="_"), files)])
   } else {
-    val_files <- sort(files[grep(paste(select, "mean$", sep="_"), files)])
-    ci_files_1 <- sort(files[grep(paste(select, "mean_bootCI_1", sep="_"), files)])
-    ci_files_2 <- sort(files[grep(paste(select, "mean_bootCI_2", sep="_"), files)])
+    #val_files <- sort(files[grep(paste(select, "mean$", sep="_"), files)])
+    #ci_files_1 <- sort(files[grep(paste(select, "mean_bootCI_1", sep="_"), files)])
+    #ci_files_2 <- sort(files[grep(paste(select, "mean_bootCI_2", sep="_"), files)])
+    val_files <- sort(files[grep(paste(select, paste(fun, "$", sep=""), sep="_"), files)])
+    ci_files_1 <- sort(files[grep(paste(select, fun, "bootCI_1", sep="_"), files)])
+    ci_files_2 <- sort(files[grep(paste(select, fun, "bootCI_2", sep="_"), files)])
     #val_files <- sort(files[grep("mean$", files)])
     #ci_files_1 <- sort(files[grep("mean_bootCI_1", files)])
     #ci_files_2 <- sort(files[grep("mean_bootCI_2", files)])
