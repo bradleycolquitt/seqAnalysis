@@ -325,9 +325,9 @@ def extract_worker(sam_file, h5_file, ref, ref_length, track_name):
 #       add absolute value of insert size to list of insert sizes
 #   average sizes
 #   write to value vector
-# Write out as track in HDF5 file:
+# Write out as WIG:
 
-def extractInsertSizes(sam, output, track_name):
+def extractInsertSizes(sam, wsize, output):
     sam_file = pysam.Samfile(sam, 'rb')
     #h5_file = tb.openFile(output, 'a')
     wig_file = open(output, 'w')
@@ -344,24 +344,29 @@ def extractInsertSizes(sam, output, track_name):
     #pool.close()
     #pool.join()
     ## Loop through chromosomes
-    for chr_index in range(len(refs)):
+    #for chr_index in range(len(refs)):
+    for chr_index in [0]:
         ## Extract and initialize variables
         curr_ref = refs[chr_index]
         print curr_ref
         #pdb.set_trace()
         curr_length = ref_lengths[chr_index]
-        values = numpy.zeros(curr_length)
+        values = numpy.zeros(curr_length / wsize)
         sum_inserts = 0
         num_reads = 0
         value_ind = 0
         
-        out = "fixedStep chrom={0} start=1 step={1} span={1}\n".format(curr_ref, 1)
+        out = "fixedStep chrom={0} start=1 step={1} span={1}\n".format(curr_ref, wsize)
         wig_file.write(out)
         ## Create pileup iterator
         it = sam_file.pileup(reference=curr_ref)
         
         ## Loop through each position in iterator
         #print "Computing"
+        value_ind = 0
+        value_ind_store = 0
+        update = 1
+        #pdb.set_trace()
         for proxy in it:
             assert(value_ind < curr_length)
             
@@ -370,18 +375,41 @@ def extractInsertSizes(sam, output, track_name):
                 sum_inserts = sum_inserts + abs(pread.alignment.isize)
                 num_reads = num_reads + 1
                 
-            ## Computre average insert size at position
-            #values[value_ind] = float(sum_inserts) / float(num_reads)
-            value = float(sum_inserts) / float(num_reads)
-            wig_file.write(str(value) + "\n")
+            ## Compute average insert size at position
+            value_ind = proxy.pos / wsize
+            if value_ind_store == 0: value_ind_store = value_ind
+            if value_ind == value_ind_store:
+                update += 1
+                values[value_ind] += float(sum_inserts) / float(num_reads)
+                
+            else:
+                #pdb.set_trace()
+                #values[value_ind]
+                values[value_ind_store] /= float(update)
+                if values[value_ind_store] > 1000: pdb.set_trace()
+                update = 0
+            value_ind_store = value_ind    
+            
+            
+            
+            #value = float(sum_inserts) / float(num_reads)
+            #wig_file.write(str(value) + "\n")
+            #if sum_inserts > 1: pdb.set_trace()
+            #if num_reads > 0: pdb.set_trace()
             sum_inserts = 0
             num_reads = 0
-            value_ind = value_ind + 1
+            #value_ind = value_ind + 1
+        #pdb.set_trace()
+        values[value_ind_store] /= float(update)
+        for value in values:
+        #    if value > 0: pdb.set_trace()
+            wig_file.write(str(value) + "\n")
             
         ## Write HDF5 track
         #print "Writing"
         #wig_file.write()
         #track_util.writeTrack(h5_file, track_name, curr_ref, values, 1)
+    wig_file.close()
     cmd_args = ['igvtools', 'tile', output, output + ".tdf", 'mm9']
     p = Popen(cmd_args)
     p.wait()

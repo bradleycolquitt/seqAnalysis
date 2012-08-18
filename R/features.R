@@ -110,7 +110,7 @@ makeFeatureMatrix.all <- function(set="cells", value_type="raw") {
 }
 
 ## Make summaries
-makeFeatureMatrix2 <- function(feature, set = "all", value_type, transf=NULL, write=TRUE) {
+makeFeatureMatrix2 <- function(feature, set = "all", data_type, transf=NULL, write=TRUE) {
   if (set=="cells_norm" | set=="cells") {
     samples <- samples.cells_norm
   } else if (set=="unnorm") {
@@ -124,7 +124,7 @@ makeFeatureMatrix2 <- function(feature, set = "all", value_type, transf=NULL, wr
   } else if (set=="rpm_avg_2") {
     samples <- samples.cells_norm
   } else if (set=="tfo_unnorm") {
-    #value_type <- "unnorm_2"
+    #data_type <- "unnorm_2"
     samples <- samples.tfo_unnorm
   } else if (set=="tfo") {
     samples <- samples.tfo
@@ -146,6 +146,8 @@ makeFeatureMatrix2 <- function(feature, set = "all", value_type, transf=NULL, wr
     samples <- samples.d3a_nuc
   } else if (set=="d3a_nuc_sub") {
     samples <- samples.d3a_nuc_sub
+  } else if (set=="d3a_kde") {
+    samples <- c("d3xog_wt_nuc_478_p1", "d3xog_ko_nuc_256_p1")
   } else if (set=="tt3_min") {
     #samples <- c("omp_hmc_120424_rpkm", "ott3_1_hmc_rpkm", "ott3_2_hmc_rpkm", "ott3_2_hmc_21M_rpkm", "ngn_hmc_rpkm", "icam_hmc_rpkm",
     #             "omp_mc_rpkm", "ott3_1_mc_rpkm", "ott3_2_mc_rpkm", "ott3_2_mc_rmdup_17M_rpkm", "ngn_mc_rpkm", "icam_mc_rpkm")
@@ -157,38 +159,38 @@ makeFeatureMatrix2 <- function(feature, set = "all", value_type, transf=NULL, wr
   
   print(samples)
   vals <- foreach (sample=samples, .combine="cbind") %dopar% {
-    print(paste(feature_norm_path, value_type, feature, sample, sep="/"))
-    data <- read.delim(paste(feature_norm_path, value_type, feature, sample, sep="/"), header=FALSE)
+    print(paste(feature_norm_path, data_type, feature, sample, sep="/"))
+    data <- read.delim(paste(feature_norm_path, data_type, feature, sample, sep="/"), header=FALSE)
     val <- data[,ncol(data)]
     if (!is.null(transf)) val <- do.call(transf, list(val))
     names(val) <- data[,4]
     return(val)
   }
   colnames(vals) <- samples
-  out_path <- paste(feature_norm_path, value_type, "summaries", sep="/")
+  out_path <- paste(feature_norm_path, data_type, "summaries", sep="/")
   if (!file.exists(out_path)) dir.create(out_path)
-  fname <- paste(feature_norm_path, value_type, "summaries", paste(set, feature, sep="_"), sep="/")
+  fname <- paste(feature_norm_path, data_type, "summaries", paste(set, feature, sep="_"), sep="/")
   if (!is.null(transf)) fname <- paste(fname, transf, sep="_")
   if (write) write.table(vals, file=fname, quote=FALSE, sep="\t")
   return(vals)
 }
 
-makeFeatureMatrix2.all <- function(set, value_type, transf=NULL) {
+makeFeatureMatrix2.all <- function(set, data_type, transf=NULL) {
   files <- list.files(feature.path)
   files <- files[grep("chr", files)]
   for(file in files) {
     print(file)
-    if (file.exists(paste(feature_norm_path, value_type, "summaries", paste(set, file, transf, sep="_"), sep="/"))) {
+    if (file.exists(paste(feature_norm_path, data_type, "summaries", paste(set, file, transf, sep="_"), sep="/"))) {
       print("File exists")
       next
     }
-    tryCatch(makeFeatureMatrix2(file, set=set, value_type=value_type, transf=transf, write=TRUE), error = function(e) {
+    tryCatch(makeFeatureMatrix2(file, set=set, data_type=data_type, transf=transf, write=TRUE), error = function(e) {
             print(paste("Skipping", file, sep=" "))
                   print(e)
                   return
           })
     
-    #a <- makeFeatureMatrix2(file, set=set, value_type=value_type, transf=transf, write=TRUE)
+    #a <- makeFeatureMatrix2(file, set=set, data_type=data_type, transf=transf, write=TRUE)
   }
 }
 
@@ -196,8 +198,8 @@ makeFeatureMatrix2.all <- function(set, value_type, transf=NULL) {
 threshMatByQ <- function(data, q) {
   
 }
-statCollect <- function(set, value_type, feature, transf_name, transf=NULL) {
-  data_path <- paste(feature_norm_path, value_type, "summaries",
+statCollect <- function(set, data_type, feature, transf_name, transf=NULL) {
+  data_path <- paste(feature_norm_path, data_type, "summaries",
                            paste(set, feature, sep="_"), sep="/")
   if (!is.null(transf_name)) data_path <- paste(data_path, transf_name, sep="_")
   print(data_path)
@@ -214,8 +216,8 @@ statCollect <- function(set, value_type, feature, transf_name, transf=NULL) {
   return(data_melt)
 }
 
-statSummary <- function(set, value_type, feature, transf_name=NULL, transf=NULL, FUN, ...) {
-  data_path <- paste(feature_norm_path, value_type, "summaries",
+statSummary <- function(set, data_type, feature, transf_name=NULL, transf=NULL, FUN, ...) {
+  data_path <- paste(feature_norm_path, data_type, "summaries",
                            paste(set, feature, sep="_"), sep="/")
   if (!is.null(transf_name)) data_path <- paste(data_path, transf_name, sep="_")
   data <- read.delim(data_path, header=TRUE, row.names=NULL)
@@ -225,7 +227,7 @@ statSummary <- function(set, value_type, feature, transf_name=NULL, transf=NULL,
   return(apply(data[,2:ncol(data)], 2, FUN, ...))
 }
 
-statSummary.all <- function(set, value_type, toplot="general", action="summary", transf_name="sqrt", transf=NULL, FUN=mean, ...) {
+statSummary.all <- function(set, data_type, toplot="general", action="summary", transf_name="sqrt", transf=NULL, FUN=mean, ...) {
     features <- ""
     if (toplot=="general") {
       features <- as.character(features_toplot)
@@ -234,7 +236,7 @@ statSummary.all <- function(set, value_type, toplot="general", action="summary",
     } else {
 
   
-      features <- list.files(paste(feature_norm_path, value_type, "summaries", sep="/"))
+      features <- list.files(paste(feature_norm_path, data_type, "summaries", sep="/"))
                                         #print(features)
       features <- lapply(features, str_split, paste(set, "_", sep=""))
                                         #print(features)
@@ -245,9 +247,9 @@ statSummary.all <- function(set, value_type, toplot="general", action="summary",
   out <- foreach (feature=features, .combine="rbind") %dopar% {
     print(feature)
     if (action=="summary") {
-      result <- statSummary(set, value_type, feature, transf_name=transf_name, transf=transf, FUN, ...)
+      result <- statSummary(set, data_type, feature, transf_name=transf_name, transf=transf, FUN, ...)
     } else if (action=="collect") {
-      result <- statCollect(set, value_type, feature, transf_name=transf_name)
+      result <- statCollect(set, data_type, feature, transf_name=transf_name)
     }
     return(result)
   }
@@ -255,16 +257,16 @@ statSummary.all <- function(set, value_type, toplot="general", action="summary",
   return(out)
 }
 
-statSummary.allCI <- function(set, value_type, transf=NULL, boot=TRUE, ...) {
-  stat <- melt(statSummary.all(set=set, value_type=value_type, transf=transf, FUN=mean, ...))
+statSummary.allCI <- function(set, data_type, transf=NULL, boot=TRUE, ...) {
+  stat <- melt(statSummary.all(set=set, data_type=data_type, transf=transf, FUN=mean, ...))
   if (boot) {
     CI <- bootCI
   } else {
     CI <- ci95
   }  
-  CIup <- melt(statSummary.all(set=set, value_type=value_type, transf=transf,
+  CIup <- melt(statSummary.all(set=set, data_type=data_type, transf=transf,
                                FUN=CI, stat=boot.samplemean, bound="upper" ))
-  CIlow <- melt(statSummary.all(set=set, value_type=value_type, transf=transf,
+  CIlow <- melt(statSummary.all(set=set, data_type=data_type, transf=transf,
                                 FUN=CI, stat=boot.samplemean, bound="lower"))
   colnames(stat) <- c("feature", "sample", "median")
   colnames(CIup) <- c("feature", "sample", "CIup")
@@ -274,28 +276,28 @@ statSummary.allCI <- function(set, value_type, transf=NULL, boot=TRUE, ...) {
   return(stat_ci)
 }
 
-statSummary.allSEM <- function(set, value_type, FUN=sem) {
-  stat <- melt(statSummary.all(set=set, value_type=value_type, FUN=median))
-  SEM <- melt(statSummary.all(set=set, value_type=value_type, FUN=FUN))
+statSummary.allSEM <- function(set, data_type, FUN=sem) {
+  stat <- melt(statSummary.all(set=set, data_type=data_type, FUN=median))
+  SEM <- melt(statSummary.all(set=set, data_type=data_type, FUN=FUN))
   colnames(stat) <- c("feature", "sample", "median")
   colnames(SEM) <- c("feature", "sample", "SEM")
   return(merge(stat, SEM, all.y=TRUE))
 }
 
-statSummary.allSD <- function(set, value_type, trim=.05, ...) {
-  stat <- melt(statSummary.all(set=set, value_type=value_type, FUN=mean, trim=trim))
-  sd <- melt(statSummary.all(set=set, value_type=value_type, FUN=sd_trim, trim=trim))
+statSummary.allSD <- function(set, data_type, trim=.05, ...) {
+  stat <- melt(statSummary.all(set=set, data_type=data_type, FUN=mean, trim=trim))
+  sd <- melt(statSummary.all(set=set, data_type=data_type, FUN=sd_trim, trim=trim))
   colnames(stat) <- c("feature", "sample", "median")
   colnames(sd) <- c("feature", "sample", "sd")
   return(merge(stat, sd, all.y=TRUE))
 }
 
-statSummary.allIQR <- function(set, value_type, toplot="general", transf_name="sqrt", transf=NULL, ...) {
-  stat <- melt(statSummary.all(set=set, value_type=value_type, toplot=toplot, transf_name=transf_name, transf=transf, FUN=median, ...))
+statSummary.allIQR <- function(set, data_type, toplot="general", transf_name="sqrt", transf=NULL, ...) {
+  stat <- melt(statSummary.all(set=set, data_type=data_type, toplot=toplot, transf_name=transf_name, transf=transf, FUN=median, ...))
  
-  up <- melt(statSummary.all(set=set, value_type=value_type, toplot=toplot, transf_name=transf_name, transf=transf,
+  up <- melt(statSummary.all(set=set, data_type=data_type, toplot=toplot, transf_name=transf_name, transf=transf,
                                FUN=iqr, bound="upper" ))
-  low <- melt(statSummary.all(set=set, value_type=value_type, toplot=toplot,
+  low <- melt(statSummary.all(set=set, data_type=data_type, toplot=toplot,
                               transf_name=transf_name, transf=transf,
                                 FUN=iqr, bound="lower"))
   colnames(stat) <- c("feature", "sample", "median")
@@ -307,8 +309,8 @@ statSummary.allIQR <- function(set, value_type, toplot="general", transf_name="s
 }
 
 ## Normalize values of feature matrix by median value of specified feature
-statSummary.allNorm <- function(set, value_type, toplot=TRUE, transf_name=NULL, transf=NULL, norm="intergenic_sub_rmsk_chr") {
-  data <- statSummary.all(set=set, value_type=value_type, toplot=toplot, action="collect", transf_name=transf_name, transf=transf)
+statSummary.allNorm <- function(set, data_type, toplot=TRUE, transf_name=NULL, transf=NULL, norm="intergenic_sub_rmsk_chr") {
+  data <- statSummary.all(set=set, data_type=data_type, toplot=toplot, action="collect", transf_name=transf_name, transf=transf)
   data.norm <- data[data$feature == norm,]
   data.norm.median <- ddply(data.norm, .(variable, celltype, ip), summarize, value.median=median(value))
   norm_feature_name <- paste(norm, "median", sep="_")
@@ -463,10 +465,10 @@ prepForHeatmap <- function(mat, var_ind=c(1:3), N=1000) {
   return(mat)
 }
 
-makeFeatureDF <- function(set="cells", value_type="raw", FUN=mean) {
+makeFeatureDF <- function(set="cells", data_type="raw", FUN=mean) {
   files <- list.files(paste(feature2.path, "summaries", sep="/"))
   files <- files[grep(set, files)]
-  files <- files[grep(value_type, files)]
+  files <- files[grep(data_type, files)]
   files_names <- lapply(files, str_split, "_")
   print(files)
   #return(files_names)
@@ -474,7 +476,7 @@ makeFeatureDF <- function(set="cells", value_type="raw", FUN=mean) {
     #print(x)
     sel <- x[[1]][-grep(set, x[[1]])]
     #return(sel)
-    sel <- sel[-grep(value_type, sel)]
+    sel <- sel[-grep(data_type, sel)]
     sel <- sel[-grep("chr", sel)]
     return(sel)
   })
@@ -499,7 +501,7 @@ makeFeatureDF <- function(set="cells", value_type="raw", FUN=mean) {
   ci.df <- ldply(ci)
   #return(ci.df)
   #return(stat.df)
-  stat.df$value_type <- "stat"
+  stat.df$data_type <- "stat"
   stat.df$feature <- files_names
   fl <- length(unique(stat.df$feature))
   print(fl)
@@ -533,6 +535,19 @@ compareFeatures <- function(feature, sample_list, value_type="raw") {
     read.delim(paste(feature2.path, sample, feature, sep="/"), header=FALSE)
   })
   
+}
+
+ecdf <- function(d) {
+  h <- hist(d, breaks=50, plot=FALSE)
+  counts <- h$counts
+  count_sum <- sum(counts)
+  vals <- vector('numeric', length=length(counts))
+  vals[1] <- counts[1]
+  for (i in 2:length(vals)) {
+     vals[i] <- counts[i] + vals[i-1]
+  }
+  vals <- vals / count_sum
+  return(cbind(breaks=h$mids, vals=vals))
 }
 
 .sem <- function(vals) {

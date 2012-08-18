@@ -27,8 +27,7 @@ loadPhaseData <- function(path, filter=NULL, neg_filter=NULL) {
   names(data) <- files
   return(data)
 }
-
-normPhaseData <- function(data, phase_ind, num_regions=NULL) {
+normPhaseData <- function(data, phase_ind=ind16, num_regions=NULL) {
   #omp_data <- data[grep("omp_nuc", names(data))]
   #icam_data <- data[grep("icam_nuc", names(data))]
   #omp_count <- 73284106
@@ -127,7 +126,7 @@ plotPhase.four <- function(data, phase_ind, step, ...) {
   }
 }
 
-reportPhasePeaks <- function(data, phase_ind, span) {
+reportPhasePeaks <- function(data, phase_ind) {
   peaks <- c()
   for (ind in 3:(length(phase_ind)-2)) {
     curr_ind <- phase_ind[(ind-2):(ind+2)]

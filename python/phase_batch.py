@@ -7,7 +7,7 @@ from subprocess import Popen
 
 track_dir = '/media/storage2/data/h5'
 lib_dir = '/home/user/lib/for_nuc'
-phase_dir = '/media/storage2/data/phasogram'
+phase_dir = '/media/storage2/analysis/nuc/phasogram'
 
 def main(argv):
     parser = argparse.ArgumentParser()
@@ -29,7 +29,7 @@ def main(argv):
     bed_path = "/".join([lib_dir, args.bed_set])
     bed_files = os.listdir(bed_path)
     
-    out_path = "/".join([phase_dir, track_prefix, args.bed_set])
+    out_path = "/".join([phase_dir, args.bed_set])
     if not os.path.exists(out_path): os.makedirs(out_path)
     
     for track in nodes:

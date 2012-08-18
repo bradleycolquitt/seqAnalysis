@@ -19,6 +19,7 @@ class indexer:
     def __init__(self, read1, read2, readInd, outpath, mismatches):
        # pdb.set_trace()
         self.read1 = os.path.abspath(read1)
+        
         self.read2 = os.path.abspath(read2)
         self.readInd = os.path.abspath(readInd)
         self.mismatches = mismatches
@@ -34,7 +35,9 @@ class indexer:
             index = index.split()
             self.indices[int(index[0])] = index[1]
         
-        self.outpath = os.path.abspath(outpath)
+        #self.outpath = os.path.abspath(outpath)
+        self.outpath = self.path_prefix + "/" + os.path.basename(read1).split("_")[0] + "_split"
+        if not os.path.exists(self.outpath): os.makedirs(self.outpath)
         
         for index in self.indices.iterkeys():
             dir = "/".join([self.outpath, str(index)])
@@ -84,11 +87,11 @@ def main(argv):
     parser.add_argument('-1', dest="read1")
     parser.add_argument('-2', dest="read2", required=False, default="none")
     parser.add_argument('-i', dest="readInd")
-    parser.add_argument('-o', dest="outpath")
-    parser.add_argument('-m', dest="mismatches", help="Number of mismatches tolerated in index sequence")
+    parser.add_argument('-o', dest="outpath", default="none")
+    parser.add_argument('-m', dest="mismatches", required=False, help="Number of mismatches tolerated in index sequence", default=1)
     args = parser.parse_args()
-    if not os.path.exists(args.outpath): os.mkdir(args.outpath)
-    error_log = open(args.outpath + "/error_log", 'a')
+    #if not os.path.exists(args.outpath): os.mkdir(args.outpath)
+    #error_log = open(args.outpath + "/error_log", 'a')
     #pdb.set_trace()
     i = indexer(args.read1, args.read2, args.readInd, args.outpath, args.mismatches)
     try:
