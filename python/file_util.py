@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys, os, re
+import shutil
 from subprocess import Popen
 
 def transfer_to_dir(file_path, storage_dir):
@@ -29,4 +30,13 @@ def transfer_to_dir(file_path, storage_dir):
         cmd_args = ['rm', file_path]
         
 
-    
+def file_combine(in_path, out_path):
+    in_files = os.listdir(in_path)
+    out_file = open(out_path, 'w')
+    for in_file in in_files:
+            a = open(int_path + "/" + in_file)
+            for line in a:
+                out_file.write(line)
+            a.close()
+    shutil.rmtree(in_path)
+    out_file.close()

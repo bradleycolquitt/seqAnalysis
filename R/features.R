@@ -18,27 +18,29 @@ features_toplot <- factor(1:11, labels=c("refgene_1to3kb_up_chr", "Refgene_1kb_u
                                   "phastCons30way_intergenic_merge500_thresh500_chr",
                                   "intergenic_sub_rmsk_chr"))
 
-features_merge_toplot <- factor(1:10, labels=c("refgene_1to3kb_up_merged",
+features_merge_toplot <- factor(1:11, labels=c("refgene_1to3kb_up_merged",
                                        "Refgene_1kb_up_merged",
                                        "cgi_merged",
                                        "Refgene_5_UTR_merged",
                                        "Refgene_CDS_merged",
                                        "Refgene_3_UTR_merged",
+                                       "Refgene_exons_merged",
                                        "Refgene_intron_merged",
                                        "phastCons30way_intergenic_sorted_merge500_thresh500_inter_omp_h3k4me1_default.bed_merged",
                                        "phastCons30way_intergenic_merge500_thresh500_merged",
                                        "intergenic_sub_rmsk_merged"))
 
-features_merge_toplot_short <- c("1 to 3 kb upstream",
+features_merge_toplot_short <- factor(1:11, labels=c("1 to 3 kb\n upstream",
                                  "1kb upstream",
                                  "CGI",
                                  "5' UTR",
                                  "CDS",
                                  "3' UTR",
+                                 "Exon",
                                  "Intron",
-                                 "mOSN enhancer",
-                                 "Intergenic conserved",
-                                 "Intergenic")
+                                 "mOSN\n enhancer",
+                                 "Intergenic\n conserved",
+                                 "Intergenic"))
 
 features_rmsk <- factor(1:10, labels=c("rmsk_LTR_chr", "rmsk_LINE_chr", "rmsk_SINE_chr",
                                "rmsk_DNA_chr", "rmsk_RNA_chr",
@@ -70,7 +72,11 @@ featureScaleFill3 <- scale_fill_manual(values=brewer.pal(3, "Set1"))
 
 
 featureClasses <- factor(1:4, labels=c("Upstream", "Exons", "Transcript", "Intergenic"))
+featureMatrix <- data.frame(features_toplot, features_merge_toplot, features_merge_toplot_short, featureClasses[c(1,1,1,2,2,2,3,3,4,4,4)])
 featureClasses5 <- factor(1:5, labels=c("Upstream", "Exons", "Transcript", "Intergenic", "Repeat"))
+
+enhancerClasses <- data.frame(cluster=1:14, class=factor(1:4, labels=c("5hmC variable", "5hmC/5mC variable", "5mC variable", "Invariant"))[c(1,1,1,1,2,2,2,2,3,4,3,3,3,3)])
+
 makeFeatureMatrix <- function(feature, set="cells", value_type = "raw", write=TRUE) {
   if (set=="cells") {
     samples <- samples.cells
@@ -110,15 +116,23 @@ makeFeatureMatrix.all <- function(set="cells", value_type="raw") {
 }
 
 ## Make summaries
-makeFeatureMatrix2 <- function(feature, set = "all", data_type, transf=NULL, write=TRUE) {
+makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type, transf=NULL, write=TRUE) {
   if (set=="cells_norm" | set=="cells") {
     samples <- samples.cells_norm
   } else if (set=="unnorm") {
     samples <- samples.cells_raw
   } else if (set=="cells_rpkm") {
     samples <- samples.cells_rpkm
+  } else if (set=="cells_rpkm2") {
+    samples <- c("omp_hmc_120424_rpkm", "ngn_hmc_rpkm", "icam_hmc_rpkm",
+                 "omp_mc_rpkm", "ngn_mc_rpkm", "icam_mc_rpkm")
   } else if (set=="cells_noM") {
     samples <- samples.cells_noM
+  } else if (set=="cells_full") {
+    samples <- c("omp_hmc_120424_full", "ngn_hmc_120424_full", "icam_hmc_120424_full",
+                 "omp_mc_full", "ngn_mc_full", "icam_mc_full")
+  } else if (set=="cells_bam") {
+    samples <- c("omp_hmc_120424_rmdup", "ngn_hmc_120424_rmdup", "icam_hmc_120424_rmdup")
   } else if (set=="medips_rf_1" | set=="medips_rf_2") {
     samples <- samples.medips_rf
   } else if (set=="rpm_avg_2") {
@@ -136,12 +150,16 @@ makeFeatureMatrix2 <- function(feature, set = "all", data_type, transf=NULL, wri
     samples <- samples.d3a_rpkm
   } else if (set=="d3a_2") {
     samples <- samples.d3a_2
+  } else if (set=="d3a_strand") {
+    samples <- c("moe_d3a_wt_hmc_plus", "moe_d3a_wt_hmc_minus", "moe_d3a_ko_hmc_plus", "moe_d3a_ko_hmc_minus")
   } else if (set=="all") {
     samples <- list.files(paste(feature_norm_path, feature, sep="/")) 
   } else if (set=="d3a_mrna") {
     samples <- c("moe_d3a_wt_mrna_rpkm", "moe_d3a_ko_mrna_rpkm")
   } else if (set=="d3a_mrna_2") {
     samples <- c("moe_d3a_wt_mrna", "moe_d3a_ko_mrna")
+  } else if (set=="cells_nuc") {
+    samples <- c("omp_nuc_0123", "icam_nuc_01234")
   } else if (set=="d3a_nuc") {
     samples <- samples.d3a_nuc
   } else if (set=="d3a_nuc_sub") {
@@ -155,8 +173,16 @@ makeFeatureMatrix2 <- function(feature, set = "all", data_type, transf=NULL, wri
                  "omp_mc_rpkm", "ott3_1_mc_rpkm", "ott3_2_mc_rpkm")
   } else if (set=="tt3_sub") {
     samples <- c("ott3_2_hmc_21M_rpkm_sub_omp_hmc_120424_rpkm")
-  } 
-  
+  } else if (set=="cpg") {
+    samples <- c("mm9")
+  } else if (set=="encode_dnase") {
+    samples <- c("wgEncodeUwDnaseCerebrumC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseCerebellumC57bl6MAdult8wksAlnRep1",
+                 "wgEncodeUwDnaseHeartC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseLiverC57bl6MAdult8wksAlnRep1",
+                 "wgEncodeUwDnaseRetinaC57bl6MAdult1wksAlnRep1")
+  }
+  if (!is.null(select)) {
+    samples <- sapply(samples, function(x) paste(x, select, sep="_"))
+  }
   print(samples)
   vals <- foreach (sample=samples, .combine="cbind") %dopar% {
     print(paste(feature_norm_path, data_type, feature, sample, sep="/"))
@@ -166,6 +192,7 @@ makeFeatureMatrix2 <- function(feature, set = "all", data_type, transf=NULL, wri
     names(val) <- data[,4]
     return(val)
   }
+  vals <- as.matrix(vals)
   colnames(vals) <- samples
   out_path <- paste(feature_norm_path, data_type, "summaries", sep="/")
   if (!file.exists(out_path)) dir.create(out_path)
@@ -221,10 +248,19 @@ statSummary <- function(set, data_type, feature, transf_name=NULL, transf=NULL, 
                            paste(set, feature, sep="_"), sep="/")
   if (!is.null(transf_name)) data_path <- paste(data_path, transf_name, sep="_")
   data <- read.delim(data_path, header=TRUE, row.names=NULL)
+  #return(data)
   if (!is.null(transf)) {
-    data[,2:ncol(data)] <- apply(data[, 2:ncol(data)], 2, function(x) do.call(transf, list(x)))
+    if (ncol(data) == 2) {
+      data[,2] <- do.call(transf, list(data[,2]))
+    } else {
+      data[,2:ncol(data)] <- apply(data[, 2:ncol(data)], 2, function(x) do.call(transf, list(x)))
+    }  
   }
-  return(apply(data[,2:ncol(data)], 2, FUN, ...))
+  if (ncol(data) == 2) {
+    return(do.call(FUN, list(data[,2])))
+  } else { 
+    return(apply(data[,2:ncol(data)], 2, FUN, ...))
+  }  
 }
 
 statSummary.all <- function(set, data_type, toplot="general", action="summary", transf_name="sqrt", transf=NULL, FUN=mean, ...) {
@@ -257,6 +293,50 @@ statSummary.all <- function(set, data_type, toplot="general", action="summary", 
   return(out)
 }
 
+statSummary.test <- function(summary, type="wilcox", col_split="feature", col_compare="celltype", subsample=0) {
+  registerDoMC(cores=2)
+#  feature_split <- split(summary, summary$feature)
+  summary_split <- split(summary, summary[,col_split])
+ # return(summary_split)
+#  samples <- unique(summary$celltype)
+  samples <- as.character(unique(summary[, col_compare]))
+  print(samples)
+  samples_comb <- combn(samples, 2)
+  #print(samples_comb)
+  samples_comb_name <- unlist(apply(samples_comb, 2, paste, collapse="_"))
+#  pvalues <- foreach(feature=feature_split) %dopar% {
+  pvalues <- foreach(group=summary_split) %dopar% {
+
+    pvalue <- apply(samples_comb, 2, function(comb) {
+      if (type=="wilcox") {
+        val <- 0
+        #with(feature, wilcox.test(value[celltype==comb[1]], value[celltype==comb[2]])$p.value)
+        if (subsample == 0) {
+          val <- wilcox.test(group$value[group[,col_compare]==comb[1]],
+                                group$value[group[,col_compare]==comb[2]])$p.value
+          return(val)
+        } else {
+          val <- sapply(1:100, function(x) {
+            obs <- sample(unique(group$obs), subsample)
+            group_sub <- group[group$obs %in% obs,]
+            wilcox.test(group_sub$value[group_sub[,col_compare]==comb[1]],
+                        group_sub$value[group_sub[,col_compare]==comb[2]])$p.value
+          })
+          return(mean(val))
+        }
+      } else if (type=="perm") {
+        with(feature, permutationTest(value[celltype==comb[1]], value[celltype==comb[2]]))
+      }  
+    })
+    pvalue <- unlist(pvalue)
+    names(pvalue) <- samples_comb_name
+    a <- gc()
+    return(pvalue)
+  }
+  names(pvalues) <- names(summary_split)
+  return(pvalues) 
+}
+  
 statSummary.allCI <- function(set, data_type, transf=NULL, boot=TRUE, ...) {
   stat <- melt(statSummary.all(set=set, data_type=data_type, transf=transf, FUN=mean, ...))
   if (boot) {
@@ -309,12 +389,18 @@ statSummary.allIQR <- function(set, data_type, toplot="general", transf_name="sq
 }
 
 ## Normalize values of feature matrix by median value of specified feature
-statSummary.allNorm <- function(set, data_type, toplot=TRUE, transf_name=NULL, transf=NULL, norm="intergenic_sub_rmsk_chr") {
+statSummary.allNorm <- function(set, data_type, toplot=TRUE, transf_name=NULL, transf=NULL, norm_col="feature", norm="intergenic_sub_rmsk_chr") {
   data <- statSummary.all(set=set, data_type=data_type, toplot=toplot, action="collect", transf_name=transf_name, transf=transf)
-  data.norm <- data[data$feature == norm,]
-  data.norm.median <- ddply(data.norm, .(variable, celltype, ip), summarize, value.median=median(value))
+#  data.norm <- data[data$feature == norm,]
+    data.norm <- data[data[,norm_col] == norm,]
+  data.norm.median <- ddply(data.norm, c("variable", "ip", norm_col), summarize, value.median=median(value))
   norm_feature_name <- paste(norm, "median", sep="_")
-  data.norm.median <- data.frame(obs="X", variable=data.norm.median$variable, value=data.norm.median$value.median, feature=norm_feature_name, celltype=data.norm.median$celltype, ip=data.norm.median$ip)
+  data.norm.median <- data.frame(obs="X",
+                                 variable=data.norm.median$variable,
+                                 value=data.norm.median$value.median,
+                                 feature=norm_feature_name,
+                                 celltype=data.norm.median$celltype,
+                                 ip=data.norm.median$ip)
   data <- rbind(data, data.norm.median)
   print("start norm")
   data.split <- split(data, data$variable)
@@ -330,6 +416,7 @@ processIntersectSummary <- function(summary, features=features_merge_toplot) {
   data$internal_norm <- with(data, fraction_norm/sum(fraction_norm))
   data$feature.factor <- features[match(data$feature, as.character(features))]
   data$feature.pretty <- features_merge_toplot_short[as.numeric(data$feature.factor)]
+  data$class <- featureMatrix[match(data$feature.pretty, featureMatrix[,3]),4]
   return(data)
 }
 
@@ -415,6 +502,7 @@ trimOutliers <- function(mat, trim) {
   })  
   return(out)
 }
+
 splitSummaryByQ <- function(data, q, fname=NULL) {
   qs <- apply(data, 2, quantile, probs=q)
   
@@ -441,6 +529,13 @@ splitSummaryByQ <- function(data, q, fname=NULL) {
   return(out)
 }
 
+splitByQ <- function(data, column, q=c(0, .25, .5, .75, 1), fname=NULL) {
+  qs <- quantile(data[,column], q)
+  data_cut <- cut(data[,column], breaks=qs, labels=FALSE)
+  data_out <- data.frame(rownames(data), data_cut)
+  if (!is.null(fname)) write.table(data_out, file=fname, quote=FALSE, sep="\t", row.names=F, col.names=F)
+  return(data_out)
+}
 
 saveBedBySubset <- function(data, bed, fname=NULL) {
   lapply(1:length(data), function(x) {

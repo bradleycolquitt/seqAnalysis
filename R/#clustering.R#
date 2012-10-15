@@ -2,7 +2,7 @@ library(foreach)
 library(bigmemory)
 library(bigtabulate)
 library(cluster) 
-
+library(boot)
 source("~/src/R/LEA/util.R")
 source("~/src/R/profiles2.R")
 loadROI4 <- function(fname) {
@@ -374,7 +374,7 @@ binaryTable <- function(files, roi.name) {
   
 }
 
-clusterImageByPos <- function(data, pos, centers, justCluster=FALSE) {
+clusterImageByPos <- function(data, pos, centers) {
   data.k <- kmeans(data[,pos], centers=centers)
   data.means <- lapply(split(data, data.k$cluster), function(x) apply(x, 2, mean, na.rm=T))
   return(data.means)
@@ -401,6 +401,100 @@ clusterImage.plot <- function(samples.means) {
       lines(curr.sample[[j]], col=j)
     }
   }
+}
+
+## Measure of similarity between hierarchical clusterings
+## From Fowlkes and Mallows, JASA, 1983
+
+testClusterSim <- function(cluster1, cluster2, range=c(2,10)) {
+  B_ks <- foreach (k=range) %do% {
+  k <- 2
+    #cluster1 <- cutree(hc1, k)
+    #cluster2 <- cutree(hc2, k)
+    
+    simmatrix <- matrix(nrow=k, ncol=k)
+    for (i in 1:k) {
+      names1 <- names(cluster1[cluster1==i])
+      for (j in 1:k) {
+        names2 <- names(cluster2[cluster2==j])
+        simmatrix[i,j] <- length(intersect(names1, names2))
+      }
+    }
+
+    m_i <- apply(simmatrix, 1, sum)
+    m_j <- apply(simmatrix, 2, sum)
+    n <- sum(simmatrix)
+    P_k <- sum(m_i ^ 2) - n
+    Q_k <- sum(m_j ^ 2) - n
+    T_k <- sum(simmatrix ^ 2) - n
+    B_k <- T_k / sqrt(P_k * Q_k)
+    return(B_k)
+ }
+  #return(B_k)
+  names(B_ks) <- range
+  return(B_ks)
+
+}
+
+## Cut trees into k clusters
+## If permuting, test range of permutation fractions for a given k number of clusters
+testClusterSim.range <- function(hc1, hc2, range=seq(2, 10), perm=c(.05, .1, .2, .5, .8, 1)) {
+  B_ks <- foreach(k=range) %do% {
+    cluster1 <- cutree(hc1, k)
+    cluster2 <- cutree(hc2, k)
+    out <- c()
+    if (length(perm) > 1) {
+      for (fraction in perm) {
+        cluster2 <- sampleSubset(cluster1, fraction)
+        out <- c(out, testClusterSim(cluster1, cluster2, k))
+      }  
+    } else {
+      out <- testClusterSim(cluster1, cluster2, k)
+    }
+    return(out)
+  }
+  names(B_ks) <- range
+  return(B_ks)
+}
+
+
+testClusterSim.bootInterface <- function(hc1, hc2, k=2, R=10) {
+  cluster1 <- cutree(hc1, k)
+  cluster2 <- cutree(hc2, k)
+  #hc_boot <- boot(data=cluster2, statistic=c, R=R)
+  #hc_boot.array < boot.array(hc_boot)
+  #out <- foreach (row=hc_boot.array) %do% {
+  i <- 1
+  out <- vector(length=R)
+  while (i <= R) {
+    cluster2 <- cluster2[sample(1:length(cluster2), length(cluster2))]
+    out[i] <- testClusterSim(cluster1, cluster2, k=k)
+    
+    i <- i + 1
+  }  
+  #}
+  return(out)
+}
+
+sampleSubset <- function(data, fraction) {
+  num_sample <- round(length(data) * fraction)
+  #print(num_sample)
+  sample_ind <- sample(1:length(data), num_sample)
+  #print(sample_ind)
+  sample_ind_new <- as.numeric(sample(as.character(sample_ind), length(sample_ind)))
+  #print(sample_ind_new)
+  data[sample_ind_new] <- data[sample_ind]
+  return(data)
+}
+
+computeClusterStats.hc <- function(d, hc, range=c(2:10)) {
+  stat_list <- list()
+  for (i in range) {
+    print(i)
+    ct <- cutree(hc, i)
+    stat_list <- c(stat_list, list(cluster.stats(d, ct)))
+  }
+  return(stat_list)
 }
 
 hmedips <- paste(c("omp","ngn","icam"),"hmedip.bed",sep="_")

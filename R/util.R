@@ -382,3 +382,18 @@ lappend <- function(lst, obj) {
   return(lst)
 
 }
+
+range01 <- function(x) {
+  y <- (x - min(x)) / (max(x) - min(x))
+  y[!is.finite(y)] <- 0
+  return(y)
+}
+
+readWIG <- function(fname) {
+  chrs <- list.files(fname)
+  data <- foreach(chr=chrs, .combine="c") %do% {
+    d <- read.delim(paste(fname, chr, sep="/"), header=FALSE)
+    d[,1]
+  }
+  return(data)
+}

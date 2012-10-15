@@ -70,6 +70,9 @@ makeImage.all <- function(set="d3a", anno, data_type="unnorm/mean") {
     samples <- samples.d3a
   } else if (set=="cells") {
     samples <- samples.cells_norm
+  } else if (set=="cells_rpkm") {
+    samples <- list("omp_hmc_120424_rpkm", "ngn_hmc_rpkm", "icam_hmc_rpkm",
+                    "omp_mc_rpkm", "ngn_mc_rpkm", "icam_mc_rpkm")
   }
   
   out <- lapply(samples, function(sample) {
@@ -99,8 +102,8 @@ MP.heat <- function(data, density="none", range=NULL, average=NULL, fname=NULL) 
   if (is.null(fname)) {
     x11()
   } else {
-    #pdf(file=paste("~/s2/analysis/profiles/plots", fname, sep="/"), 12,12)
-    pdf(file=fname, 12, 12)
+    pdf(file=paste("~/s2/analysis/profiles/plots", fname, sep="/"), 12,12)
+    #pdf(file=fname, 12, 12)
   }
   
   if (is.null(range)) {
@@ -131,9 +134,9 @@ MP.heat <- function(data, density="none", range=NULL, average=NULL, fname=NULL) 
             #col=hcl(h=240, c=30, l=seq(99,0,-1)),
             #col=hcl(h = seq(60, 258, by = 2)),
             #col=rgb.palette(100),
-            #col=lab.palette(100),
+            col=lab.palette(100),
             #col=terrain.colors(100),
-            col=rainbow(100, end=.7),
+            #col=rainbow(100, end=.7),
             density.info=density, # "none", "density", "histogram"
             breaks=breaks)
   if (!is.null(fname)) dev.off()

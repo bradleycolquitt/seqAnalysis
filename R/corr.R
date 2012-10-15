@@ -11,14 +11,19 @@ source("~/src/seqAnalysis/R/profiles2.R")
 source("~/src/seqAnalysis/R/util.R")
 
 registerDoMC(cores=6)
-corrs <- function(data1, data2, method="spearman", N) {
+corrs <- function(data1, data2, method="spearman", N, test=FALSE) {
+        #print(N)
 	index <- seq(1, length(data1) - N , by = N)
 	cors <- c()
-	for (i in index){
+	for (i in index) {
 		sub1 <- data1[seq(i, i + N)]
                 sub2 <- data2[seq(i, i + N)]
-		cors <- c(cors,cor(sub1, sub2, method=method))
-		}
+                if (test) {
+                  cors <- c(cors,cor.test(sub1, sub2, method=method)$p.value)
+		} else {
+                  cors <- c(cors,cor(sub1, sub2, method=method))
+                }
+        }        
 	return(cors)
 	}
 	
@@ -75,31 +80,50 @@ meanWindows <- function(data, step) {
   return(tapply(data, ind, mean))
 }
   
-corrWig <- function(wig1, wig2, method="spearman", N=1000, step=1) {
+corrWig <- function(wig1, wig2, method="spearman", step=1, test=FALSE) {
   
   wig1_chr <- list.files(wig1)
   wig2_chr <- list.files(wig2)
   #print(wig1_chr)
   common_chr <- wig1_chr[wig1_chr %in% wig2_chr]
-  filter <- c(grep("random", common_chr), grep("NT", common_chr))
+  filter <- c(grep("random", common_chr), grep("NT", common_chr), grep("chrY", common_chr), grep("chrM", common_chr))
   if (length(filter) > 0) common_chr <- common_chr[-filter]
-  corrs <- foreach(chr=common_chr, .combine="c", .verbose=FALSE) %dopar% {
+  corrs <- foreach(chr=common_chr, .combine="c", .verbose=FALSE) %do% {
     #print(chr)
     data1 <- scan(paste(wig1, chr, sep="/"), skip=1, quiet=TRUE)
     data2 <- scan(paste(wig2, chr, sep="/"), skip=1, quiet=TRUE)
     if (step > 1) {
-      #print(paste("Binning ", chr, sep=""))
       time <- Sys.time()
       data1 <- meanWindows(data1, step)
       data2 <- meanWindows(data2, step)
-      #print(paste(chr, Sys.time() - time, sep=" "))
     }
     if (length(data1) != length(data2)) {
       stop(paste("Non-matching wig lengths: ", chr, sep=""))
     }
-    tryCatch(cor(data1, data2, method=method), error=function(e) return(NA))   
+    datac <- cbind(data1, data2)
+    datac <- removeZeros(datac)
+    #if (test) { 
+    #  tryCatch(cor.test(data1, data2, method=method)$p.value, error=function(e) return(NA))   
+    #} else {
+    #  tryCatch(cor(data1, data2, method=method), error=function(e) return(NA))
+    #}
+    tryCatch(corrs(datac[,1], datac[,2], N=100, test=test), error=function(e) return(NA))
   }
-  return(list(mean=mean(corrs), sd=sd(corrs), se=sd(corrs)/length(corrs)))
+#  return(corrs)
+  print(c(wig1, wig2))
+  print(length(corrs))
+  return(list(mean=mean(corrs, na.rm=TRUE), median=median(corrs, na.rm=TRUE), sd=sd(corrs), se=sd(corrs)/length(corrs)))
+}
+
+corrWigMulti <- function(wig_list, method="spearman", test=FALSE) {
+  wig_comb <- combn(wig_list, 2)
+  out <- list()
+  for (i in 1:ncol(wig_comb)) {
+    out <- c(out, list(corrWig(wig_comb[1,i], wig_comb[2, i], method=method, test=test)))
+  }
+  names_comb <- apply(wig_comb, 2, function(x) paste(x, collapse="_"))
+  names(out) <- names_comb
+  return(out)
 }
 
 stepCorrWig <- function(wig1, wig2, method="spearman", steps) {
@@ -147,7 +171,7 @@ corrDNAmodAndmk4 <- function(data_type="raw", method="spearman", N=100, fname=NU
 
 
 #Combinatorial patterns of histone acetylations and methylations in the human genome
-corrMatrix <- function(set, method, N, fname) { 
+corrMatrix <- function(set, method, N, fname, test=FALSE) { 
  # cat("Getting data...\n")
  # set_data <- foreach(data=set, .combine="cbind") %do% {
  #   dd <- load.DipData(data)    
@@ -166,7 +190,7 @@ corrMatrix <- function(set, method, N, fname) {
   registerDoMC(cores=6)
   corr_vals <- foreach(pair=iter(comb, by="col"), .inorder=TRUE, .combine="c") %dopar% {
     cat(paste(pair[1], " and ", pair[2], "\n", sep=""))
-    val <- corrs(set[,pair[1]], set[,pair[2]], method=method, N=N)
+    val <- corrs(set[,pair[1]], set[,pair[2]], method=method, N=N, test=test)
     return(mean(val, na.rm=TRUE))
   }
   

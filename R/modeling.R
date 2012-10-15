@@ -1,5 +1,6 @@
 library(MASS)
 registerDoMC(cores=4)
+
 fitNormal <- function(vals, plot=TRUE) {
   normfit <- fitdistr(vals, "normal")
   if (plot) {
@@ -50,6 +51,7 @@ fitExp <- function(vals, plot=TRUE) {
     lines(x, y, col="red")
   }
 }
+
 plotDistModel <- function(vals, dfit) {
   step <- round((max(vals) - min(vals)) / 100)
   x <- seq(min(vals), max(vals), by=step)
@@ -78,10 +80,9 @@ permutationTest <- function(x, y, N=1000, sub=0.5, FUN="mean") {
     half_2 <- (sample_size/2 + 1):sample_size
     #print(half_2)
     t_perm[i] <- abs(do.call(FUN, list(x_y[ind[half_1]], na.rm=TRUE)) - do.call(FUN, list(x_y[ind[half_2]], na.rm=TRUE)))
-    #stop
+
   }
-  #print(t_obs)
-  #return(t_perm)
+  
   above <- table(t_perm >= t_obs)
   if (length(above) == 2) {
     p_value <- above[2]/N
@@ -90,10 +91,6 @@ permutationTest <- function(x, y, N=1000, sub=0.5, FUN="mean") {
   }
   return(p_value)
   print(table(t_perm >= t_obs))
-  #return(t_perm)
-  #print(above)
-  #p_value <- above/N
-  #return(p_value)
 }
 
 ## Accepts two matrices, tests pairwise by column
@@ -109,7 +106,7 @@ permutationTest.mat <- function(d1, d2, chunkSize=5, N=10000, adjust="BH") {
       y <- d2[,column]
     }
     permutationTest(x, y, N=N)
-  }
+  } 
   if (!is.null(adjust)) p.adjust(out, method="BH")
   return(out)
 }
@@ -163,11 +160,11 @@ funOnColPairs <- function(data, FUN) {
   #print(ncol(data))
   nc <- ncol(data)
   if (!is.null(nc)) {
-  ind <- seq(1,ncol(data), 2)
-  tmp <- unlist(lapply(ind, function(x) do.call(FUN, list(data[,x], data[,x+1]))))
-  return(tmp)
-}
-  #return(do.call("rbind", tmp))
+    ind <- seq(1,ncol(data), 2)
+    tmp <- unlist(lapply(ind, function(x) do.call(FUN, list(data[,x], data[,x+1]))))
+    return(tmp)
+  }
+  return(do.call("rbind", tmp))
 }
 
 # data is data.frame with paired columns of values and column for splitting
@@ -178,8 +175,8 @@ JScounts <- function(data, key, ind) {
   data.norm <- lapply(data.s, function(x) apply(x[,ind], 2, function(y) y/sum(y)))
   out <- lapply(data, function(x) funOnColPairs(x, JSdist))
   return(do.call("rbind", out))
-  
 }
+  
 ## Table factors
 ## For each factor
 ##     Sample N values from index vector
@@ -232,7 +229,9 @@ testPeakIntersects <- function(summary) {
                                         #return(feature_fraction)
     exp <- round(total * feature_fraction)
     contig_table <- matrix(c(obs, total - obs, exp, total - exp), ncol=2)
-    chisq.test(contig_table)$p.value})
+    chisq.test(contig_table)$p.value
+  })
+  
   names(pvalues) <- data$feature
   qvalues <- p.adjust(pvalues, method="BH")
   out <- data.frame(chisq.pvalue=unlist(pvalues), chisq.BH=qvalues)

@@ -16,8 +16,9 @@ out_path = "/media/storage2/analysis/crosscor"
 
 class cross_track:
     
-    def __init__(self, h5, track1, track2, feature, data_type, corr_type, flank):
-        self.h5 = h5
+    def __init__(self, h5_a, h5_b, track1, track2, feature, data_type, corr_type, flank):
+        self.h5_a = h5_a
+        self.h5_b = h5_b
         self.track1 = track1
         self.track2 = track2
         self.feature = feature_path + feature
@@ -50,9 +51,9 @@ class cross_track:
 def compute_by_chrom(obj):
         pool = Pool(processes=4)
         for chr_tbp in obj.chrs_tbp:
-            #compute_worker(obj, chr_tbp)
+            compute_worker(obj, chr_tbp)
             #pool.apply(compute_worker, (obj, chr_tbp))
-            pool.apply_async(compute_worker, (obj, chr_tbp))
+            #pool.apply_async(compute_worker, (obj, chr_tbp))
         pool.close()
         pool.join()
         
@@ -60,11 +61,12 @@ def compute_by_chrom(obj):
 
 def compute_worker(obj, chr_tbp):
     print chr_tbp
-    h5 = tb.openFile(obj.h5)
-    sample1 = h5.getNode("/", obj.track1)
+    h5_a = tb.openFile(obj.h5_a)
+    h5_b = tb.openFile(obj.h5_b)
+    sample1 = h5_a.getNode("/", obj.track1)
     sample_chrs = [chr._v_name for chr in sample1._f_iterNodes()]
     if not chr_tbp in sample_chrs: return
-    sample2 = h5.getNode("/", obj.track2)
+    sample2 = h5_b.getNode("/", obj.track2)
     sample1_data = sample1._f_getChild(chr_tbp)
     sample2_data = sample2._f_getChild(chr_tbp)
 
@@ -86,7 +88,7 @@ def compute_worker(obj, chr_tbp):
         vals1 = sample1_data[start:end]
         vals2 = sample2_data[start:end]
         
-        if obj.corr_type == "cross": 
+        if obj.corr_type == "cross" or obj.corr_type == "auto": 
             corr = ss.fftconvolve(vals1, vals2, 'same')
         elif obj.corr_type == "spearmanr":
             corr = [stats.spearmanr(vals1, vals2)[0]]
@@ -96,7 +98,8 @@ def compute_worker(obj, chr_tbp):
        
     feature_data.close()
     feature_out.close()
-    h5.close()
+    h5_a.close()
+    h5_b.close()
     
 def corr_wrapper(func, *args):
     return(func(*args))
@@ -106,12 +109,16 @@ def main(argv):
     parser.add_argument(dest="feature")
     parser.add_argument(dest="file")
     parser.add_argument(dest="track1")
+    parser.add_argument("--file_b", required=False)
     parser.add_argument("-b", dest="track2", required=False)
     parser.add_argument("--data_type")
     parser.add_argument("--cor_type", choices=['cross', 'spearmanr', 'pearsonr'])
     parser.add_argument("--flank", dest="flank", type=int, required=False, default=0)
     
     args = parser.parse_args()
+    
+    file_b = args.file
+    if args.file_b: file_b = args.file_b
     
     track2 = ""
     if args.track2:
@@ -121,7 +128,7 @@ def main(argv):
         # auto-correlate
         track2 = args.track1
         
-    obj = cross_track(args.file, args.track1, track2, args.feature, args.data_type, args.cor_type, args.flank)
+    obj = cross_track(args.file, file_b, args.track1, track2, args.feature, args.data_type, args.cor_type, args.flank)
     compute_by_chrom(obj)
 
     

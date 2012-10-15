@@ -24,7 +24,7 @@ class indexer:
         self.readIndf = open(readInd)
         self.indices = {}
         self.outfiles = {}
-        
+        #pdb.set_trace()
         indicesf = open("/seq/lib/illumina_index_sequences")
         for index in indicesf:
             index = index.split()
@@ -44,6 +44,7 @@ class indexer:
         
             
     def split(self):
+        #pdb.set_trace()
         rInd_seq = ""
         seq_dist1 = (0,)*12
         min1 = (0,)*2

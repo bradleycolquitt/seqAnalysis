@@ -4,7 +4,7 @@ library(foreach)
 library(itertools)
 library(doMC)
 
-registerDoMC(cores=4)
+registerDoMC(cores=6)
 
 bedClasses <- c("character", "numeric", "numeric", "character", "numeric", "character")
 nuc_seq_path <- "/media/storage2/analysis/nuc/sequence"
@@ -69,8 +69,8 @@ batchShift <- function(path, shift, pos="start", direction="up") {
   }
 }
 
-randomizeBed <- function(bed, name, write=TRUE) {
-  data <- read.delim(bed, header=F, colClasses=bedClasses)
+randomizeBed <- function(data, name, write=TRUE) {
+  #data <- read.delim(bed, header=F, colClasses=bedClasses)
 
   #for each bed record
   #choose chr based with probability based on chromosome size fraction
@@ -111,15 +111,60 @@ randomizeBed.batch <- function(bed, N=100) {
 #fasta file
 formatFasta <- function(data, fname=NULL) {
   names <- as.character(data[,1])
+  names <- lapply(names, function(x) gsub(" ", "", x))
   seq <- as.character(data[,2])
   fc <- file(fname, 'w')
   for (i in 1:nrow(data)) {
-    name.out <- paste(c(">", names[i], "\n"), sep="")
+    name.out <- paste(">", names[i], "\n", sep="")
     cat(name.out, file=fc)
     seq.out <- paste(c(seq[i], "\n"), sep="")
     cat(seq.out, file=fc)
   }
   close(fc)
+}
+# For each element in BEDA find distance each element in BEDB
+bedDistances <- function(a, b, chrs=NULL) {
+  asplit <- split(a, a[,1])
+
+  bsplit <- split(b, b[,1])
+  if (is.null(chrs)) {
+    chrs <- intersect(names(asplit), names(bsplit))
+  }  
+  a <- do.call("rbind", asplit[chrs])
+  b <- do.call("rbind", bsplit[chrs])
+#  return(b)
+  result4 <- foreach (chr=chrs, .inorder=TRUE) %dopar% {
+    print(chr)
+#    return(asplit[[chr]])
+    result3 <- foreach (arow=isplitRows(asplit[[chr]], chunkSize=1), .combine="rbind") %do% {
+ #     return(arow)
+      result2 <- foreach (brow=isplitRows(bsplit[[chr]], chunkSize=1), .combine="c") %do% {
+#        return(1)
+        a_start <- arow[2]
+        a_end <- arow[3]
+        b_start <- brow[2]
+        b_end <- brow[3]
+        result <- 0
+#        print(a_end)
+#        print(b_start)
+        if (a_end < b_start) {
+          result <- b_start - a_end
+        } else if (b_end < a_start) {
+          result <- a_start - b_end
+        }
+        return(result) 
+        }
+      #result2 <- unlist(result2)  
+      return(result2)
+    }
+    rownames(result3) <- asplit[[chr]][,4]
+    colnames(result3) <- bsplit[[chr]][,4]
+
+    return(as.matrix(result3))
+  }
+  #return(result4)
+  names(result4) <- chrs
+  return(result4)
 }
 
 getSeq.bed <- function(bed, extend=0) {
@@ -360,6 +405,53 @@ computeFrequencies.count <- function(seq_list, nuc_set=trinuc) {
   return(mindex)
 }
 
+countPattern.bin <- function(chr, pattern, res, wig_fc) {
+  start <- 1
+  end <- 1 + res
+  chr_len <- length(chr)
+  
+  while (end <= chr_len) {
+    
+  }
+}
+
+
+countPattern.genome <- function(pattern, res, wig) {
+  #params <- new("BSParams", X=Mmusculus, FUN=matchPattern)
+  #bsapply(params, pattern=pattern)
+  fc <- file(wig, 'w')
+  chrs <- seqnames(Mmusculus)
+  lengths <- seqlengths(Mmusculus)
+ 
+  for (i in 1:length(chrs)) {
+    print(chrs[i])
+    
+    start <- 1
+    end <- res
+    out_vector <- vector("numeric", length=round(lengths[i] / res))
+   
+    for (j in 1:length(out_vector)) {
+#    while (end <= lengths[i]) {
+      if (!(round(Mestart, -1) %% round(lengths[i] * .001, -1))) print(start)
+      seq <-  getSeq(Mmusculus, chrs[i], start, end, as.character=TRUE)
+#      print(seq)
+      out_vector[j] <- countPattern(pattern, seq)
+#      cat(paste(val, "\n", sep=""), file=fc)
+      start <- start + res
+      end <- end + res
+    }
+    name.out <- paste("fixedStep",
+                      paste("chr", chrs[i], sep="="),
+                      paste("step", res, sep="="),
+                      paste("span", res, sep="="),
+                      "\n", sep=" ")
+    cat(name.out, file=fc)
+    cat(out_vector, file=fc, sep="\n")
+  }
+  close(fc)
+
+  
+}
 prop_coeff <- data.frame(pattern=dinuc[,1],
                          coeff=c(-17.3, -6.7, -14.3, -16.9,
                                  -8.6, -12.8, -11.2, -8.6,

@@ -142,3 +142,42 @@ RNA.filt <- function(data, thresh) {
   colnames(data.diff.r) <- c("Gene", "Measure", "Value")
   return(data.diff.r)
 }
+
+
+# Input:
+#   1. matrix of enhancer-gene distances (rows - enhancers, columns - genes)
+#   2. matrix of rna values
+
+# Algorithm:
+#   1. cut distances
+#   2. for each enhancer, determine rna~cut distance ecdf for each rna group
+#   3. average values for each rna group across enhancers
+
+
+computeRnaEcdf <- function(eg_dist, rna, summary_stat="mean") {
+#  eg_dist_cut <- t(apply(eg_dist, 1, cut, breaks=seq(0, by=20000, length.out=100)))
+#  return(eg_dist_cut)
+#  ecdf_all <- apply(eg_dist, 1, function(row) {
+  ecdf_all <- foreach(row=isplitRows(eg_dist, chunkSize=1)) %do% {
+    names(row) <- colnames(eg_dist)
+    row_sorted <- sort(row)
+    #return(names(row_sorted))
+    row_cut <- cut(row_sorted, breaks=seq(0, by=2000, length.out=100))
+    names(row_cut) <- names(row_sorted)
+#    return(names(row_cut))
+    row_ecdf <- apply(rna, 2, function(rna_col) {
+      rna_col_select <- na.omit(rna_col[match(names(row_cut), rownames(rna))])
+      return(rna_col_select)
+#      return(cumsum(rna_col_select))
+      #range01(cumsum(rna_col_select))
+    })
+    row_ecdf <- data.frame(cut=row_cut[match(rownames(row_ecdf), names(row_cut))], row_ecdf)
+    return(row_ecdf)
+  #})
+  }
+  ecdf_long <- do.call("rbind", ecdf_all)
+#  return(ecdf_long)
+  ecdf_summary <- ddply(ecdf_long, .(cut), function(d) apply(d[,2:ncol(d)], 2, summary_stat))
+  ecdf_summary2 <- cbind(ecdf_summary[,1], apply(ecdf_summary[,2:4], 2, function(x) range01(cumsum(x))))
+  return(ecdf_summary2)
+}

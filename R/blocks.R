@@ -57,6 +57,19 @@ MP.feature.All <- function(data1, data2=NULL, set="general", select=2, transf=FA
 }
 
 
+MP.feature.allSamp <- function(medips_set, feature_set="general", select=2, transf=FALSE) {
+  set <- NULL
+  if (medips_set=="cells_200") {
+    set <- medips.cells200
+  }
+  comb <- combn(medips.cells200, 2)
+  foreach (pair=comb) %do% {
+    a <- readRDS(paste(medip_noregions.path, pair[1], sep="/"))
+    b <- readRDS(paste(medip_noregions.path, pair[2], sep="/"))
+    MP.feature.All(a, b, set=feature_set, select=select, transf=transf)
+    x <- gc()
+  }
+}
 
 MP.getIndVals.all <- function(files=NULL) {
   if (is.null(files)) files <- list.files(feature.path)
@@ -241,6 +254,7 @@ MP.heatmap.2 <- function(vals, rowv=NULL, trim_dist=FALSE, lab=NULL, fname=NULL,
             distfun=distfun,
             hclustfun=.hclustWard,
             col=greenred(100),
+
             #labCol=colnames(vals),
             labCol=lab,
             labRow="",

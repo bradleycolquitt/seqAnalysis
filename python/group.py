@@ -25,7 +25,7 @@ ANNO_OUT_PATH = '/media/storage2/analysis/profiles/norm'
 FEATURE_OUT_PATH = '/media/storage2/analysis/features/norm'
 
 class tab:
-    def __init__(self, anno, sample, sample_type, bam_attr, fun, type, flank, data_type, split_anno):
+    def __init__(self, anno, sample, sample_type, bam_attr, fun, type, flank, data_type, split_anno, strand):
         self.anno = anno
         self.sample = sample
         self.sample_type = sample_type
@@ -33,6 +33,7 @@ class tab:
         self.fun = fun
         #self._type = type
         self.split_anno = split_anno
+        self.strand = strand
         self.window_size = 1
         self.flank = flank
         self.out_path = ""
@@ -49,7 +50,8 @@ class tab:
         anno = self.anno
         h5 = tb.openFile(SAMPLE_PATH + "/" + self.sample)
         samples = [s._v_name for s in h5.iterNodes("/")]
-        h5.close()
+        
+#        h5.close()
         for sample in samples:
             if self.flank:
                 if os.path.exists(self.out_path + "/" + sample + "_flank" + str(self.flank)):
@@ -57,12 +59,19 @@ class tab:
                     continue
             else:
                 if os.path.exists(self.out_path + "/" + sample):
+                    
+                    continue
                     dec = raw_input("File exists. Overwrite? [y/n]")
                     if dec == "n": continue
 
             print sample
-            chrs_tbp = os.listdir(anno)
+            anno_chrs = os.listdir(anno)
+            sample_chrs = [chr._v_name for chr in h5.getNode("/", sample)._f_iterNodes()]
+            chrs_tbp = list(set(anno_chrs) & set(sample_chrs))
             tmp_path = tempfile.mkdtemp(suffix=os.path.basename(anno))
+
+        
+        #pdb.set_trace()
             
             
             exp = 0
@@ -80,7 +89,7 @@ class tab:
                 #print chr_tbp
                 #self.tab_h5(anno, sample, chr_tbp, tmp_path, self.fun, exp)
                 #tab_h5(self, anno, sample, chr_tbp, tmp_path, self.fun, exp)
-                #pdb.set_trace()
+                ##pdb.set_trace()
                 #pool.apply(tab_h5, (self, anno, sample, chr_tbp, tmp_path, self.fun, exp))
                 pool.apply_async(tab_h5, (self, anno, sample, chr_tbp, tmp_path, self.fun, exp))
             pool.close()
@@ -146,9 +155,12 @@ def tab_h5(self, anno, track, chr_tbp, tmp_path, fun, exp):
     start = 0
     end = 0
     vals = 0
+    strand_line = "+"
+    strand_factor = 1
     for line in anno_data:
         line = line.strip()
         sline = line.split()
+        
         if flank == 0:
             start = (atoi(sline[1]) - 1) / self.window_size
             end = (atoi(sline[2]) - 1) / self.window_size
@@ -158,7 +170,16 @@ def tab_h5(self, anno, track, chr_tbp, tmp_path, fun, exp):
             start = [int(sline[1]) - 1 - flank, int(sline[2])]
             end = [int(sline[1]) - 2, int(sline[2]) + flank - 1]
             vals = np.append(sample_data[start[0]:(end[0] + 1)], sample_data[start[1]:(end[1] + 1)])
-
+        
+        if self.strand:
+#            pdb.set_trace()
+            if len(sline) == 6: strand_line = sline[5]
+            elif len(sline) == 4: strand_line = sline[3]
+            if strand_line == "-":
+                strand_factor = -1
+            else:
+                strand_factor = 1
+        
         if len(vals) > 0:
             #pdb.set_trace()
             if self.split_anno:
@@ -166,14 +187,14 @@ def tab_h5(self, anno, track, chr_tbp, tmp_path, fun, exp):
                     out = "\t".join([line, str(val)]) + "\n"
                     anno_out.write(out) 
             else:
-                result = compute_result(vals, fun)
+                result = strand_factor * compute_result(vals, fun)
                 #if result > 4: pdb.set_trace()
                 out = "\t".join([line, str(result)]) + "\n"
                 anno_out.write(out)
             
     anno_data.close()
     anno_out.close()
-    h5.close()
+    #h5.close()
         
 
 def tab_bam(obj, chr_tbp , tmp_path):
@@ -212,8 +233,6 @@ def tab_bam(obj, chr_tbp , tmp_path):
         j = 0
         for i in xrange(len(start)):
             #it = bam.pileup(chr_tbp, start[i], end[i] + 1)
-
-            
             try:
                 #for proxy in it:
                 #    pos = proxy.pos - start[i]
@@ -280,10 +299,14 @@ def compute_result(vals, fun):
         result = val_var(vals)
     elif fun == "cv":
         result = val_cv(vals)
+    elif fun == "kurtosis":
+        result = val_kurtosis(vals)
     elif fun =="max":
         result = max(vals)
     elif fun == "randc":
         result = val_compareRandom(vals, exp)
+    elif fun == "energy":
+        result = val_energy(vals)
     return(result)
     
 def computeExpected(sample):
@@ -324,21 +347,31 @@ def val_cv(vals):
     sd = sqrt(val_var(vals))
     return(sd / mean)
     
+def val_kurtosis(vals):
+    result = stats.kurtosis(vals)
+    if np.isnan(result): result = 0
+    return result
+
 def val_compareRandom(vals, exp):
     val_sum = np.sum(vals)
     exp_sum = len(vals) * exp
     return(val_sum / exp_sum)
-    
-def tab_worker(anno, sample, sample_type, bam_attr, fun, type, flank, data_type, split_anno):
+
+def val_energy(vals):
+    m = val_mean(vals)
+    result = sum(pow(vals - m, 2))
+    return(result)
+          
+def tab_worker(anno, sample, sample_type, bam_attr, fun, type, flank, data_type, split_anno, strand):
     #print anno
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         if sample_type == "h5":
-            obj = tab(anno, sample, sample_type, bam_attr, fun, type, flank, data_type, split_anno)
+            obj = tab(anno, sample, sample_type, bam_attr, fun, type, flank, data_type, split_anno, strand)
             obj.run_h5()
         elif sample_type == "bam":
             for bam in sample:
-                obj = tab(anno, bam, sample_type, bam_attr, fun, type, flank, data_type, split_anno)
+                obj = tab(anno, bam, sample_type, bam_attr, fun, type, flank, data_type, split_anno, strand)
                 obj.run_bam()
     
 def main(argv):
@@ -353,10 +386,12 @@ def main(argv):
     parser.add_argument('--bam_attr', required=False, default="count", help="BAM attribute to group")
     parser.add_argument('--data_type', help="Directory for analysis output")
     parser.add_argument('--function', dest='fun', required=False, default="mean",
-                        choices=['mean', 'mean_skip_zero', 'median', 'mode','sum', 'max', 'var', 'cv'],
+                        choices=['mean', 'mean_skip_zero', 'median', 'mode','sum',
+                                 'max', 'var', 'cv', 'kurtosis', 'energy'],
                         help="Summary function to apply to read counts")
     parser.add_argument('--split', dest="split_anno", action="store_true", default=False)
-    parser.add_argument('--flank', type=int, required=False, default=0, help="Size of regions flanking bed to compute values for") 
+    parser.add_argument('--flank', type=int, required=False, default=0, help="Size of regions flanking bed to compute values for")
+    parser.add_argument('--strand', dest="strand", action="store_true", default=False)
     args = parser.parse_args()
     
     fun = args.fun
@@ -373,17 +408,17 @@ def main(argv):
         
     if args.anno_set:
         annos = [ANNO_PATH + "/"+ f for f in os.listdir(ANNO_PATH) if re.search("chr", f)]
-        [tab_worker(anno, sample, sample_type, args.bam_attr, fun, "anno", args.data_type, args.split_anno) for anno in annos]
+        [tab_worker(anno, sample, sample_type, args.bam_attr, fun, "anno", args.data_type, args.split_anno, args.strand) for anno in annos]
         
     elif args.feature_set:
         features = [FEATURE_PATH + "/" + f for f in os.listdir(FEATURE_PATH) if re.search("chr", f)]
-        [tab_worker(feature, sample, sample_type, args.bam_attr, fun, "feature", args.data_type, args.split_anno) for feature in features]
+        [tab_worker(feature, sample, sample_type, args.bam_attr, fun, "feature", args.flank, args.data_type, args.split_anno, args.strand) for feature in features]
     
     elif args.annotation:
-        tab_worker(ANNO_PATH + "/" + args.annotation, sample, sample_type, args.bam_attr, fun, "anno", args.flank, args.data_type, args.split_anno)
+        tab_worker(ANNO_PATH + "/" + args.annotation, sample, sample_type, args.bam_attr, fun, "anno", args.flank, args.data_type, args.split_anno, args.strand)
     
     elif args.feature:
-        tab_worker(FEATURE_PATH + "/" + args.feature, sample, sample_type, args.bam_attr, fun, "feature", args.flank, args.data_type, args.split_anno)
+        tab_worker(FEATURE_PATH + "/" + args.feature, sample, sample_type, args.bam_attr, fun, "feature", args.flank, args.data_type, args.split_anno, args.strand)
     
     
    

@@ -4,9 +4,10 @@ library(foreach)
 library(itertools)
 library(doMC)
 
-registerDoMC(cores=2)
+registerDoMC(cores=6)
 
 bedClasses <- c("character", "numeric", "numeric", "character", "numeric", "character")
+nuc_seq_path <- "/media/storage2/analysis/nuc/sequence"
 
 shiftBedPositions <- function(bed, shift, pos="start", direction="up") {
   
@@ -68,8 +69,8 @@ batchShift <- function(path, shift, pos="start", direction="up") {
   }
 }
 
-randomizeBed <- function(bed, name, write=TRUE) {
-  data <- read.delim(bed, header=F, colClasses=bedClasses)
+randomizeBed <- function(data, name, write=TRUE) {
+  #data <- read.delim(bed, header=F, colClasses=bedClasses)
 
   #for each bed record
   #choose chr based with probability based on chromosome size fraction
@@ -110,15 +111,62 @@ randomizeBed.batch <- function(bed, N=100) {
 #fasta file
 formatFasta <- function(data, fname=NULL) {
   names <- as.character(data[,1])
+  names <- lapply(names, function(x) gsub(" ", "", x))
   seq <- as.character(data[,2])
   fc <- file(fname, 'w')
   for (i in 1:nrow(data)) {
-    name.out <- paste(c(">", names[i], "\n"), sep="")
+    name.out <- paste(">", names[i], "\n", sep="")
     cat(name.out, file=fc)
     seq.out <- paste(c(seq[i], "\n"), sep="")
     cat(seq.out, file=fc)
   }
   close(fc)
+}
+
+
+# For each element in BEDA find distance each element in BEDB
+bedDistances <- function(a, b, chrs=NULL) {
+  asplit <- split(a, a[,1])
+
+  bsplit <- split(b, b[,1])
+  if (is.null(chrs)) {
+    chrs <- intersect(names(asplit), names(bsplit))
+  }  
+  a <- do.call("rbind", asplit[chrs])
+  b <- do.call("rbind", bsplit[chrs])
+#  return(b)
+  result4 <- foreach (chr=chrs, .inorder=TRUE) %dopar% {
+    print(chr)
+#    return(asplit[[chr]])
+    result3 <- foreach (arow=isplitRows(asplit[[chr]], chunkSize=1), .combine="rbind") %do% {
+ #     return(arow)
+      result2 <- foreach (brow=isplitRows(bsplit[[chr]], chunkSize=1), .combine="c") %do% {
+#        return(1)
+        a_start <- arow[2]
+        a_end <- arow[3]
+        b_start <- brow[2]
+        b_end <- brow[3]
+        result <- 0
+#        print(a_end)
+#        print(b_start)
+        if (a_end < b_start) {
+          result <- b_start - a_end
+        } else if (b_end < a_start) {
+          result <- a_start - b_end
+        }
+        return(result) 
+        }
+      #result2 <- unlist(result2)  
+      return(result2)
+    }
+    rownames(result3) <- asplit[[chr]][,4]
+    colnames(result3) <- bsplit[[chr]][,4]
+
+    return(as.matrix(result3))
+  }
+  #return(result4)
+  names(result4) <- chrs
+  return(result4)
 }
 
 getSeq.bed <- function(bed, extend=0) {
@@ -286,6 +334,7 @@ expectedFrequencies <- function(monofreq, nuc_set) {
 ## Input: nuc_set (matrix of all possible nucleotide combinations for given pattern length)
 ## Return: Matrix of frequeicnes 
 computeFrequencies <- function(seq_list, nuc_set=trinuc, norm=TRUE, fname=NULL) {
+  
   mindex <- foreach (i=1:nrow(nuc_set)) %dopar% {
     print(i)
     ms <- lapply(seq_list, function(x) {
@@ -296,34 +345,42 @@ computeFrequencies <- function(seq_list, nuc_set=trinuc, norm=TRUE, fname=NULL) 
 #    m <- as.matrix(m)[,1]
     ms <- do.call("c", ms)
     ms <- factor(ms, levels=1:nchar(seq_list[[1]]))
-
+    b <- gc()
     return(ms)
   }
+ 
   names(mindex) <- nuc_set[,1]
   mindex <- lapply(mindex, table)
   mindex <- do.call("rbind", mindex)
   mindex <- apply(mindex, 2, function(x) x/sum(x))
   mindex <- t(na.omit(t(mindex)))
+
   if (norm) {
     print("Normalizing...")
-    mono <- computeFrequencies.count(seq_list, mononuc)
+    mono <- na.omit(computeFrequencies.count(seq_list, mononuc))
+    mono <- apply(mono, 2, mean)
     expfreq <- expectedFrequencies(mono, nuc_set)
     mindex <- mindex / expfreq
   }
-  return(mindex)
+  #return(mindex)
   if (!is.null(fname)) {
-    write.table(mindex, file=paste("~/s2/analysis/nuc/sequence/", fname, sep=""), quote=F, sep="\t")
+    write.table(mindex, file=fname, quote=F, sep="\t")
   }
   return(mindex)
 }
 
 computeFrequencies.set <- function(seq_list, norm=TRUE, fname=NULL) {
   mat <- lapply(1:length(nuc_sets), function(x) {
-    gc()
+    a <- gc()
     name <- names(nuc_sets)[x]
     nuc_set <- nuc_sets[[x]]
     print(name)
-    fname <- paste(fname, name, sep="_")
+    fname <- paste(nuc_seq_path, paste(fname, name, sep="_"), sep="/")
+    print(paste("Saving to ", fname, sep=""))
+    if (file.exists(fname)) {
+      print("File exists. Skipping.")
+      return(0)
+    }  
     if (name == "mono") norm <- FALSE
     return(computeFrequencies(seq_list, nuc_set=nuc_set, norm=norm, fname=fname))
   })
@@ -350,6 +407,53 @@ computeFrequencies.count <- function(seq_list, nuc_set=trinuc) {
   return(mindex)
 }
 
+countPattern.bin <- function(chr, pattern, res, wig_fc) {
+  start <- 1
+  end <- 1 + res
+  chr_len <- length(chr)
+  
+  while (end <= chr_len) {
+    
+  }
+}
+
+
+countPattern.genome <- function(pattern, res, wig) {
+  #params <- new("BSParams", X=Mmusculus, FUN=matchPattern)
+  #bsapply(params, pattern=pattern)
+  fc <- file(wig, 'w')
+  chrs <- seqnames(Mmusculus)
+  lengths <- seqlengths(Mmusculus)
+ 
+  for (i in 1:length(chrs)) {
+    print(chrs[i])
+    
+    start <- 1
+    end <- res
+    out_vector <- vector("numeric", length=round(lengths[i] / res))
+   
+    for (j in 1:length(out_vector)) {
+#    while (end <= lengths[i]) {
+      if (!(round(Mestart, -1) %% round(lengths[i] * .001, -1))) print(start)
+      seq <-  getSeq(Mmusculus, chrs[i], start, end, as.character=TRUE)
+#      print(seq)
+      out_vector[j] <- countPattern(pattern, seq)
+#      cat(paste(val, "\n", sep=""), file=fc)
+      start <- start + res
+      end <- end + res
+    }
+    name.out <- paste("fixedStep",
+                      paste("chr", chrs[i], sep="="),
+                      paste("step", res, sep="="),
+                      paste("span", res, sep="="),
+                      "\n", sep=" ")
+    cat(name.out, file=fc)
+    cat(out_vector, file=fc, sep="\n")
+  }
+  close(fc)
+
+  
+}
 prop_coeff <- data.frame(pattern=dinuc[,1],
                          coeff=c(-17.3, -6.7, -14.3, -16.9,
                                  -8.6, -12.8, -11.2, -8.6,
@@ -361,7 +465,6 @@ slide_coeff <- data.frame(pattern=dinuc[,1],
                                   1.46, 0.6, 0.63, 0.47,
                                   -0.07, 0.29, 0.6, -0.13,
                                   0.74, -0.07, 1.46, -0.03))
-
 nuc_test <- data.frame(c("AAAA", "AAAT", "AAGT", "AATA", "AATT", "AGAA", "ATAA", "ATAT", "ATTA", "GAAA", "TATA"), 1:11)
 
 # For each sequence, compute average structural features [propeller, slide]
@@ -414,7 +517,21 @@ computeNucPeriod <- function(seq_list, nuc_set=trinuc, max_dist=2000) {
   return(mindex)
 }
   
+plotNucFreq <- function(data, ...) {
+  nr <- nrow(data)
+  nc <- ncol(data)
+  names <- rownames(data)
+  cols <- rainbow(nr, s=.75, v=.75)
 
+  #x11()
+  par(mfrow=c(nr/4, 4), mar=c(2,2,2,2), oma=c(3,3,2,2))
+  a <- sapply(1:nr, function(x) {
+    plot(1:nc - (nc/2) , data[x,], type="l", col=cols[x], main=names[x], xlab="", ylab="", ...)
+    abline(v=0, lty=2)
+  })
+  mtext("Basepairs from dyad", 1, outer=TRUE, line=1)
+  mtext("Normalized frequency", 2, outer=TRUE, line=1)
+}
 
 readSplitGetNames <- function(path, filter=NULL) {
   files <- list.files(path)

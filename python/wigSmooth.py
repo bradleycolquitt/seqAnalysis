@@ -54,7 +54,7 @@ def main(argv):
     window_arr = np.zeros(window_size)
     initial_fill_count = 0
     smoothed_val = 0
-    for line in in_wig:
+    for line in in_wig:            
         if head_flag.match(line):
             print line
             smoothed_val = np.mean(window_arr)

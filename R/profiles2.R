@@ -15,7 +15,7 @@ source("~/src/seqAnalysis/R/boot.R")
 source("~/src/seqAnalysis/R/plotUtil.R")
 source("~/src/MEDIPS/R/MEDIPS_mod.methylProfiling.R")
 
-registerDoMC(cores=4)
+registerDoMC(cores=2)
 
 col4 <- brewer.pal(4, "Spectral")
 col3 <- brewer.pal(3, "Dark2")
@@ -50,6 +50,7 @@ writeModule <- function(out.path, sample, group2=NULL, fun, rm.outliers=0, profi
         unwrapped <- NULL
         if (is.null(group2)) {unwrapped <- .unwrap(CI[[name]], x)
         } else {unwrapped <- apply(CI[[name]], 2, function(y) .unwrap(y, x))}
+        print(paste(out.path, paste(out.name, name, fun, "bootCI", x, sep="_")))
         write.table(unwrapped,
                   #file=paste(out.path, paste(out.name, name, "mean_bootCI", x, sep="_"),
                     file=paste(out.path, paste(out.name, name, fun, "bootCI", x, sep="_"),
@@ -164,7 +165,7 @@ makeProfile2.allSamp <- function(anno, group2=NULL, data_type="unnorm/mean", fun
   ind <- grep("profiles", samples)
   if (length(ind) > 0) samples <- samples[-ind]
   out_path = paste(sample_path, "profiles", sep="/")
-  data <- foreach(sample=samples) %do% {
+  data <- foreach(sample=samples) %dopar% {
     out_name <- sample
     if (!is.null(group2)) {
       out_name <- paste(out_name, group2, sep="_")
@@ -172,7 +173,7 @@ makeProfile2.allSamp <- function(anno, group2=NULL, data_type="unnorm/mean", fun
     if (rm.outliers > 0) {
       out_name <- paste(out_name, paste("trim", rm.outliers, sep=""), sep="_")
     }
-    if (file.exists(paste(out_path, paste(out_name, "mean", sep="_"), sep="/"))) {
+    if (file.exists(paste(out_path, paste(out_name, fun, sep="_"), sep="/"))) {
       print("Skipping")
       next 
     }
@@ -294,6 +295,9 @@ plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="me
   } else {
     anno <-  paste(annotation, data_type, sep="_")
   }
+  print(anno)
+  print(sample)
+  print(profile2.path)
   
   ## Orient 1 data structure is no longer used (2/14/12)
   if (orient==1) {
@@ -302,7 +306,7 @@ plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="me
   } else if (orient==2) {
     data <- profileRead(paste(profile2.path, "norm", data_type, annotation, "profiles", sep="/"), fun, sample, group2)
   }
-
+  
   ## If range specificed, trim profile by given values
   if (!is.null(range)) {
       data <- lapply(data, function(x) x[range[1]:range[2],])
@@ -314,13 +318,14 @@ plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="me
   } else if (fname=="manual") {
     # do nothing, device has already been set
   } else {
-    if (fname=="auto")
+    if (fname=="auto") {
       dt <- paste(unlist(str_split(data_type, "/")), collapse="_")
       if (!is.null(group2)) {
-        fname <- paste(annotation, sample, dt, group2, sep="_")
+        fname <- paste(annotation, sample, dt, group2, fun, sep="_")
       } else {
-        fname <- paste(annotation, sample, dt, sep="_")        
+        fname <- paste(annotation, sample, dt, fun, sep="_")        
       }
+    }  
     fname <- paste(fname, ".pdf", sep="")
     print(paste("Saving to ", fname, sep=""))
     pdf(file=paste(profile2.path, "norm", "plots", fname, sep="/"), 6, 4.5)
@@ -348,7 +353,8 @@ plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="me
   }
 }
 
-plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2=NULL, cols=NULL, lab=c("",""), y.vals=NULL, wsize=25, standard=FALSE, range=NULL, baseline=FALSE, fname=NULL) {
+plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2=NULL, cols=NULL, lab=c("",""), y.vals=NULL, wsize=25, standard=FALSE, range=NULL, baseline=FALSE,
+                          fun="mean", legend=FALSE, fname=NULL) {
   samples <- NULL
   orient <- 1
   rows <- 1
@@ -369,7 +375,7 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
     columns <- 1
     orient <- 2
   } else if (set=="d3a_4") {
-    samples <- list(list("moe_d3a_wt_hmc_30M_rpkm",  "moe_d3a_ko_hmc_rpkm"),
+    samples <- list(list("moe_d3a_wt_hmc_rpkm",  "moe_d3a_ko_hmc_rpkm"),
                     list("moe_d3a_wt_mc_rpkm", "moe_d3a_ko_mc_rpkm"))
     rows <- 2
     columns <- 1
@@ -404,7 +410,7 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
     rows <- 2
     orient <- 2
   } else if (set=="cells_rpkm") {
-    samples <- list(list("omp_hmc_rpkm", "ngn_hmc_rpkm", "icam_hmc_rpkm"),
+    samples <- list(list("omp_hmc_120424_rpkm", "ngn_hmc_rpkm", "icam_hmc_rpkm"),
                     list("omp_mc_rpkm", "ngn_mc_rpkm", "icam_mc_rpkm"))
     columns <- 1
     #if (!is.null(group2)) {
@@ -456,19 +462,42 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
     rows <- 2
     columns <- 1
     orient <- 2
+  } else if (set=="cells_nuc") {
+    samples <- list(list("omp_nuc_0123", "icam_nuc_01234"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
+  
   } else if (set=="d3a_nuc") {
-    samples <- list(list("d3xog_wt_nuc_478_rmdup", "d3xog_ko_nuc_256_rmdup"))
+    samples <- list(list("d3xog_wt_nuc_478_p1", "d3xog_ko_nuc_256_p1"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
+  } else if (set=="encode_dnase") {
+    samples <- list(list("wgEncodeUwDnaseCerebrumC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseCerebellumC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseRetinaC57bl6MAdult1wksAlnRep1",
+                    "wgEncodeUwDnaseHeartC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseLiverC57bl6MAdult8wksAlnRep1"))
     rows <- 1
     columns <- 1
     orient <- 2
   }
-
-  if (is.null(fname))  {x11("", 10, 5)
+  if (is.null(fname))  {
+    x11("", 5, 6)
+  } else if (fname=="manual") {
+    # do nothing, device has already been set
   } else {
-    if (fname!="manual") {
-      pdf(file=paste(profile2.path, "norm", "plots", fname, sep="/"), 6 * columns, 4.5 * rows)
+    if (fname=="auto") {
+      dt <- paste(unlist(str_split(data_type, "/")), collapse="_")
+      if (!is.null(group2)) {
+        fname <- paste(annotation, set, dt, group2, fun, paste("y", paste(y.vals, collapse="_"), sep=""), sep="_")
+      } else {
+        fname <- paste(annotation, set, dt, fun, paste("y", paste(y.vals, collapse="_"), sep=""), sep="_")        
+      }
     }  
-  }                      
+    fname <- paste(fname, ".pdf", sep="")
+    print(paste("Saving to ", fname, sep=""))
+    pdf(file=paste(profile2.path, "norm", "plots", fname, sep="/"), 6, 9)
+  }
+  
   par(mfrow=c(rows, columns), mar=c(2,4,1,1) + 0.1, oma=c(1, 1, 1, 1))
   if (orient==1) {
     data <- lapply(samples,
@@ -479,8 +508,10 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
     data <- lapply(samples, function(sample)
                  lapply(sample, function(s) 
                         profileRead(paste(profile2.path, "norm",
-                                          data_type, annotation, "profiles", sep="/"), s, group2)))
-  }  
+                                          data_type, annotation, "profiles", sep="/"), fun, s, group2)))
+  }
+#  return(data)
+#    data <- profileRead(paste(profile2.path, "norm", data_type, annotation, "profiles", sep="/"), fun, sample, group2)
   ## If baseline is specified, normalize by mean start and end valuee
   #return(data)
   if (baseline) {
@@ -512,9 +543,13 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
     name <- lapply(samples[[x]], function(y) unlist(str_split(y[1], "_")))
     name <- unlist(lapply(name, function(y) y[-length(y)]))
     #legend(0, y=(y.vals[[x]][2] - (y.vals[[x]][2] / 20)), legend=legend, col=cols, bty="n", lty=1, horiz=TRUE)
+    if (legend) {
+      legend(2, y.vals[[x]][2], legend=samples[[x]], col=cols, lty=1)
+    }
   })
   par(las=1)
   mtext(annotation, side=3, outer=TRUE, cex=.8)
+  
   if (!is.null(fname))
     if (fname!="manual") dev.off()
 }
@@ -558,12 +593,24 @@ MP.plot2.horiz <- function(annotation, set="d3a", data_type = "raw", group2=NULL
     columns <- 1
     orient <- 1
   }
-  
-  if (is.null(fname))  {x11("", 10, 5)
+  if (is.null(fname))  {
+    x11("", 6, 4)
+  } else if (fname=="manual") {
+    # do nothing, device has already been set
   } else {
-    pdf(file=paste(profile2.path, "plots", fname, sep="/"), 3 * columns, 3 * rows)
-  }                      
-  par(mfrow=c(rows, columns), mar=c(2,4,1,1) + 0.1, oma=c(1, 5, 1, 1))
+    if (fname=="auto") {
+      dt <- paste(unlist(str_split(data_type, "/")), collapse="_")
+      if (!is.null(group2)) {
+        fname <- paste(annotation, set, dt, group2, fun, sep="_")
+      } else {
+        fname <- paste(annotation, set, dt, fun, sep="_")        
+      }
+    }  
+    fname <- paste(fname, ".pdf", sep="")
+    print(paste("Saving to ", fname, sep=""))
+    pdf(file=paste(profile2.path, "norm", "plots", fname, sep="/"), 6, 4.5)
+  }
+  
   if (orient==1) {
     data <- lapply(samples, function(sample)
                  lapply(sample, function(s)

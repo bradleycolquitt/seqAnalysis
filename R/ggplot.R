@@ -91,9 +91,15 @@ gg.box2 <- function(data) {
 gg.feature_bar <- function(gg) {
 #gg.tfo.2 <- ggplot(droplevels(tfo.2[tfo.2$ip=="hmc",]), aes(celltype, value.median, ymax=up, ymin=low, fill=class))
 theme_set(theme_bw())
-  gg + geom_bar(position="dodge") + geom_linerange(position="dodge")  + facet_grid(ip~feature) #+ featureScaleFill
+  gg + geom_bar(position="dodge") + geom_linerange(position="dodge")  + facet_grid(ip~features.nice) + featureScaleFill4 + opts(legend.position="none") + ylab("Median square-root RPKM") + xlab("Cell type")
+
 }
 
+gg.feature_crossbar <- function(gg) {
+#gg.tfo.2 <- ggplot(droplevels(tfo.2[tfo.2$ip=="hmc",]), aes(celltype, value.median, ymax=up, ymin=low, fill=class))
+theme_set(theme_bw())
+  gg + geom_crossbar(position="dodge") + facet_grid(ip~feature) #+ featureScaleFill
+}
 #For TT3 refgene plot split by omp_hmc/ott3_2_hmc Bayes Factor GT/LT 3
 #tt3.melt object at ~/s2/analysis/features/norm/rpkm/mean/summaries/tt3_omp_ngn_icam_hmc_mc_refgene_chr_tt3_omp_2_hmc_bf.Rdata
 #gg.tt3 <- ggplot(droplevels(tt3.melt[tt3.melt$sample!="ott3.1",]), aes(sample, value.sqrt))
@@ -160,3 +166,10 @@ theme_set(theme_bw())
 
 #For nuc str vs. hmc/mc scatter/contour plots
 #g + geom_point(alpha=.1)+ stat_density2d(geom="polygon", color="blue", aes(alpha=..level..)) +coord_cartesian(ylim=c(-3,4), xlim=c(-3, 3)) + scale_alpha_continuous(limits=c(0, .3), breaks=seq(0, .3, .025)) + theme_bw() + xlab("OMP 5mC") + ylab("OMP nucleosome stringency") + opts(legend.position="none")
+
+#For BF densities
+#gg.bf + geom <- density(aes(value)) + facet <- grid(variable~.) + coord <- cartesian(xlim=c(-400, 300), ylim=c(0, .006)) + xlab("KO vs. WT Bayes factor") + ylab("Density") + opts(strip.text.y=theme <- text(size=12, face="bold"), panel.margin=unit(1, "cm"))
+
+#For boxplot hmc, mc enhancer gene fpkm
+#gg <- ggplot(dna4.3mn, aes(celltype, value, fill=factor(l2)))
+#gg + geom <- boxplot(outlier.shape=NA) + facet <- grid(sampe~l2, scales="free_y") + opts(legend.position="none")

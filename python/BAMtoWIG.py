@@ -6,6 +6,7 @@ import re
 import argparse
 import pysam
 import pdb
+import file_util
 import numpy as np
 from subprocess import Popen
 from multiprocessing import Queue, Process, Pool
@@ -33,11 +34,12 @@ class windower:
         self.nreads = self.bamfile.mapped
         self.pseudo = pseudo
         self.full = full
-        if pe:    
-            #self.nreads = atoi(pysam.flagstat(bamname)[4].split()[0])
-            self.nreads = self.bamfile.mapped / 2
+        if pe:
+            if re.search("plus", bamname) or re.search("minus", bamname):
+                self.nreads = self.bamfile.mapped
+            else:    
+                self.nreads = self.bamfile.mapped / 2
         else:
-            #self.nreads = atoi(pysam.flagstat(bamname)[0].split()[0])
             self.nreads = self.bamfile.mapped
         print self.nreads
         self.chr_lengths = self.bamfile.lengths
@@ -55,10 +57,18 @@ class windower:
                 window_core(arg[0], arg[1], arg[2], arg[3], arg[4], arg[5], arg[6], arg[7])
             else:
                 window_full(arg[0], arg[1], arg[2], arg[3], arg[4], arg[5], arg[6], arg[7])
+#                result = [p.apply_async(window_full, arg) for arg in args]        
         #print args
-        #result = [p.apply_async(window_core, arg) for arg in args]        
-        #p.close()
-        #p.join()
+        
+#        p.close()
+#        p.join()
+        #pool = Pool(processes=5)
+        #bam = pysam.Samfile(self.sample, 'rb')
+        #for chr_tbp in chrs_tbp:
+        #    pool.apply_async(tab_bam, (self.bamname, self.wigfile, self.window_size, chr, self.pe, self.extend, self.nreads, self.pseudo))))
+            #tab_bam(self, chr_tbp, tmp_path)
+        #pool.close()
+        #pool.join()
         self.wigfile.close()
         
     def tdf(self):
@@ -113,14 +123,38 @@ def window_full(bamname, wigfile, window_size, chr_tuple, pe, extend, nreads, ps
     
     ## Initialize output vector and BAM iterator
     pos_vect = np.zeros((chr_length / window_size,))
-    it = bamfile.pileup(reference=chr)
+    #it = bamfile.pileup(reference=chr)
+    start = 0
+    end = 0
     
     ## Loop through each position in iterator
-    for proxy in it:
-        read_index = proxy.pos / window_size
-        if read_index <= len(pos_vect) - 1:
-            pos_vect[read_index] = pos_vect[read_index] + proxy.n
-    
+    #for proxy in it:
+    #    read_index = proxy.pos / window_size
+    #    if read_index <= len(pos_vect) - 1:
+    #        pos_vect[read_index] = pos_vect[read_index] + proxy.n
+    print "Start loop"
+    for read in bamfile.fetch(chr):
+#        pdb.set_trace()
+        if pe:
+            if not read.is_reverse:
+                start = read.pos
+                end = read.pnext + read.qlen
+        if extend:
+            if not read.is_reverse:
+                start = read.pos
+                end = start + extend
+            else:
+                end = read.aend
+                start = end - extend
+        start /= window_size
+        end /= window_size
+        if end >= len(pos_vect): end = len(pos_vect) - 1
+        
+        try:
+            for i in range(start, end): pos_vect[i] += 1
+        except IndexError:
+            pdb.set_trace()
+    print "Start write"    
     for val in pos_vect:
         if pseudo and val == 0: val = 1
         wigfile.write(str(window_correct * float(val)) + "\n")
@@ -132,19 +166,23 @@ def main(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('-b', dest='bam', required=False)
     parser.add_argument('-w', dest='window')
+    
     parser.add_argument('-e', dest='extend', type=int, required=False, default=0)
     parser.add_argument('-d', dest='date', required=False)
     parser.add_argument('--paired_end', action='store_true', default=False)
     parser.add_argument('--pseudocount', dest='pseudo', action='store_true', default=False)
     parser.add_argument('--full', action='store_true', default=False, help="Record extent of each read")
     args = parser.parse_args()
+    
+        
+        
     if args.date:
         bams = [f for f in os.listdir("/".join([bam_dir, args.date])) if re.search(".bam$", f)]
         for bam in bams:
             bam_path = "/".join([bam_dir, args.date, bam])
             print bam
             bam_prefix = os.path.basename(bam).split(".bam")[0]
-            wig_path = "/".join([wig_dir, args.date, bam_prefix])
+            wig_path = "/".join([wig_dir, bam_prefix])
             wig_file = ""
             if not args.pseudo:
                 wig_file = "/".join([wig_path, "_".join([bam_prefix, args.window]) + ".wig"])
