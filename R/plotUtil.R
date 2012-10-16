@@ -24,6 +24,7 @@ profileRead <- function(data.path, fun, select, select2=NULL) {
   if (!is.null(select2)) {
     #files <- files[grep(select2, files)]
     filter <- paste(select, select2, sep="_")
+    print(filter)
     #print(files)
     #val_files <- sort(files[grep(paste(select, "mean$", sep="_"), files)])
     #ci_files_1 <- sort(files[grep(paste(select, "bootCI_1", sep="_"), files)])

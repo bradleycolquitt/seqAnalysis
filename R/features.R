@@ -126,6 +126,10 @@ makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type, tra
   } else if (set=="cells_rpkm2") {
     samples <- c("omp_hmc_120424_rpkm", "ngn_hmc_rpkm", "icam_hmc_rpkm",
                  "omp_mc_rpkm", "ngn_mc_rpkm", "icam_mc_rpkm")
+  } else if (set=="cells_strand") {
+    samples <- c("omp_hmc_120424_rmdup_plus_sub_minus", "ngn_hmc_120424_rmdup_plus_sub_minus",
+                 "icam_hmc_120424_rmdup_plus_sub_minus", "omp_mc_rmdup_plus_sub_minus",
+                 "ngn_mc_rmdup_plus_sub_minus", "icam_mc_rmdup_plus_sub_minus")
   } else if (set=="cells_noM") {
     samples <- samples.cells_noM
   } else if (set=="cells_full") {
@@ -151,7 +155,9 @@ makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type, tra
   } else if (set=="d3a_2") {
     samples <- samples.d3a_2
   } else if (set=="d3a_strand") {
-    samples <- c("moe_d3a_wt_hmc_plus", "moe_d3a_wt_hmc_minus", "moe_d3a_ko_hmc_plus", "moe_d3a_ko_hmc_minus")
+    samples <- c("moe_d3a_wt_hmc_plus_sub_minus", "moe_d3a_ko_hmc_plus_sub_minus",
+                 "moe_d3a_wt_mc_plus_sub_minus", "moe_d3a_ko_mc_plus_sub_minus",
+                 "moe_d3a_wt_in_plus_sub_minus")
   } else if (set=="all") {
     samples <- list.files(paste(feature_norm_path, feature, sep="/")) 
   } else if (set=="d3a_mrna") {

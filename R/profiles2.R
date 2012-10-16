@@ -13,6 +13,7 @@ library(gplots)
 source("~/src/seqAnalysis/R/paths.R")
 source("~/src/seqAnalysis/R/boot.R")
 source("~/src/seqAnalysis/R/plotUtil.R")
+source("~/src/seqAnalysis/R/samples.R")
 source("~/src/MEDIPS/R/MEDIPS_mod.methylProfiling.R")
 
 registerDoMC(cores=2)
@@ -289,13 +290,6 @@ plotAnno <- function(data, annotation, wsize, cols=NULL, lab=NULL,
 plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="mean", group2=NULL,
                      cols=1, lab=c("",""), y.vals=NULL, wsize=25, range=NULL, type="range", fname=NULL) {
 
-  ## make profile path
-  if (!is.null(group2)) {
-    anno <- paste(annotation, group2, data_type, sep="_")
-  } else {
-    anno <-  paste(annotation, data_type, sep="_")
-  }
-  print(anno)
   print(sample)
   print(profile2.path)
   
@@ -338,148 +332,27 @@ plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="me
   plotAnno(list(data), annotation, cols=cols, lab=lab,
                 y.val=y.vals, wsize=wsize) 
   
-  ## Label axes
-  #mtext("AMS", at=.775, side=2, outer=T, line=-1, cex=1.6)
-  #mtext("AMS", at=.275, side=2, outer=T, line=-1, cex=1.6)
-  #mtext("Normalized read count", at=.5, side=2, outer=T, line=-2, cex=1)
-  #par(las=1)
-  #mtext("5hmC", at=.775, side=2, outer=T, line=1, cex=1.6)
-  #mtext("5mC", at=.275, side=2, outer=T, line=1, cex=1.6)
-  #mtext("5hmC", at=.275, side=3, outer=T, line=0, cex=1.6)
-  #mtext("5mC", at=.775, side=3, outer=T, line=0, cex=1.6)
-  #mtext(paste(sample, " -> ", group2, sep=""), side=3, outer=T, cex=1.6)
+  mtext(paste(sample, " -> ", group2, sep=""), side=3, outer=T, cex=1.6)
   if (!is.null(fname)) {
     if (fname != "manual") dev.off()
   }
 }
 
+## Plot several profiles in one graphic device
 plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2=NULL, cols=NULL, lab=c("",""), y.vals=NULL, wsize=25, standard=FALSE, range=NULL, baseline=FALSE,
                           fun="mean", legend=FALSE, fname=NULL) {
   samples <- NULL
   orient <- 1
   rows <- 1
   columns <- 1
-  if (set=="d3a") {
-    samples <- list(list("moe_wt_hmc.bed", "moe_d3a_hmc.bed"), list("moe_wt_mc.bed", "moe_d3a_mc.bed"))
-    legend <- c("Dnmt3a +/+", "Dnmt3a -/-")
-    rows <- 2
-    columns <- 1
-  } else if (set=="d3a_2") {
-    samples <- list(list("moe_d3a_wt_hmc", "moe_d3a_ko_hmc"), list("moe_d3a_wt_mc", "moe_d3a_ko_mc"))
-    rows <- 2
-    columns <- 1
-    orient <- 2
-  } else if (set=="d3a_3") {
-    samples <- list(list("d3a_wt_hmc", "d3a_ko_hmc"), list("d3a_wt_mc", "d3a_ko_mc"))
-    rows <- 2
-    columns <- 1
-    orient <- 2
-  } else if (set=="d3a_4") {
-    samples <- list(list("moe_d3a_wt_hmc_rpkm",  "moe_d3a_ko_hmc_rpkm"),
-                    list("moe_d3a_wt_mc_rpkm", "moe_d3a_ko_mc_rpkm"))
-    rows <- 2
-    columns <- 1
-    orient <- 2
-  } else if (set=="d3a_rlm") {
-    samples <- list(list("moe_wt_hmc_rlm", "moe_d3a_hmc_rlm"), list("moe_wt_mc_rlm", "moe_d3a_mc_rlm"))
-    rows <- 2
-    columns <- 1
-  } else if (set=="d3a_rf") {
-    samples <- list(list("moe_wt_mc_rf", "moe_d3a_mc_rlm"))
-    rows <- 1
-    columns <- 1
-  }
-  else if (set=="cells") {
-    samples <- list(list("omp_hmedip.bed", "ngn_hmedip.bed", "icam_hmedip.bed"),
-                    list("omp_medip.bed", "ngn_medip.bed", "icam_medip.bed"))
-    rows <- 2
-    columns <- 1
-    legend <- c("mOSN", "GBC", "HBC")
-  } else if (set=="cells_rlm") {
-    samples <- list(list("omp_hmc_rlm", "ngn_hmc_rlm", "icam_hmc_rlm"),
-                    list("omp_mc_rlm", "ngn_mc_rlm", "icam_mc_rlm"))
-    rows <- 2
-    columns <- 1
-  } else if (set=="cells_norm") {
-    samples <- list(list("omp_hmc", "ngn_hmc", "icam_hmc"),
-                    list("omp_mc", "ngn_mc", "icam_mc"))
-    columns <- 1
-    #if (!is.null(group2)) {
-    #  columns <- 3
-    #}
-    rows <- 2
-    orient <- 2
-  } else if (set=="cells_rpkm") {
-    samples <- list(list("omp_hmc_120424_rpkm", "ngn_hmc_rpkm", "icam_hmc_rpkm"),
-                    list("omp_mc_rpkm", "ngn_mc_rpkm", "icam_mc_rpkm"))
-    columns <- 1
-    #if (!is.null(group2)) {
-    #  columns <- 3
-    #}
-    rows <- 2
-    orient <- 2
-  } else if (set=="cells_norm_hmc") {
-    samples <- list("omp_hmc", "ngn_hmc", "icam_hmc")
-    columns <- 1
-    rows <- 2
-    orient <- 2
-  } else if (set=="cells_norm_mc") {
-    samples <- list("omp_mc", "ngn_mc", "icam_mc")
-    columns <- 1
-    rows <- 2
-    orient <- 2
-  } else if (set=="tfo_omp") {
-    samples <- list(list("tfo_hmc", "omp_hmc"),
-                    list("tfo_mc", "omp_mc"))
-    rows <- 2
-    columns <- 1
-    orient <- 2
-  } else if (set=="tfo_omp_rpkm") {
-    samples <- list(list("tfo_hmc_22M", "omp_hmc_rpkm"))
-    rows <- 1
-    columns <- 1
-    orient <- 2
-  } else if (set=="tfo_omp_d3a") {
-    samples <- list(list("tfo_hmc", "omp_hmc", "moe_d3a_wt_hmc", "moe_d3a_ko_hmc"),
-                    list("tfo_mc", "omp_mc", "moe_d3a_wt_mc", "moe_d3a_ko_mc"))
-    rows <- 2
-    columns <- 1
-    orient <- 2
-  } else if (set=="nuc") {
-    samples <- list(list("omp_nuc_0123", "icam_nuc_01234"))
-    rows <- 1
-    columns <- 1
-    orient <- 2
-  } else if (set=="tt3") {
-    samples <- list(list("o.tt3.1_hmc_rpkm", "o.tt3.2_hmc_rpkm"),
-                    list("o.tt3.1_mc_rpkm", "o.tt3.2_mc_rpkm"))
-    rows <- 2
-    columns <- 1
-    orient <- 2
-  } else if (set=="tt3_2") {
-    samples <- list(list("omp_hmc_rpkm", "o.tt3.2_hmc_rpkm"),
-                    list("omp_mc_rpkm", "o.tt3.2_mc_rpkm"))
-    rows <- 2
-    columns <- 1
-    orient <- 2
-  } else if (set=="cells_nuc") {
-    samples <- list(list("omp_nuc_0123", "icam_nuc_01234"))
-    rows <- 1
-    columns <- 1
-    orient <- 2
-  
-  } else if (set=="d3a_nuc") {
-    samples <- list(list("d3xog_wt_nuc_478_p1", "d3xog_ko_nuc_256_p1"))
-    rows <- 1
-    columns <- 1
-    orient <- 2
-  } else if (set=="encode_dnase") {
-    samples <- list(list("wgEncodeUwDnaseCerebrumC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseCerebellumC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseRetinaC57bl6MAdult1wksAlnRep1",
-                    "wgEncodeUwDnaseHeartC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseLiverC57bl6MAdult8wksAlnRep1"))
-    rows <- 1
-    columns <- 1
-    orient <- 2
-  }
+
+  plot_param <- select_set(set)
+  samples <- plot_param[1]
+  rows <- plot_param[2]
+  columns <- plot_param[3]
+  orient <- plot_param[4]
+
+  # setup graphic device
   if (is.null(fname))  {
     x11("", 5, 6)
   } else if (fname=="manual") {
@@ -510,19 +383,17 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
                         profileRead(paste(profile2.path, "norm",
                                           data_type, annotation, "profiles", sep="/"), fun, s, group2)))
   }
-#  return(data)
-#    data <- profileRead(paste(profile2.path, "norm", data_type, annotation, "profiles", sep="/"), fun, sample, group2)
-  ## If baseline is specified, normalize by mean start and end valuee
-  #return(data)
+
+  ## If baseline is specified, normalize by mean start and end valuee  
   if (baseline) {
     data <- list(baselineNorm(data[[1]]))
   }  
-#  return(data)
+
   
   if (!is.null(range)) {
       data <- list(lapply(data[[1]], function(x) lapply(x, function(y) as.matrix(y[range[1]:range[2],]))))
   }
- # return(data)
+
   if (is.null(y.vals)) {
     y.vals <- lapply(data, getRange)
     if (standard) {
@@ -539,10 +410,8 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
   y_label_pos <- c(0.75, 0.25)
   lapply(c(1:length(samples)), function(x) {
     plotAnno(data[[x]], annotation, cols=cols, lab=lab, y.val=y.vals[[x]], wsize=wsize, stack=TRUE)
-    #mtext("Normalized read count", at=y_label_pos[x], side=2, outer=TRUE, line=-1, cex=1)
     name <- lapply(samples[[x]], function(y) unlist(str_split(y[1], "_")))
     name <- unlist(lapply(name, function(y) y[-length(y)]))
-    #legend(0, y=(y.vals[[x]][2] - (y.vals[[x]][2] / 20)), legend=legend, col=cols, bty="n", lty=1, horiz=TRUE)
     if (legend) {
       legend(2, y.vals[[x]][2], legend=samples[[x]], col=cols, lty=1)
     }

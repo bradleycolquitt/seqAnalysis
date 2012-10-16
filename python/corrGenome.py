@@ -28,6 +28,7 @@ class corr_genome:
         if method == "spearman": self.func = ss.spearmanr
         elif method == "ratio": self.func = val_ratio
         elif method == "diff": self.func = val_diff
+        elif method == "fraction": self.func = val_fraction
         self.window = int(window)
         self.step = int(step)
         self.tmp_path = tempfile.mkdtemp()
@@ -95,13 +96,15 @@ def compute_worker(obj, chr_tbp):
     corr = 0
     pvalue = 0
     
+    sample1_data = sample1_data[:]
+    sample2_data = sample2_data[:]
     
     while end < len(sample1_data):
         #pdb.set_trace()
         vals1 = sample1_data[start:end]
         vals2 = sample2_data[start:end]
         (corr, pvalue) = corr_wrapper(obj.func, vals1, vals2)
-        if math.isnan(corr): corr = 0
+        #if math.isnan(corr): corr = 0
         out_wig.write(str(corr) + "\n")
         start = start + step
         end = start + window
@@ -113,7 +116,7 @@ def corr_wrapper(func, *args):
     return(func(*args))
   
 def val_ratio(v1, v2):
-#    pdb.set_trace()
+
     
     val = float(sum(v1)) / sum(v2)
     #if val < 1: pdb.set_trace()
@@ -128,6 +131,14 @@ def val_ratio(v1, v2):
 def val_diff(v1, v2):
     return((np.mean(v1-v2),0))
     
+def val_fraction(v1, v2):
+    v1_s = sum(v1)
+    v2_s = sum(v2)
+    if v1_s < 10 and v2_s < 10: return(("NaN", 0))
+    val = v1_s / (v1_s + sum(v2))
+    #if np.isnan(val): val = "NA"
+    return((val,0))
+    
 def main(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument(dest="file")
@@ -136,7 +147,7 @@ def main(argv):
     parser.add_argument('-w', dest="window", default="1000")
     parser.add_argument('-s', dest="step", default="500")
     parser.add_argument("--data_type")
-    parser.add_argument("--method", choices=['pearson', 'spearman', 'ratio', 'diff'])
+    parser.add_argument("--method", choices=['pearson', 'spearman', 'ratio', 'diff', 'fraction'])
     
     args = parser.parse_args()
         

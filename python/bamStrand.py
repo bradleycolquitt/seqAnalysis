@@ -26,6 +26,8 @@ def splitByStrand(bamfile, pe):
     
     for cmd_arg in cmd_args:
         print cmd_arg
+        if os.path.exists(cmd_arg[5]): 
+            continue
         outfile = open(cmd_arg[5], 'w')
         p = Popen(cmd_arg[:5], stdout=outfile)
         p.wait()
@@ -61,8 +63,8 @@ def main(argv):
     parser.add_argument(dest="bamfile")
     parser.add_argument('-o', dest='outfile')
     parser.add_argument('-w', dest='window')
-    parser.add_argument('-e', dest="extend")
-    parser.add_argument('--paired-end', dest="pe")
+    parser.add_argument('-e', dest="extend", default=0)
+    parser.add_argument('--paired-end', dest="pe", action="store_true")
     args = parser.parse_args()
     
     split_bam = splitByStrand(args.bamfile, args.pe)

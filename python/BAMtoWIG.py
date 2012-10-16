@@ -1,5 +1,25 @@
 #!/usr/bin/env python
 
+
+## Converts a BAM file to a WIG file by
+## counting the number of fragments that lie within nonoverlapping genomic windows.
+## A fragment is defined as a pair of reads for paired-end samples and
+## an extended single-end read for single-end samles
+
+## Single-end samples ##
+##   Reads are extended by a given amount (param 'extend') and
+##   the midpoint of that extension is used to place a fragment in a genomic bin
+
+## Paired-end samples ##
+##   The midpoint of a given pair of reads is used to determine fragment placement
+
+## Window counts are normalized by
+##   1. The number of reads (in millions) in the sample
+##   2. The window size to yield read number per kilobase
+##      - this allows comparison of values generated from different windows
+
+## WIGs are outputted to a common directory
+
 import sys
 import os
 import re
@@ -30,7 +50,7 @@ class windower:
         self.window_size = atoi(window_size)
         self.pe = pe
         self.extend = int(extend)
-        #self.nreads = 0
+
         self.nreads = self.bamfile.mapped
         self.pseudo = pseudo
         self.full = full
@@ -57,18 +77,7 @@ class windower:
                 window_core(arg[0], arg[1], arg[2], arg[3], arg[4], arg[5], arg[6], arg[7])
             else:
                 window_full(arg[0], arg[1], arg[2], arg[3], arg[4], arg[5], arg[6], arg[7])
-#                result = [p.apply_async(window_full, arg) for arg in args]        
-        #print args
-        
-#        p.close()
-#        p.join()
-        #pool = Pool(processes=5)
-        #bam = pysam.Samfile(self.sample, 'rb')
-        #for chr_tbp in chrs_tbp:
-        #    pool.apply_async(tab_bam, (self.bamname, self.wigfile, self.window_size, chr, self.pe, self.extend, self.nreads, self.pseudo))))
-            #tab_bam(self, chr_tbp, tmp_path)
-        #pool.close()
-        #pool.join()
+
         self.wigfile.close()
         
     def tdf(self):
@@ -82,31 +91,41 @@ def window_core(bamname, wigfile, window_size, chr_tuple, pe, extend, nreads, ps
     chr = chr_tuple[0]
     chr_length = chr_tuple[1]
     print chr
-    window_correct = 1000 / float(window_size)
-    #wigfile = open(outpath + "/" + chr, 'w')
+    #window_correct = 1000 / float(window_size)
+    
+    # Normalize by Reads per million and by reads per kilobase
+    # Reads
+    window_correct = 1e6 * 1e3 / (float(window_size) * nreads)
+    
     out = "fixedStep chrom={0} start=1 step={1} span={1}\n".format(chr, window_size)
     wigfile.write(out)
     
     pos_vect = np.zeros((chr_length / window_size,))
-    #print pe
-    #print extend
+    
     for read in bamfile.fetch(chr):
-        #print read.pos
+    
         read_mid = 0
         if pe:
             if read.is_read1:
+                pdb.set_trace()
                 read_mid = read.pos + read.isize / 2
             else: continue
         else:
-            read_mid = read.pos + extend / 2
-            #print read_mid
+            if read.is_reverse:
+                
+                read_mid = read.aend - extend / 2
+            else:
+                
+                read_mid = read.pos + extend / 2
         read_mid_index = read_mid / window_size
         if read_mid_index <= len(pos_vect) - 1:
             pos_vect[read_mid_index] = pos_vect[read_mid_index] + 1
+            
     for val in pos_vect:
         if pseudo and val == 0: val = 1
         #wigfile.write(str((window_correct * 1e6 * float(val)) / nreads) + "\n")
         wigfile.write(str(window_correct * float(val)) + "\n")
+        #wigfile.write(str(1e6 * float(val) / nreads) + "\n")
        
     #wigfile.close()
     
@@ -128,11 +147,6 @@ def window_full(bamname, wigfile, window_size, chr_tuple, pe, extend, nreads, ps
     end = 0
     
     ## Loop through each position in iterator
-    #for proxy in it:
-    #    read_index = proxy.pos / window_size
-    #    if read_index <= len(pos_vect) - 1:
-    #        pos_vect[read_index] = pos_vect[read_index] + proxy.n
-    print "Start loop"
     for read in bamfile.fetch(chr):
 #        pdb.set_trace()
         if pe:
@@ -161,64 +175,39 @@ def window_full(bamname, wigfile, window_size, chr_tuple, pe, extend, nreads, ps
         
        
 def main(argv):
-    ## Take BAM
-    ## Count number of reads within specified window size
     parser = argparse.ArgumentParser()
     parser.add_argument('-b', dest='bam', required=False)
     parser.add_argument('-w', dest='window')
     
     parser.add_argument('-e', dest='extend', type=int, required=False, default=0)
-    parser.add_argument('-d', dest='date', required=False)
+    #parser.add_argument('-d', dest='date', required=False)
     parser.add_argument('--paired_end', action='store_true', default=False)
     parser.add_argument('--pseudocount', dest='pseudo', action='store_true', default=False)
     parser.add_argument('--full', action='store_true', default=False, help="Record extent of each read")
     args = parser.parse_args()
     
-        
-        
-    if args.date:
-        bams = [f for f in os.listdir("/".join([bam_dir, args.date])) if re.search(".bam$", f)]
-        for bam in bams:
-            bam_path = "/".join([bam_dir, args.date, bam])
-            print bam
-            bam_prefix = os.path.basename(bam).split(".bam")[0]
-            wig_path = "/".join([wig_dir, bam_prefix])
-            wig_file = ""
-            if not args.pseudo:
-                wig_file = "/".join([wig_path, "_".join([bam_prefix, args.window]) + ".wig"])
-            else:
-                wig_file = "/".join([wig_path, "_".join([bam_prefix, args.window]) + "pseudo.wig"])
-            if not os.path.exists(wig_path): os.makedirs(wig_path)
-            if os.path.exists(wig_file):
-                dec = raw_input("WIG exists. Overwrite [y/n]? ")
-                if dec == "n": continue
-            
-            wi = windower(bam_path, wig_file, args.window, args.extend, args.paired_end, args.pseudo, args.full)
-            wi.window()
-            wi.wigfile.close()
-            #wi.tdf()
-    else:
-        bam_path = "/".join([bam_dir, args.bam])
-        bam_prefix = os.path.basename(args.bam).split(".bam")[0]
-        wig_path = "/".join([wig_dir, bam_prefix])
-        wig_file = "/".join([wig_path, "_".join([bam_prefix, args.window])])
-        
-        if args.pseudo:
-            wig_file = "_".join([wig_file, "pseudo"])
-        if args.full:
-            wig_file = "_".join([wig_file, "full"])
-            
-        wig_file = wig_file + ".wig"
-        
-        if not os.path.exists(wig_path): os.makedirs(wig_path)
-        if os.path.exists(wig_file):
-            dec = raw_input("WIG exists. Overwrite [y/n]? ")
-            if dec == "n": return
-            
-        wi = windower(bam_path, wig_file, args.window, args.extend, args.paired_end, args.pseudo, args.full)
-        wi.window()
-        wi.wigfile.close()
-        #wi.tdf()
+    
+    bam_path = "/".join([bam_dir, args.bam])
+    bam_prefix = os.path.basename(args.bam).split(".bam")[0]
+    wig_path = "/".join([wig_dir, bam_prefix])
+    wig_file = "/".join([wig_path, "_".join([bam_prefix, args.window])])
+
+    if args.pseudo:
+        wig_file = "_".join([wig_file, "pseudo"])
+    if args.full:
+        wig_file = "_".join([wig_file, "full"])
+
+    wig_file = wig_file + ".wig"
+
+    if not os.path.exists(wig_path): os.makedirs(wig_path)
+    if os.path.exists(wig_file):
+        dec = raw_input("WIG exists. Overwrite [y/n]? ")
+        if dec == "n": return
+
+    wi = windower(bam_path, wig_file, args.window, args.extend, args.paired_end, args.pseudo, args.full)
+    wi.window()
+    wi.wigfile.close()
+    #wi.tdf()
         
             
     
