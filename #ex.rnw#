@@ -1,0 +1,24 @@
+\documentclass{article}
+
+\title{Sweave example 1}
+\author{Not me}
+
+\begin{document}
+
+\maketitle
+
+In this example we embed parts of the examples from the
+\texttt{kruskal.test} help page into a \LaTeX{} document :
+
+<<>>=
+data(airquality)
+kruskal.test(Ozone ~ Month, data = airquality)
+@ 
+
+\begin{center}
+<<fig=TRUE,echo=FALSE>>=
+boxplot(Ozone ~ Month, data = airquality)
+@ 
+\end{center}
+
+\end{document}
