@@ -222,15 +222,13 @@ makeFeatureMatrix2.all <- function(set, data_type, transf=NULL) {
                   print(e)
                   return
           })
-    
-    #a <- makeFeatureMatrix2(file, set=set, data_type=data_type, transf=transf, write=TRUE)
   }
 }
 
 
-threshMatByQ <- function(data, q) {
-  
-}
+# Summary functions -------------------------------------------------------
+
+
 statCollect <- function(set, data_type, feature, transf_name, transf=NULL) {
   data_path <- paste(feature_norm_path, data_type, "summaries",
                            paste(set, feature, sep="_"), sep="/")
@@ -301,22 +299,16 @@ statSummary.all <- function(set, data_type, toplot="general", action="summary", 
 
 statSummary.test <- function(summary, type="wilcox", col_split="feature", col_compare="celltype", subsample=0) {
   registerDoMC(cores=2)
-#  feature_split <- split(summary, summary$feature)
   summary_split <- split(summary, summary[,col_split])
- # return(summary_split)
-#  samples <- unique(summary$celltype)
   samples <- as.character(unique(summary[, col_compare]))
   print(samples)
   samples_comb <- combn(samples, 2)
-  #print(samples_comb)
   samples_comb_name <- unlist(apply(samples_comb, 2, paste, collapse="_"))
-#  pvalues <- foreach(feature=feature_split) %dopar% {
   pvalues <- foreach(group=summary_split) %dopar% {
 
     pvalue <- apply(samples_comb, 2, function(comb) {
       if (type=="wilcox") {
         val <- 0
-        #with(feature, wilcox.test(value[celltype==comb[1]], value[celltype==comb[2]])$p.value)
         if (subsample == 0) {
           val <- wilcox.test(group$value[group[,col_compare]==comb[1]],
                                 group$value[group[,col_compare]==comb[2]])$p.value
@@ -417,6 +409,11 @@ statSummary.allNorm <- function(set, data_type, toplot=TRUE, transf_name=NULL, t
   return(data)
 }
 
+
+
+# Intersection functions --------------------------------------------------
+
+
 processIntersectSummary <- function(summary, features=features_merge_toplot) {
   data <- read.delim(summary)
   data$internal_norm <- with(data, fraction_norm/sum(fraction_norm))
@@ -439,8 +436,13 @@ processIntersectSummary.batch <- function(set, features=features_merge_toplot) {
   }
   return(out)
 }
+
+
+# Utility functions -------------------------------------------------------
+
+
 sem <- function(vals) {
-  return(sd(vals)/(length(vals - 1)))
+  return(sd(vals)/(length(vals)))
 }
 
 sd_trim <- function(vals, trim=.05) {
@@ -481,6 +483,8 @@ feature_ks_batch <- function(collect_df, key_col, reference_key) {
   return(sub)
 }
 
+
+#! not functional
 cell_compare <- function(values, ind, key_col, reference_key) {
   print(dim(values))
   #print(names(values))

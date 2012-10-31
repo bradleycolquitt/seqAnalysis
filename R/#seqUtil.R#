@@ -107,7 +107,7 @@ randomizeBed.batch <- function(bed, N=100) {
   }
 }
 
-#take data.frame with sequence names and sequence, and generate
+#take data.frame with sequence names and sequences, and generate
 #fasta file
 formatFasta <- function(data, fname=NULL) {
   names <- as.character(data[,1])
