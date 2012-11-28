@@ -239,3 +239,16 @@ testPeakIntersects <- function(summary) {
   write.table(out, file=out_path, quote=FALSE, sep="\t")
   return(out)            
 }
+
+## https://gist.github.com/1099499
+multiRF <- function(x,data, ...) {
+  foreach(i=x,.combine=combine,.packages='randomForest',
+          .export=c('X','Y'),.inorder=FALSE) %dopar% {
+            randomForest(data,mtry=i,...)
+          } 
+}
+
+dist_poission <- function(x) {
+    
+  
+}

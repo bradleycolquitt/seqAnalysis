@@ -11,10 +11,11 @@ library(doMC)
 source("~/src/seqAnalysis/R/seqUtil.R")
 
 # Options
-registerDoMC(cores=6)
+registerDoMC(cores=4)
 
 
 # Matrix of 8-mer E-scores from Berger, Cell, 2008
+# Uncomment to load
 # 32896 rows of 8-mers
 # 180 columns: 1-2 are 8-mer sequence and reverse complement, 3-180 are HD
 # E-scores computed by
@@ -72,7 +73,7 @@ filterByEscore <- function(thresh=0.45) {
 # Determine number of HD sites (defined as 8-mer with E>=thresh) in sequence
 # Input list of sequences, E-score threshold
 # Output matrix with counts of HD site occurances
-
+### USE Jellyfish to count
 count_hd_sites <- function(seq_list, thresh) {
   print("thresh")
   escore_thresh <- cbind(ESCORE_MAT[,1:2], apply(ESCORE_MAT[,3:180] >= thresh, 2, as.numeric))
@@ -105,26 +106,17 @@ count_hd_sites <- function(seq_list, thresh) {
   return(result)
 }
 
-#normalize site occurence matrix by 
-#  length of sequence
-#  prob of random occurence
-norm_hd_matrix <- function(hd_matrix, seq_list) {
-  # norm by length
-  seq_lengths <- width(seq_list)
-  hd_matrix <- hd_matrix / seq_lengths
-  return(hd_matrix)
-  # norm by random prob
-  #mono_nuc <- computeFrequencies.count(seq_list)
-  
-}
 
+
+# Read in fasta files of kmer occurences produced by jellyfish
+# Fill matrix of these counts
 parse_kmer_counts <- function(dir) {
   files <- list.files(dir)
   files <- files[grep("fa$", files)]
   
   files_prefixes <- str_split(files, ".fa")
   files_prefixes <- unlist(lapply(files_prefixes, function(x) x[1]))
-  
+  #files_prefixes <- unlist(lapply(files_prefixes, function(x) paste("el", x, sep="_")))
   # Rows: sequences
   # Cols: 8mer
   count_matrix <- matrix(0, nrow=length(files_prefixes), ncol=nrow(ESCORE_MAT)*2, 
@@ -139,13 +131,48 @@ parse_kmer_counts <- function(dir) {
     count_matrix[i,match(as.character(fasta), colnames(count_matrix))] <- names(fasta)
     }
   close(pb)
+  
   count_matrix <- apply(count_matrix, 2, as.numeric)
-    
-  # Multiply count matrix by thresholded ESCORE_MAT to remove non-signifcant 8mers
+  return(count_matrix)
+}
+  
+# Multiply count matrix by thresholded ESCORE_MAT to remove non-signifcant 8mers
+threshold_count_matrix <- function(count_matrix) {
   print("Thresholding count matrix...")
   escore_thresh <- apply(ESCORE_MAT[,3:180] >= 0.45, 2, as.numeric)
   escore_thresh <- rbind(escore_thresh, escore_thresh)
   result_matrix <- count_matrix %*% escore_thresh
-  
   return(result_matrix)
+}
+
+# Normalize count matrix by expected occurence by binomial
+norm_by_binom <- function(counts, seq_list) {
+  # Determine mononucleotide frequencies
+  print("Compute mononucleotide frequencies")
+  mononuc_freq <- computeFrequencies.count(seq_list)
+  mononuc_freq_mean <- apply(mononuc_freq, 2, mean, na.rm=TRUE)
+  
+  # Loop across colnames (kmers) and calculate expected frequency for each
+  print("Computing expected frequencies")
+  kmer_freq <- foreach(kmer=colnames(counts), .combine="c") %dopar% {
+    expectedFrequencies.single(kmer, mononuc_freq_mean)
+  }
+  names(kmer_freq) <- colnames(counts)
+  
+  # Construct expectation matrix from
+  # vector of sequence lengths and vector of kmer frequencies
+  print("Construct expectation matrix")
+  kmer_freq_seq <- width(seq_list) %*% t(kmer_freq)
+  rownames(kmer_freq_seq) <- names(seq_list)
+  #return(kmer_freq_seq)
+  
+  # Normalize counts by expectation matrix
+  print("Normalize counts")
+  kmer_freq_seq <- kmer_freq_seq[match(rownames(counts), rownames(kmer_freq_seq)),]
+  kmer_freq_seq <- na.omit(kmer_freq_seq)
+  kmer_freq_seq <- kmer_freq_seq[-grep(setdiff(rownames(kmer_freq_seq), rownames(counts)), rownames(kmer_freq_seq)),]
+  #return(kmer_freq_seq)
+  counts_norm <- counts / kmer_freq_seq
+  
+  return(counts_norm)
 }
