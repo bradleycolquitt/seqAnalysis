@@ -1,14 +1,13 @@
-
-library(itertools)
-library(foreach)
-library(boot)
+suppressPackageStartupMessages(library(itertools))
+suppressPackageStartupMessages(library(foreach))
+suppressPackageStartupMessages(library(boot))
 library(RColorBrewer)
-library(multicore)
-library(doMC)
+suppressPackageStartupMessages(library(multicore))
+suppressPackageStartupMessages(library(doMC))
 library(MEDIPS)
-library(colorspace)
-library(cluster)
-library(gplots)
+suppressPackageStartupMessages(library(colorspace))
+suppressPackageStartupMessages(library(cluster))
+suppressPackageStartupMessages(library(gplots))
 
 source("~/src/seqAnalysis/R/paths.R")
 source("~/src/seqAnalysis/R/boot.R")
@@ -21,6 +20,9 @@ registerDoMC(cores=2)
 col4 <- brewer.pal(4, "Spectral")
 col3 <- brewer.pal(3, "Dark2")
 col2 <- rev(brewer.pal(3, "Set1")[1:2])
+
+# Make Profile ------------------------------------------------------------
+
 
 # Accepts data from makeProfile and writes to givin out.path
 writeModule <- function(out.path, sample, group2=NULL, fun, rm.outliers=0, profile, CI) {
@@ -82,7 +84,7 @@ writeModule <- function(out.path, sample, group2=NULL, fun, rm.outliers=0, profi
 profileCompute <- function(data, param) {
   grouping <- lapply(param[[2]], function(x) if(!is.null(x)) data[,x])
   if (length(param) == 3) {
-    return(tapply(data[,param[[1]]], grouping, param[[3]]))
+    return(tapply(data[,param[[1]]], grouping, param[[3]], na.rm=TRUE))
   } else {
     return(tapply(data[,param[[1]]], grouping, param[[3]], param[[4]]))
   }  
@@ -114,10 +116,10 @@ makeProfile2 <- function(anno, samples, group2=NULL, data_type="unnorm/mean", fu
       }
 
       if (rm.outliers > 0) {
-        thresh <- quantile(data$norm, probs=c(rm.outliers, 1-rm.outliers))
+        thresh <- quantile(data$norm, probs=c(rm.outliers, 1-rm.outliers), na.rm=TRUE)
         data <- data[data$norm >= thresh[1] & data$norm <= thresh[2], ]
       }
-
+      
       if (!is.null(group2)) {
         group2_vals <- read.delim(paste(group2.path, group2, sep="/"), header=FALSE)
         data$group2 <- group2_vals[match(data$name, group2_vals[,1]),2]
@@ -204,6 +206,10 @@ makeProfile2.allAnno <- function(data_type="rpm_avg_2", group2=NULL, write=TRUE)
   } 
 }
 
+
+# Plot Profiles -----------------------------------------------------------
+
+
 ## Draws profile and confidence intervals
 plotProfiles <- function(profile=NULL, ci_1=NULL, ci_2=NULL, cols=NULL,
                             smooth=FALSE, span=0.1) {
@@ -271,7 +277,7 @@ plotAnno <- function(data, annotation, wsize, cols=NULL, lab=NULL,
       }
     }
   
-  ## Draw and label axes
+  # Draw and label axes
   box()
   axis(1, at=lab.data$pos,
        labels=c(paste("-", lab.data$dist, " kb", sep=""), lab,
@@ -284,10 +290,8 @@ plotAnno <- function(data, annotation, wsize, cols=NULL, lab=NULL,
   if (length(lab) == 2) abline(v=lab.data$pos[3], lty=2, col="grey")
 }
 
-##############################################################
-## Primary interface for drawing profile of a single sample ##
-##############################################################
-plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="mean", group2=NULL,
+## Primary interface for drawing profile of a single sample 
+plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="mean", group2=NULL, group2_col=NULL,
                      cols=1, lab=c("",""), y.vals=NULL, wsize=25, range=NULL, type="range", fname=NULL) {
 
   print(sample)
@@ -299,6 +303,15 @@ plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="me
                         paste(annotation, group2, data_type, sep="_"))
   } else if (orient==2) {
     data <- profileRead(paste(profile2.path, "norm", data_type, annotation, "profiles", sep="/"), fun, sample, group2)
+  }
+
+  ## If group2_col is specified, select given column of data
+  if (!is.null(group2_col)) {
+    if (length(group2_col) == 1) {
+      data <- lapply(data, function(x) matrix(x[,group2_col], ncol=1))
+    } else {
+      data <- lapply(data, function(x) x[,group2_col])
+    }
   }
   
   ## If range specificed, trim profile by given values
@@ -347,16 +360,17 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
   columns <- 1
 
   plot_param <- select_set(set)
-  samples <- plot_param[1]
-  rows <- plot_param[2]
-  columns <- plot_param[3]
-  orient <- plot_param[4]
+  samples <- plot_param[[1]]
+  rows <- plot_param[[2]]
+  columns <- plot_param[[3]]
+  orient <- plot_param[[4]]
 
   # setup graphic device
   if (is.null(fname))  {
     x11("", 5, 6)
   } else if (fname=="manual") {
     # do nothing, device has already been set
+    
   } else {
     if (fname=="auto") {
       dt <- paste(unlist(str_split(data_type, "/")), collapse="_")
@@ -370,8 +384,9 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
     print(paste("Saving to ", fname, sep=""))
     pdf(file=paste(profile2.path, "norm", "plots", fname, sep="/"), 6, 9)
   }
-  
   par(mfrow=c(rows, columns), mar=c(2,4,1,1) + 0.1, oma=c(1, 1, 1, 1))
+  
+  # Read in data
   if (orient==1) {
     data <- lapply(samples,
                  function(sample) lapply(sample, function(s)
@@ -384,16 +399,17 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
                                           data_type, annotation, "profiles", sep="/"), fun, s, group2)))
   }
 
-  ## If baseline is specified, normalize by mean start and end valuee  
+  ## If baseline is specified, normalize by mean start and end values  
   if (baseline) {
     data <- list(baselineNorm(data[[1]]))
   }  
 
-  
+  ## Trim data to x-axis range specificed with 'range' parameter
   if (!is.null(range)) {
       data <- list(lapply(data[[1]], function(x) lapply(x, function(y) as.matrix(y[range[1]:range[2],]))))
   }
-
+  
+  ## If y.vals unspecficied, calculate reasonable range from the data
   if (is.null(y.vals)) {
     y.vals <- lapply(data, getRange)
     if (standard) {
@@ -406,8 +422,9 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
     y.vals <- list(tmp_vals)
     for(i in 2:length(data)) y.vals <- c(y.vals, list(tmp_vals))
   }
-  
   y_label_pos <- c(0.75, 0.25)
+  
+  ## Send data for each sample to the plotter
   lapply(c(1:length(samples)), function(x) {
     plotAnno(data[[x]], annotation, cols=cols, lab=lab, y.val=y.vals[[x]], wsize=wsize, stack=TRUE)
     name <- lapply(samples[[x]], function(y) unlist(str_split(y[1], "_")))
@@ -536,71 +553,6 @@ makeLegend <- function(labels, title=NULL, cols, fname=NULL) {
     
 }
 
-prepMP <- function(vals) {
-  vals <- vals[is.finite(vals$ams_A),]
-  vals <- vals[!is.na(vals$ams_A),]
-  return(vals)
-}
-
-subsetByROI <- function(data, roi, select=4, norm_factor=1) {
-  raw <- vector(length=nrow(roi), mode="numeric")
-  norm <- vector(length=nrow(roi), mode="numeric")
-  #thresh <- roi[1,3] - roi[1,2]
-  #x <- 1
-  i <- 1
-  name <- ""
-  #while (i <= nrow(roi)) {
-  for (j in 1:nrow(data)) {
-    if (data[j,2] >= roi[i,2]) {
-      dist_j1 <- abs(data[j-1,2] - roi[i,2])
-      dist_j2 <- abs(data[j,2] - roi[i,2])
-      ind <- 0
-      if (dist_j1 < dist_j2) {
-        ind <- j-1 
-      } else {
-        ind <- j
-      }
-      raw[i] <- data[ind, 3]
-      norm[i] <- data[ind, 4]
-      if (i < nrow(roi)) {
-        i <- i + 1
-      } else {
-        break
-      }  
-        #x <- j + 1
-        #break
-    }
-  }
-  raw <- raw / norm_factor
-  out <- cbind(roi, raw, norm)
-  return(out)
-}    
- 
-subsetByROI.par <- function(sample, anno.path, roi_name, select=4) {
-  roi <- read.delim(paste(anno.path, roi_name, sep="/"), header=FALSE)
-  roi <- roi[order(roi[,1], roi[,2]),]
-  random_ind <- grep("random", roi[,1])
-  if (length(random_ind) > 0) roi <- roi[-random_ind,]
-  chr_names <- unique(roi[,1])
-  roi_split <- split(roi, roi[,1])
-  
-  norm_factor <- scan(file=paste(medip_split.path, sample, "total_reads", sep="/")) / 1e6
-  registerDoMC(cores=6)
-  out <- foreach (chr=chr_names, .combine="rbind") %dopar% {
-    cat("=")
-    data.path <- paste(medip_split.path, sample, chr, sep="/")
-    data <- read.delim(data.path, header=FALSE)
-    #print(as.character(chr))
-    return(subsetByROI(data, roi_split[[chr]], select, norm_factor))
-  }
-  cat("\n")
-  #return(out)
-  colnames(out) <- c("chr", "start", "end", "name", "group", "strand", "raw", "norm")
-  out.path <- paste(profile2.path, sample, sep="/")
-  if (!file.exists(out.path)) dir.create(out.path)
-  cat("Writing...\n")
-  write.table(out, file=paste(out.path, roi_name, sep="/"), quote=FALSE, sep="\t", row.names=FALSE)
-}
 
 
 saveRoiByChr <- function(roi_name) {
@@ -608,12 +560,6 @@ saveRoiByChr <- function(roi_name) {
   rand <- grep("random", roi[,1])
   if (length(rand) > 0) roi <- roi[-rand,]
   roi.split <- split(roi, roi[,1])
-  #return(roi.split)
-  #rand <- grep("random", names(roi.split))
-  #no_rand <- c(1:length(roi.split))[-rand]
-  #print(rand)
-  #print(no_rand)
-  #if (length(rand) > 0) roi.split <- roi.split[[no_rand]]
   roi.split <- lapply(roi.split, function(x) x[order(x[,1], x[,2]),])
   chrs <- names(roi.split)
   roi_split_name <- paste(roi_name, "_chr", sep="")

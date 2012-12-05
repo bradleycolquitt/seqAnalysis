@@ -107,14 +107,16 @@ randomizeBed.batch <- function(bed, N=100) {
   }
 }
 
-#take data.frame with sequence names and sequence, and generate
+#take data.frame with sequence names and sequences, and generate
 #fasta file
-formatFasta <- function(data, fname=NULL) {
-  names <- as.character(data[,1])
+formatFasta <- function(id, seq, fname=NULL) {
+  #names <- as.character(data[,1])
+  names <- id
   names <- lapply(names, function(x) gsub(" ", "", x))
-  seq <- as.character(data[,2])
+  seq <- lapply(seq, function(x) gsub(" ", "", x))
+  #seq <- as.character(data[,2])
   fc <- file(fname, 'w')
-  for (i in 1:nrow(data)) {
+  for (i in 1:length(seq)) {
     name.out <- paste(">", names[i], "\n", sep="")
     cat(name.out, file=fc)
     seq.out <- paste(c(seq[i], "\n"), sep="")
@@ -122,6 +124,8 @@ formatFasta <- function(data, fname=NULL) {
   }
   close(fc)
 }
+
+
 # For each element in BEDA find distance each element in BEDB
 bedDistances <- function(a, b, chrs=NULL) {
   asplit <- split(a, a[,1])
@@ -179,9 +183,10 @@ getSeq.bed <- function(bed, extend=0) {
 
 getSeq.masked <- function(bed) {
   bed <- na.omit(bed)
-  chrs <- unique(bed[,1])
+  chrs <- sort(unique(bed[,1]))
   print(chrs)
   bed.split <- split(bed, bed[,1])
+  #return(bed.split)
   names(bed.split) <- chrs
   total.seq <- foreach(chr=chrs, .combine="c") %dopar%  {
     chr <- as.character(chr)
@@ -190,7 +195,8 @@ getSeq.masked <- function(bed) {
     active(masks(chr.seq))['RM'] <- TRUE
     bed.curr <- bed.split[[chr]]
     bed.seq <- apply(bed.curr, 1, function(line) {
-      tryCatch(return(getSeq.single(chr.seq, line)), error=function(e) return(NA))
+      #tryCatch(return(getSeq.single(chr.seq, line)), error=function(e) return(NA))
+      return(getSeq.single(chr.seq, line))
       #if (class(result) == "try-error") {
       #  return(NA)
       #} else {
@@ -317,6 +323,8 @@ trinuc <- cbind(trinuc, 1:length(trinuc))
 
 nuc_sets = list("mono"=mononuc, "di"=dinuc, "tri"=trinuc)
 
+# Compute expected frequency of nucleotide set (nuc_set) from 
+# mononucleotide frequencies (monofreq)
 expectedFrequencies <- function(monofreq, nuc_set) {
   nuc_names <- lapply(str_split(nuc_set[,1], ""), function(x) x[2:length(x)])
   freq <- lapply(nuc_names, function(x) {
@@ -324,6 +332,16 @@ expectedFrequencies <- function(monofreq, nuc_set) {
   })
   freq <- do.call("c", freq)
   names(freq) <- nuc_set[,1]
+  return(freq)
+}
+
+# Compute expected frequency of single sequence from
+# mononucleotide frequencies
+expectedFrequencies.single <- function(test, monofreq) {
+  test_split <- str_split(test, "")[[1]]
+  test_split <- test_split[2:length(test_split)]
+  ind <- sapply(test_split, function(x) match(x, names(monofreq)))
+  freq <- prod(monofreq[ind])
   return(freq)
 }
 
@@ -386,7 +404,7 @@ computeFrequencies.set <- function(seq_list, norm=TRUE, fname=NULL) {
   return(mat)
 }
 
-computeFrequencies.count <- function(seq_list, nuc_set=trinuc) {
+computeFrequencies.count <- function(seq_list, nuc_set=mononuc) {
   mindex <- foreach (i=1:nrow(nuc_set), .combine="cbind") %dopar% {
     print(i)
     ms <- lapply(seq_list, function(x) {
@@ -449,9 +467,8 @@ countPattern.genome <- function(pattern, res, wig) {
     cat(out_vector, file=fc, sep="\n")
   }
   close(fc)
-
-  
 }
+  
 prop_coeff <- data.frame(pattern=dinuc[,1],
                          coeff=c(-17.3, -6.7, -14.3, -16.9,
                                  -8.6, -12.8, -11.2, -8.6,
@@ -557,7 +574,8 @@ classifyByQuantiles <- function(vals, probs) {
     cl[vals >= qs[i] & vals < qs[i+1]] <- N[i]
   }
   return(cl)
-  }
+}
+  
 getSeqByStrand <- function(bed) {
   seq <- getSeq(Mmusculus, bed[,1], bed[,2], bed[,3])
   ind <- bed[,6] == "-"
@@ -582,7 +600,6 @@ countBasesByStrand <- function(seq, strand, pattern) {
     counts <- c(counts, list(c(up_count, down_count)))
   }
   return(counts)
-
 }
 
 
@@ -626,6 +643,41 @@ freqBasesByStrand.all3 <- function(seq, strand) {
     return(freqBasesByStrand(seq, strand, phase))
   }
   return(result)
+}
+
+extractREfrags <- function(re_seq) {
+  # Find positions
+  seqnames <- seqnames(Mmusculus)
+  seqnames <- seqnames[-grep("random", seqnames)]
+  seqnames <- seqnames[-grep("chrM", seqnames)]
+  print("locating...")
+  pos <- lapply(seqnames, function(x) {
+    print(x)
+    matchPattern(re_seq, Mmusculus[[x]])})
+  #return(pos)
+  # Stitch together into BED
+  print("stitching...")
+  bed <- lapply(1:length(pos), function(ind) {
+    print(seqnames[ind])
+    starts <- start(pos[[ind]])
+    ends <- end(pos[[ind]])
+    frag_starts <- vector(length=(length(starts) + 1))
+    frag_ends <- vector(length=(length(ends) + 1))
+    frag_starts[1] <- 1
+    frag_ends[1] <- starts[1]
+    
+    #df <- data.frame(seqnames[ind], 1, ends[1], paste(seqnames[ind], "1", sep=""), 0, "+")
+    for (x in 2:length(starts)) {
+      frag_starts[x] <- starts[x-1]
+      frag_ends[x] <- ends[x]
+    }
+    frag_starts[length(frag_starts)] <- ends[length(ends)]
+    frag_ends[length(frag_ends)] <- length(Mmusculus[[seqnames[ind]]])
+    df <- data.frame(seqnames[ind], frag_starts, frag_ends, paste(seqnames[ind], 1:length(frag_starts), sep="_"), 0, "+")
+    return(df)
+  })
+  bed <- do.call("rbind", bed)
+  return(bed)
 }
 
 # Input exonStart/End file
@@ -765,5 +817,3 @@ removeClusteredGenes <- function(bed, N) {
   id_mir <- grep("Mir", bed[,4])
   return(bed[-id_mir,])
 }
-
-get

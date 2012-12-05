@@ -1,0 +1,12 @@
+## Identify positions of HD associated 8-mers within a given sequence
+## Input sequence
+## Output matrix of relative positions and E-scores
+
+# Matrix of 8-mer E-scores from Berger, Cell, 2008
+# 32896 rows of 8-mers
+# 180 columns: 1-2 are 8-mer sequence and reverse complement, 3-180 are HD
+# E-scores computed by
+#   - defining 'foreground' (contains given 8-mer sequence) or 'background' (does not contain)
+#   - took top half of each set and computed a modified Wilcoxon-Mann-Whitney stat (essentially comparing ranks) scaled to be invariant for sample size
+#Data ranged from -0.5 to 0.5
+ESCORE_MAT <- read.delim("~/data/hughes/table_hox_enrichmentscore_102107.txt")

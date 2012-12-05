@@ -41,13 +41,13 @@ tdf_dir = "/media/storage2/data/tdf"
 
 class windower:
     def __init__(self, bamname, wigname, window_size, extend, pe, pseudo, full):
-        #print pe
+        pdb.set_trace()
         self.bamname = bamname
         self.bamfile = pysam.Samfile(bamname, 'rb')
         self.wigname = wigname
         self.wigfile = open(wigname, 'w')
         self.tdffile = "/".join([tdf_dir, "".join([os.path.basename(wigname).split(".wig")[0], ".tdf"])])
-        self.window_size = atoi(window_size)
+        self.window_size = int(window_size)
         self.pe = pe
         self.extend = int(extend)
 
@@ -87,6 +87,7 @@ class windower:
         p.wait()
         
 def window_core(bamname, wigfile, window_size, chr_tuple, pe, extend, nreads, pseudo):
+    pdb.set_trace()
     bamfile = pysam.Samfile(bamname, 'rb')
     chr = chr_tuple[0]
     chr_length = chr_tuple[1]
@@ -107,15 +108,15 @@ def window_core(bamname, wigfile, window_size, chr_tuple, pe, extend, nreads, ps
         read_mid = 0
         if pe:
             if read.is_read1:
-                pdb.set_trace()
-                read_mid = read.pos + read.isize / 2
+                if read.is_reverse:
+                    read_mid = read.aend + read.isize / 2
+                else:
+                    read_mid = read.pos + read.isize / 2
             else: continue
         else:
             if read.is_reverse:
-                
                 read_mid = read.aend - extend / 2
             else:
-                
                 read_mid = read.pos + extend / 2
         read_mid_index = read_mid / window_size
         if read_mid_index <= len(pos_vect) - 1:

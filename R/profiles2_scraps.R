@@ -429,3 +429,70 @@ MP.nameChange <- function() {
     }
   }
 }
+
+subsetByROI.par <- function(sample, anno.path, roi_name, select=4) {
+  roi <- read.delim(paste(anno.path, roi_name, sep="/"), header=FALSE)
+  roi <- roi[order(roi[,1], roi[,2]),]
+  random_ind <- grep("random", roi[,1])
+  if (length(random_ind) > 0) roi <- roi[-random_ind,]
+  chr_names <- unique(roi[,1])
+  roi_split <- split(roi, roi[,1])
+  
+  norm_factor <- scan(file=paste(medip_split.path, sample, "total_reads", sep="/")) / 1e6
+  registerDoMC(cores=6)
+  out <- foreach (chr=chr_names, .combine="rbind") %dopar% {
+    cat("=")
+    data.path <- paste(medip_split.path, sample, chr, sep="/")
+    data <- read.delim(data.path, header=FALSE)
+    #print(as.character(chr))
+    return(subsetByROI(data, roi_split[[chr]], select, norm_factor))
+  }
+  cat("\n")
+  #return(out)
+  colnames(out) <- c("chr", "start", "end", "name", "group", "strand", "raw", "norm")
+  out.path <- paste(profile2.path, sample, sep="/")
+  if (!file.exists(out.path)) dir.create(out.path)
+  cat("Writing...\n")
+  write.table(out, file=paste(out.path, roi_name, sep="/"), quote=FALSE, sep="\t", row.names=FALSE)
+}
+
+subsetByROI <- function(data, roi, select=4, norm_factor=1) {
+  raw <- vector(length=nrow(roi), mode="numeric")
+  norm <- vector(length=nrow(roi), mode="numeric")
+  #thresh <- roi[1,3] - roi[1,2]
+  #x <- 1
+  i <- 1
+  name <- ""
+  #while (i <= nrow(roi)) {
+  for (j in 1:nrow(data)) {
+    if (data[j,2] >= roi[i,2]) {
+      dist_j1 <- abs(data[j-1,2] - roi[i,2])
+      dist_j2 <- abs(data[j,2] - roi[i,2])
+      ind <- 0
+      if (dist_j1 < dist_j2) {
+        ind <- j-1 
+      } else {
+        ind <- j
+      }
+      raw[i] <- data[ind, 3]
+      norm[i] <- data[ind, 4]
+      if (i < nrow(roi)) {
+        i <- i + 1
+      } else {
+        break
+      }  
+      #x <- j + 1
+      #break
+    }
+  }
+  raw <- raw / norm_factor
+  out <- cbind(roi, raw, norm)
+  return(out)
+}    
+
+prepMP <- function(vals) {
+  vals <- vals[is.finite(vals$ams_A),]
+  vals <- vals[!is.na(vals$ams_A),]
+  return(vals)
+}
+

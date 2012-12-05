@@ -13,22 +13,22 @@ from subprocess import PIPE
 fastq_dir = "/media/storage3/data/fastq"
 sam_dir = "/media/storage2/data/sam"
 #sam_dir = "/home/user/data/sam"
-
 bam_dir = "/media/storage2/data/bam"
 bed_dir = "/media/storage2/data/bed" 
 
 class bowtie_class:
-    def __init__(self, date, sample, single_end, index, style):
+    def __init__(self, date, sample, single_end, subsample):
         #pdb.set_trace()
         self.date = date
         self.sample = ""
-        if style == "old":
-            self.sample = sample.split("_")[1]
-        elif style == "new":
-            self.sample = sample
+        #if style == "old":
+        #    self.sample = sample.split("_")[1]
+        #elif style == "new":
+        #    self.sample = sample
         self.single_end = single_end
-        self.index = index
-        self.input_prefix = index[1]
+        self.subsample = subsample
+        #self.index = index
+        #self.input_prefix = index[1]
         self.input1 = ""
         self.input2 = ""
         fastq_date_dir = "/".join([fastq_dir, date])
@@ -36,28 +36,27 @@ class bowtie_class:
         if single_end:
             self.input1 = "/".join([fastq_dir, date, "".join([sample, '.fastq'])])                      
         else:
-            self.input1 = "/".join([fastq_dir, date, sample, index[0], 
-                                    "_".join([self.sample, '1.fastq'])])
-            self.input2 = "/".join([fastq_dir, date, sample, index[0], 
-                                    "_".join([self.sample, '3.fastq'])])
+            self.input1 = "/".join([fastq_dir, date, sample, 
+                                    "_".join([subsample, 'r1.fastq.gz'])])
+            self.input2 = "/".join([fastq_dir, date, sample,
+                                    "_".join([subsample, 'r2.fastq.gz'])])
             print self.input1
             #self.input1 = "/".join([fastq_dir, date, sample, index[0], '1.fastq'])
             #self.input2 = "/".join([fastq_dir, date, sample, index[0], '2.fastq'])
+        
+        ## Setup output files
         sam_date_dir = "/".join([sam_dir, self.date])
         if not os.path.exists(sam_date_dir): os.mkdir(sam_date_dir)
-        self.samfile = "/".join([sam_date_dir, "".join([self.input_prefix, ".sam"])])
-#        pdb.set_trace()
-        #self.unmapped = "/".join([sam_date_dir, "".join([self.input_prefix, "_unaligned"])])
-        self.bamfile = "/".join([bam_dir, self.date, "".join([self.input_prefix, ".bam"])])
+        self.samfile = "/".join([sam_date_dir, "".join([subsample, ".sam"])])
         
+        self.bamfile = "/".join([bam_dir, self.date, "".join([subsample, ".bam"])])
         bam_date_dir = "/".join([bam_dir, self.date])
         if not os.path.exists(bam_date_dir): os.mkdir(bam_date_dir)
+        
+        ## Setup log directory and log file for current run
         fastq_date_log_dir = "/".join([fastq_date_dir, "logs"])
-        #pdb.set_trace()
         if not os.path.exists(fastq_date_log_dir): os.mkdir(fastq_date_log_dir)
-        #self.runlog = open("/".join([bam_date_log_dir, "".join([self.input_prefix, "_run_log"])]), 'w+')
-        #pdb.set_trace()
-        self.errorlog = open("/".join([fastq_date_log_dir, "".join([self.input_prefix, "_log"])]), 'a', 0)
+        self.errorlog = open("/".join([fastq_date_log_dir, "".join([subsample, "_log"])]), 'a', 0)
         now = datetime.datetime.now()
         header = "[{0}/{1}/{2} {3}:{4}:{5}]\n".format(now.month, now.day,
                                                       now.year, now.hour,
@@ -70,8 +69,7 @@ class bowtie_class:
         run = True
         if os.path.exists(self.samfile):
             dec = raw_input("SAM exists. Overwrite? [y/n]")
-            if dec == "n": run = False
-        
+            if dec == "n": run = False  
         if run:    
             if not self.single_end:
                 cmd_args = ['bowtie2',
@@ -89,15 +87,12 @@ class bowtie_class:
             self.errorlog.write(" ".join(cmd_args) + "\n")
             try:
                 p1 = Popen(cmd_args, stderr=self.errorlog)
-            #    print "Running bowtie: " + " ".join(cmd_args) 
+                print "Running bowtie2: " + " ".join(cmd_args) 
                 p1.wait()
             except:
                 return
-            #self.errorlog.close()
             
-            #self.runlog.close()
     def sam2bam(self):
-        #pdb.set_trace()
         if not os.path.exists(self.bamfile):
             try:
                 sam.sam2bam(self.samfile, self.bamfile, self.errorlog)
@@ -110,7 +105,7 @@ class bowtie_class:
                 return
             else:
                 self.errorlog.write("SAM to BAM completed successfully.\n")
-                self.errorlog.write("Removing SAM...")
+                self.errorlog.write("Removing SAM...\n")
                 os.remove(self.samfile)
             
             try:
@@ -123,9 +118,9 @@ class bowtie_class:
     def proc(self):
         ret = sam.proc([self.bamfile, "False"])
 
-def bowtie(date, sample, single_end, index, style):
+def bowtie(date, sample, single_end, subsample):
     #pdb.set_trace()
-    bowtie_obj = bowtie_class(date, sample, single_end, index, style)
+    bowtie_obj = bowtie_class(date, sample, single_end, subsample)
     bowtie_obj.map()
     #bowtie_obj.proc()
     bowtie_obj.sam2bam()

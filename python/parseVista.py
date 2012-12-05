@@ -2,6 +2,14 @@
 
 import sys, re, pdb
 
+# parse vista info file
+# format:
+#  element
+#  hs position
+#  hs id
+#  mm position
+#  mm id
+
 def main(argv):
     
     infile = open(argv[1])

@@ -1,0 +1,13 @@
+Plotting metaprofiles
+========================================================
+
+
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+```
+
+
+```{r fig.width=7, fig.height=6}
+plot2("gene_whole_W200N50F50_chr", "omp_hmc_120424_rpkm", data_type="rpkm/mean")
+```
+

@@ -4,8 +4,6 @@ source("~/src/seqAnalysis/R/profiles2.R")
 source("~/src/seqAnalysis/R/boot.R")
 source("~/src/seqAnalysis/R/modeling.R")
 
-library(Brobdingnag)
-
 registerDoMC(cores=3)
 
 feature.path <- "~/lib/features_general"
@@ -77,45 +75,7 @@ featureClasses5 <- factor(1:5, labels=c("Upstream", "Exons", "Transcript", "Inte
 
 enhancerClasses <- data.frame(cluster=1:14, class=factor(1:4, labels=c("5hmC variable", "5hmC/5mC variable", "5mC variable", "Invariant"))[c(1,1,1,1,2,2,2,2,3,4,3,3,3,3)])
 
-makeFeatureMatrix <- function(feature, set="cells", value_type = "raw", write=TRUE) {
-  if (set=="cells") {
-    samples <- samples.cells
-  } else if (set=="cells_rlm") {
-    samples <- samples.cells.rlm
-  }
-  if (value_type == "raw") {
-    value_column <- 5
-  } else {
-    value_column <- 6
-  }
- 
- vals <- foreach (sample=samples, .combine="cbind") %dopar% {
-    data <- read.delim(paste(feature_norm_path, sample, feature, sep="/"), header=FALSE)
-    val <- data[, value_column]
-    names(val) <- data[,4]
-    return(val)
-  }
-  
- colnames(vals) <- samples
- if (write) write.table(vals, file=paste(feature_norm_path, "summaries", paste(set, feature, value_type, sep="_"), sep="/"),
-                        quote=FALSE, sep="\t")
- return(vals)
-}
-
-makeFeatureMatrix.all <- function(set="cells", value_type="raw") {
-  files <- list.files(feature.path)
-  files <- files[grep("chr", files)]
-  for(file in files) {
-    print(file)
-    if (file.exists(paste(feature_norm_path, "summaries", paste(set, file, value_type, sep="_"), sep="/"))) {
-      print("File exists")
-      next
-    }  
-    a <- makeFeatureMatrix(file, set=set, value_type=value_type, write=TRUE)
-  }
-}
-
-## Make summaries
+## Make summaries --------------------------
 makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type, transf=NULL, write=TRUE) {
   if (set=="cells_norm" | set=="cells") {
     samples <- samples.cells_norm
@@ -185,6 +145,9 @@ makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type, tra
     samples <- c("wgEncodeUwDnaseCerebrumC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseCerebellumC57bl6MAdult8wksAlnRep1",
                  "wgEncodeUwDnaseHeartC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseLiverC57bl6MAdult8wksAlnRep1",
                  "wgEncodeUwDnaseRetinaC57bl6MAdult1wksAlnRep1")
+  } else if (set=="encode_mk4") {
+      samples <- c("encode_cbellum_h3k4me1", "encode_cortex_h3k4me1", "encode_heart_h3k4me1",
+                   "encode_liver_h3k4me1", "encode_lung_h3k4me1")
   }
   if (!is.null(select)) {
     samples <- sapply(samples, function(x) paste(x, select, sep="_"))
@@ -654,13 +617,4 @@ ecdf <- function(d) {
   vals <- vals / count_sum
   return(cbind(breaks=h$mids, vals=vals))
 }
-
-.sem <- function(vals) {
-  sem <- sd(vals)/sqrt(length(vals) - 1)
-  return(sem)
-}
-
-#readBFsave <- function(bf, data_type="unnorm/mean", cutoff=3) {
-#  data <- read.delim(paste(feature_norm_path, data_type, "bf", bf, sep="/", header=FALSE
-#}
 

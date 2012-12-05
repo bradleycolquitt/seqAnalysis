@@ -31,7 +31,7 @@ class tab:
         self.sample_type = sample_type
         self.bam_attr = bam_attr
         self.fun = fun
-        #self._type = type
+        self.data_type = data_type
         self.split_anno = split_anno
         self.strand = strand
         self.window_size = 1
@@ -50,8 +50,7 @@ class tab:
         anno = self.anno
         h5 = tb.openFile(SAMPLE_PATH + "/" + self.sample)
         samples = [s._v_name for s in h5.iterNodes("/")]
-        
-#        h5.close()
+    
         for sample in samples:
             if self.flank:
                 if os.path.exists(self.out_path + "/" + sample + "_flank" + str(self.flank)):
@@ -71,26 +70,14 @@ class tab:
             tmp_path = tempfile.mkdtemp(suffix=os.path.basename(anno))
 
         
-        #pdb.set_trace()
+    
             
             
             exp = 0
-            #if self.fun=="randc":
-            #    try:
-            #        exp = sample._f_getAttr('ExpectedRPM')
-            #    except AttributeError:
-            #        exp = computeExpected(sample)
-            #        sample._f_setAttr('ExpectedRPM', exp)
-            #        self.sample.flush()
-            #        print "Expected RPM:", exp
-            #worker(anno, sample, chrs_tbp, tmp_path, self.fun)
+    
             pool = Pool(processes=6)
             for chr_tbp in chrs_tbp:
-                #print chr_tbp
-                #self.tab_h5(anno, sample, chr_tbp, tmp_path, self.fun, exp)
                 #tab_h5(self, anno, sample, chr_tbp, tmp_path, self.fun, exp)
-                ##pdb.set_trace()
-                #pool.apply(tab_h5, (self, anno, sample, chr_tbp, tmp_path, self.fun, exp))
                 pool.apply_async(tab_h5, (self, anno, sample, chr_tbp, tmp_path, self.fun, exp))
             pool.close()
             pool.join()
@@ -155,6 +142,7 @@ def tab_h5(self, anno, track, chr_tbp, tmp_path, fun, exp):
     start = 0
     end = 0
     vals = 0
+    result = 0  
     strand_line = "+"
     strand_factor = 1
     for line in anno_data:
@@ -175,11 +163,8 @@ def tab_h5(self, anno, track, chr_tbp, tmp_path, fun, exp):
 #            pdb.set_trace()
             if len(sline) == 6: strand_line = sline[5]
             elif len(sline) == 4: strand_line = sline[3]
-            if strand_line == "-":
-                strand_factor = -1
-            else:
-                strand_factor = 1
         
+        vals = vals[~np.isnan(vals)]
         if len(vals) > 0:
             #pdb.set_trace()
             if self.split_anno:
@@ -187,10 +172,24 @@ def tab_h5(self, anno, track, chr_tbp, tmp_path, fun, exp):
                     out = "\t".join([line, str(val)]) + "\n"
                     anno_out.write(out) 
             else:
-                result = strand_factor * compute_result(vals, fun)
+                if self.data_type == "strand_diff":
+                    if strand_line == "-":
+                        result = -1 * compute_result(vals, fun)
+                    else:
+                        result = compute_result(vals, fun)
+                elif self.data_type == "strand_fraction":
+                    if strand_line == "-":
+                        result = 1 - compute_result(vals, fun)
+                    else:
+                        result = compute_result(vals, fun)
+                else:
+                    result = compute_result(vals, fun)
                 #if result > 4: pdb.set_trace()
                 out = "\t".join([line, str(result)]) + "\n"
                 anno_out.write(out)
+        else:
+            out = "\t".join([line, "NA"]) + "\n"
+            anno_out.write(out)
             
     anno_data.close()
     anno_out.close()
@@ -288,6 +287,8 @@ def compute_result(vals, fun):
         result = val_mean(vals)
     elif fun == "mean_skip_zero":
         result = val_mean(vals[vals[:]>0])
+    elif fun == "mean_abs":
+        result = val_mean(abs(vals))
     elif fun == "median":
         result = np.median(vals)
     elif fun == "mode":
@@ -322,9 +323,10 @@ def val_mean(vals):
     result = np.mean(vals)
     if np.isnan(result): result = 0
     return result
-
+    
 def val_mean_nz(vals):
     result = np.sum()
+    
 def val_mode(vals):
     counts = {}
     for val in vals:
@@ -386,7 +388,7 @@ def main(argv):
     parser.add_argument('--bam_attr', required=False, default="count", help="BAM attribute to group")
     parser.add_argument('--data_type', help="Directory for analysis output")
     parser.add_argument('--function', dest='fun', required=False, default="mean",
-                        choices=['mean', 'mean_skip_zero', 'median', 'mode','sum',
+                        choices=['mean', 'mean_skip_zero', 'mean_abs', 'median', 'mode','sum',
                                  'max', 'var', 'cv', 'kurtosis', 'energy'],
                         help="Summary function to apply to read counts")
     parser.add_argument('--split', dest="split_anno", action="store_true", default=False)

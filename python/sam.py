@@ -67,10 +67,11 @@ def sam2bam(sam, bam, errorlog):
         bamfile.close()
     except:
         raise("Error converting SAM to BAM: read {0}\n".format(read_number))
-    else:
-        os.remove(sam)
+    #else:
+        #os.remove(sam)
         #os.remove(sam_out_name)
     
+#def proc(bamfile, sort, rmdup, errorlog):
 def proc(arg):
     bamfile = arg[0]
     rmdup = arg[1]

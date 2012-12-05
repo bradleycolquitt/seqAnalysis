@@ -7,7 +7,7 @@ import datetime
 
 ## Take manifest file of fastq files to map with bowtie
 ## Each line in manifest file has the form:
-##      date [111221]   lane [s_1]  library-type [SE | PE] index-sample_name [1-moe_native_pol2]
+##      date [111221]   sample_directory  library-type [SE | PE] index-sample_name [1-moe_native_pol2]
 
 def main(argv):
     parser = argparse.ArgumentParser()
@@ -23,23 +23,23 @@ def main(argv):
         if not re.search("#", line):
             line = line.split()
             date = line[0]  ## date of sequencing
-            lane = line[1]  ## lane of flow cell
+            sample = line[1] ## sample directory
             single_end = line[2] ## single or paired end
-            style = line[3]
-            indices_names = line[4:] ## list of indices to process
-            indices = []
+            #style = line[3]
+            subsamples = line[3:] ## list of samples within directory to process
+            #indices = []
             
-            for index_name in indices_names:
-                index_name = index_name.split("-")
-                indices.append((index_name[0], index_name[1]))
+            #for index_name in indices_names:
+            #    index_name = index_name.split("-")
+            #    indices.append((index_name[0], index_name[1]))
         
-            for index in indices:
+            for subsample in subsamples:
                 print line
                 if single_end == "PE": single_end = ""
                 try:
-                    bowtie2.bowtie(date, lane, bool(single_end), index, style)
+                    bowtie2.bowtie(date, sample, bool(single_end), subsample)
                 except:
-                    errorlog.write(str(sys.exc_info()[0]) + " ".join([str(index[0]), index[1]]) + "\n")
+                    errorlog.write(str(sys.exc_info()[0]) + " ".join([sample, subsample]) + "\n")
                     continue
     errorlog.close()   
 

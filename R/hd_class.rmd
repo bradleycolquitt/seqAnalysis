@@ -1,13 +1,13 @@
 Classification of enhancers by homeodomain sites
-========================================================
-
+==========
 Goal
 ----------
-Berger et al (2008) defined the binding preferences of X homeodomain transcription factors for Y 8-mers. Can we classify Dnmt3a-targeted regions by the occurence or distribution of these preferred sequences? That is, can we use this information to predict what HD will bind a given region? 
+Berger et al (2008) defined the binding preferences of 178 homeodomain transcription factors for Y 8-mers. Can we classify Dnmt3a-targeted regions by the occurence or distribution of these preferred sequences? That is, can we use this information to predict what HD will bind a given region? 
 
 ### Approach
 1. Count the number of HD sites within a given sequence
     * Dnmt3a-targeted conserved regions (N = 7903)
+    * DNase HS regions 
     * Vista enhancers (N = 1756)
     * Conserved regions within vista enhancers (N = 4020)
       * phastConsElements30way_len50_inter_vista2_masked.fa
@@ -58,7 +58,49 @@ Threshold count matrix by significant E-score (0.45) and remove outliers.
 ```
 vista.count.norm.thresh <- threshold_count_matrix(vista.count.norm)
 q <- quantile(rowSums(vista.count.norm.thresh), probs=c(.01, .99))
-vista.counts.norm.thresh.98 <- vista.counts.norm.thresh[rowSums(vista.counts.norm.thresh)>=q[1]&rowSums(vista.counts.norm.thresh)<=q[2],]
+vista.counts.norm.thresh.98 <- vista.counts.norm.thresh[rowSums(vista.counts.norm.thresh)>=q[1] & rowSums(vista.counts.norm.thresh)<=q[2],]
 ```
 
+#### 2. Clustering
 
+#### HOPACH
+
+```{r}
+vista.counts.norm.thresh.98 <- readRDS("~/data/vista/vista_masked_counts_normBinom_thresh45_mid98.rds")
+```
+Cosangle distance matrix
+```
+vista.counts.norm.thresh.98.cos <- distancematrix(vista.counts.norm.thresh.98, "cosangle")
+```
+
+Hopach clustering
+```
+vista.counts.norm.thresh.98.ho <- hopach(data=vista.counts.norm.thresh.98, dmat=vista.counts.norm.thresh.98.cos)
+```
+```{r}
+vista.counts.norm.thresh.98.ho <- readRDS("~/data/vista/vista_masked_counts_normBinom_thresh45_mid98_hopach_cosangle.rds")
+```
+
+Plot original data with hopach ordering.
+```{r}
+suppressPackageStartupMessages(library(gplots))
+heatmap.2(vista.counts.norm.thresh.98[vista.counts.norm.thresh.98.ho$final$order,], trace="none", Rowv=F, breaks=seq(0,2000,100))
+```
+
+Plot 5hmC Dnmt3a KO/WT ratios in this order.
+```{r}
+vista.d3a <- readRDS("~/s2/analysis/features/norm/rpkm/mean/rdata/d3a_rpkm_vista.bed_chr_sqrt_ratios")
+vista.d3a.ord <- vista.d3a[match(rownames(vista.counts.norm.thresh.98), rownames(vista.d3a)),]
+library(ggplot2)
+rename <- reshape::rename
+gg <- ggplot(vista.d3a.ord, aes(x=1:nrow(vista.d3a.ord), y=hmc_ko_wt))
+gg <- gg + geom_line() + coord_flip() + scale_x_reverse()
+gg <- gg + stat_smooth(method="loess", span=.1)
+gg
+```
+
+#### Hierachical clustering
+
+Cosangle distance matrix from above.
+
+Euclici

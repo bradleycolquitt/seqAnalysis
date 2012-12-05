@@ -35,7 +35,7 @@ samples.d3a_rpkm <- c("moe_d3a_wt_hmc_rpkm", "moe_d3a_ko_hmc_rpkm", "moe_d3a_wt_
 samples.d3a_2 <- c("moe_d3a_wt_hmc", "moe_d3a_ko_hmc", "moe_d3a_wt_mc", "moe_d3a_ko_mc")
 samples.cells.rlm <- paste(c("omp", "ngn", "icam"), rep(c("hmc_rlm", "mc_rlm"), each=3), sep="_")
 samples.d3a.rlm <- paste(c("moe_wt", "moe_d3a"), rep(c("hmc_rlm", "mc_rlm"), each=2), sep="_")
-samples.d3a_nuc <- c("d3xog_wt_nuc_478_rmdup", "d3xog_ko_nuc_256_rmdup")
+samples.d3a_nuc <- c("d3xog_wt_nuc_478_rmdup_q30", "d3xog_ko_nuc_256_rmdup_q30")
 samples.d3a_nuc_sub <- c("d3xog_wt_nuc_478_rmdup_sub_omp_naked_s78", "d3xog_ko_nuc_256_rmdup_sub_omp_naked_s78")
 samples.cells_raw <- c("omp_hmc_unnorm", "ngn_hmc_unnorm", "icam_hmc_unnorm",
                        "omp_mc_unnorm", "ngn_mc_unnorm", "icam_mc_unnorm")

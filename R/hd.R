@@ -114,9 +114,10 @@ parse_kmer_counts <- function(dir) {
   files <- list.files(dir)
   files <- files[grep("fa$", files)]
   
-  files_prefixes <- str_split(files, ".fa")
+  files_prefixes <- str_split(files, ".fa_")
   files_prefixes <- unlist(lapply(files_prefixes, function(x) x[1]))
   #files_prefixes <- unlist(lapply(files_prefixes, function(x) paste("el", x, sep="_")))
+  #return(files_prefixes)
   # Rows: sequences
   # Cols: 8mer
   count_matrix <- matrix(0, nrow=length(files_prefixes), ncol=nrow(ESCORE_MAT)*2, 
@@ -133,6 +134,7 @@ parse_kmer_counts <- function(dir) {
   close(pb)
   
   count_matrix <- apply(count_matrix, 2, as.numeric)
+  rownames(count_matrix) <- files_prefixes
   return(count_matrix)
 }
   
@@ -170,8 +172,44 @@ norm_by_binom <- function(counts, seq_list) {
   print("Normalize counts")
   kmer_freq_seq <- kmer_freq_seq[match(rownames(counts), rownames(kmer_freq_seq)),]
   kmer_freq_seq <- na.omit(kmer_freq_seq)
-  kmer_freq_seq <- kmer_freq_seq[-grep(setdiff(rownames(kmer_freq_seq), rownames(counts)), rownames(kmer_freq_seq)),]
   #return(kmer_freq_seq)
+  #kmer_freq_seq <- kmer_freq_seq[-grep(setdiff(rownames(kmer_freq_seq), rownames(counts)), rownames(kmer_freq_seq)),]
+  #return(kmer_freq_seq)
+  counts_norm <- counts / kmer_freq_seq
+  
+  return(counts_norm)
+}
+
+# Normalize count matrix by expected occurence by binomial
+norm_by_binom_each_seq <- function(counts, seq_list) {
+
+  # Determine mononucleotide frequencies
+  print("Compute mononucleotide frequencies")
+  mononuc_freq <- computeFrequencies.count(seq_list)
+  mononuc_freq_mean <- apply(mononuc_freq, 2, mean, na.rm=TRUE)
+  
+  # Loop across colnames (kmers) and calculate expected frequency for each
+  print("Computing expected frequencies")
+  kmer_freq <- foreach(seq_freq=isplitRows(mononuc_freq, chunkSize=1), .combine="rbind") %dopar% {
+    foreach(kmer=colnames(counts), .combine="c") %do% {
+      names(seq_freq) <- c("A", "C", "G", "T")
+      expectedFrequencies.single(kmer, seq_freq)
+    }
+  }
+  colnames(kmer_freq) <- colnames(counts)
+  rownames(kmer_freq) <- names(seq_list)
+  
+  # Construct expectation matrix from
+  # vector of sequence lengths and vector of kmer frequencies
+  print("Construct expectation matrix")
+  kmer_freq_seq <- width(seq_list) * kmer_freq
+  colnames(kmer_freq_seq) <- colnames(counts)
+  rownames(kmer_freq_seq) <- names(seq_list)
+    
+  # Normalize counts by expectation matrix
+  print("Normalize counts")
+  kmer_freq_seq <- kmer_freq_seq[match(rownames(counts), rownames(kmer_freq_seq)),]
+  kmer_freq_seq <- na.omit(kmer_freq_seq)
   counts_norm <- counts / kmer_freq_seq
   
   return(counts_norm)

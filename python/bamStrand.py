@@ -4,18 +4,19 @@ import sys
 import os
 import argparse
 import pysam
+import pdb
 import BAMtoWIG as b2w
 from subprocess import Popen
 
 def splitByStrand(bamfile, pe):
     
     bam_prefix = bamfile.split(".bam")[0]
-    
+    #pdb.set_trace()
     if pe:
-        flags = [('-f 0x40 -F 0x10', 'plus'), ('-f 0x40 -F 0x20', 'minus')]
+        flags = [('-f 0x40', '-F 0x10', 'plus'), ('-f 0x40', '-F 0x20', 'minus')]
         cmd_args = [['samtools', 'view',
-                 '-b', flag[0], bamfile,
-                 bam_prefix + "_" + flag[1] + ".bam"]for flag in flags]
+                 '-b', flag[0], flag[1], bamfile,
+                 bam_prefix + "_" + flag[2] + ".bam"]for flag in flags]
     else:
         flags = [('-F 0x10', 'plus'), ('-f 0x10', 'minus')]
         cmd_args = [['samtools', 'view',
@@ -25,16 +26,17 @@ def splitByStrand(bamfile, pe):
     
     
     for cmd_arg in cmd_args:
+       # pdb.set_trace()
         print cmd_arg
-        if os.path.exists(cmd_arg[5]): 
+        if os.path.exists(cmd_arg[len(cmd_arg)-1]): 
             continue
-        outfile = open(cmd_arg[5], 'w')
-        p = Popen(cmd_arg[:5], stdout=outfile)
+        outfile = open(cmd_arg[len(cmd_arg)-1], 'w')
+        p = Popen(cmd_arg[:(len(cmd_arg)-1)], stdout=outfile)
         p.wait()
-        pysam.index(cmd_arg[5])
+        pysam.index(cmd_arg[len(cmd_arg)-1])
     
     # Return split BAM names
-    return([cmd_arg[5] for cmd_arg in cmd_args])
+    return([cmd_arg[len(cmd_arg)-1] for cmd_arg in cmd_args])
 
 def loadTrack(split_bam, outfile):
     

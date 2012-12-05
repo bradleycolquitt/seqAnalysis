@@ -63,7 +63,7 @@ class corr_genome:
 
 def compute_by_chrom(obj):
     
-        pool = Pool(processes=6)
+        pool = Pool(processes=4)
         for chr_tbp in obj.chrs_tbp:
             #compute_worker(obj, chr_tbp)
             #pool.apply(compute_worker, (obj, chr_tbp))
