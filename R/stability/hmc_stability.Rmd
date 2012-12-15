@@ -1,0 +1,78 @@
+5hmC stability
+========================================================
+
+TFO
+----------
+
+Scatter of gene body levels
+```{r}
+tfo.gene <- read.delim("~/s2/analysis/features/norm/rpkm/mean/summaries/tfo_refgene_chr_sqrt")
+cor(tfo.gene)
+```
+
+```{r "refgene_chr_sqrt_omp_hmc_120424_full_tfo_hmc_full_scatter", fig.width=8, fig.height=8, dev=c("png", "pdf")}
+library(ggplot2)
+gg <- ggplot(tfo.gene, aes(omp_hmc_120424_full, tfo_hmc_full))
+gg + geom_point(alpha=I(1/5)) + coord_cartesian(xlim=c(0, .32), ylim=c(0, .32))
+last_plot() + geom_abline(slope=1, intercept=0, color="red") + xlab(bquote(.("OMP 5hmC" ~ sqrt(bar(RPM))))) + ylab(bquote(.("OMP-tTA x tetO-H2B-GFP 5hmC" ~ sqrt(bar(RPM))))) + theme(axis.text.x=element_text(size=20, color="black"), axis.text.y=element_text(size=20, color="black"), axis.title.x=element_text(size=24), axis.title.y=element_text(size=24))
+last_plot() + annotate("text", x=.08, y=.3, label="Pearson R = 0.94", size=9)
+
+```
+
+Scatter of TSS levels
+```{r}
+tfo.tss <- read.delim("~/s2/analysis/features/norm/rpkm/mean/summaries/tfo_refgene_-1kbTSS+1kb_chr_sqrt")
+cor(tfo.tss)
+```
+
+```{r "refgene_-1kbTSS+1kb_chr_sqrt_omp_hmc_120424_full_tfo_hmc_full_scatter", fig.width=8, fig.height=8, dev=c("png", "pdf")}
+library(ggplot2)
+gg <- ggplot(tfo.tss, aes(omp_hmc_120424_full, tfo_hmc_full))
+gg + geom_point(alpha=I(1/5)) + coord_cartesian(xlim=c(0, .32), ylim=c(0, .32))
+last_plot() + geom_abline(slope=1, intercept=0, color="red") + xlab(bquote(.("OMP 5hmC" ~ sqrt(bar(RPM))))) + ylab(bquote(.("OMP-tTA x tetO-H2B-GFP 5hmC" ~ sqrt(bar(RPM))))) + theme(axis.text.x=element_text(size=20, color="black"), axis.text.y=element_text(size=20, color="black"), axis.title.x=element_text(size=24), axis.title.y=element_text(size=24))
+last_plot() + annotate("text", x=.08, y=.3, label="Pearson R = 0.94", size=9)
+
+```
+Gene 5hmC plot comparing OMP with OMP-tTA / tetO-H2B-GFP (+DOX)
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+```
+```
+makeProfile2("gene_whole_W200N50F50_chr", c("omp_hmc_120424_rpkm", "tfo_hmc_22M"), data_type="rpkm/mean")
+makeProfile2("gene_whole_W200N50F50_chr", c("omp_hmc_120424_rpkm", "tfo_hmc_22M"), data_type="rpkm/mean", group2="omp_quartiles")
+```
+
+```{r "gene_whole_W200N50F50_omp_hmc_120424_rpkm_tfo_hmc_22M", fig.width=6, fig.height=4.5, dev=c('png', 'pdf')}
+plot2.several("gene_whole_W200N50F50_chr", "tfo_omp_rpkm", data_type="rpkm/mean", cols=col2, fname="manual", wsize=200, y.vals=c(.2, .9), lab=c("TSS","TES"))
+```
+
+Dnmt3a
+----------
+
+```
+makeProfile2("gene_whole_W200N50F50_chr", c("moe_d3a_wt_hmc_rpkm", "moe_d3a_ko_hmc_rpkm"), data_type="rpkm/mean")
+```
+```{r "gene_whole_W200N50F50_moe_d3a_wt_ko_hmc_rpkm", fig.width=6, fig.height=4.5, dev=c('png', 'pdf')}
+plot2.several("gene_whole_W200N50F50_chr", "d3a_hmc", data_type="rpkm/mean", cols=col2, fname="manual", wsize=200, y.vals=c(.1, .9), lab=c("TSS","TES"))
+```
+
+Compute permutation significance
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+positionMatrix.all("gene_whole_W200N50F50_chr", data_type="rpkm/mean")
+wt <- makeImage("moe_d3a_wt_hmc_rpkm", "gene_whole_W200N50F50_chr", data_type="rpkm/mean", image=FALSE)
+ko <- makeImage("moe_d3a_ko_hmc_rpkm", "gene_whole_W200N50F50_chr", data_type="rpkm/mean", image=FALSE)
+```
+
+Permutation test
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/modeling.R"))
+wt.ko.perm <- permutationTest.mat(wt, ko, N=1000)
+```
+
+Add significance line to plot
+```{r "gene_whole_W200N50F50_moe_d3a_wt_ko_hmc_rpkm_sigLine", fig.width=6, fig.height=4.5, dev=c('png', 'pdf')}
+plot2.several("gene_whole_W200N50F50_chr", "d3a_hmc", data_type="rpkm/mean", cols=col2, fname="manual", wsize=200, y.vals=c(.1, .9), lab=c("TSS","TES"))
+plotSigLine(sig_values=wt.ko.perm, step=5, yval=.85, thresh=0.01)
+```
+

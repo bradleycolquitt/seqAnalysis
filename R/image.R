@@ -1,11 +1,17 @@
-source("~/src/seqAnalysis/R/paths.R")
 library(itertools)
+library(gplots)
+library(plyr)
+library(foreach)
+library(doMC)
+library(RColorBrewer)
+
+source("~/src/seqAnalysis/R/paths.R")
 
 ## Generates matrix of samples values with annotation observations as rows and
 ##    positions as columns
 ##    Arguments:  data - profile data with [chr start stop name position strand value]
 ##                data_type - directory and normalization type
-positionMatrix <- function(data, data_type="raw") {
+positionMatrix <- function(data, group2, data_type="raw") {
   groups <- unique(data[,5])
   names <- unique(data[,4])
   print("Splitting...")
@@ -17,9 +23,44 @@ positionMatrix <- function(data, data_type="raw") {
     return(data_group[m, 7])
   }
   rownames(out) <- names
-  return(out)
+  return(out[!is.na(rownames(out)),])
 }
 
+positionMatrix.group <- function(anno, sample, data_type="rpkm/mean", group2=NULL, rm.outliers=0) {
+  data_path <- paste(profile2.path, "norm", data_type, anno, sep="/")
+  #data <- read.delim(paste(data_path, sample, sep="/"), header=FALSE, colClasses=image.classes)
+  
+  group2_data <- read.delim(paste(group2.path, group2, sep="/"), header=FALSE)
+  
+  out_path <- paste(profile2.path, "norm", data_type, anno, "images", sep="/")
+  out_name <- paste(sample, group2, sep="_")
+  if (!file.exists(out_path)) dir.create(out_path)
+  
+  if (!file.exists(paste(out_path, paste(out_name, group2_data[1,2], sep="_"), sep="/"))) {
+    print(sample)
+    data_path <- paste(profile2.path, "norm", data_type, anno, sep="/")
+    data <- read.delim(paste(data_path, sample, sep="/"), header=FALSE, colClasses=image.classes)
+    #return(data)
+    group2_data <- read.delim(paste(group2.path, group2, sep="/"), header=FALSE)
+    
+    if (rm.outliers > 0) {
+      thresh <- quantile(data[,7], probs=c(rm.outliers, 1-rm.outliers), na.rm=TRUE)
+      data <- data[data[,7] >= thresh[1] & data[,7] <= thresh[2], ]
+    }
+    #return(match(as.character(data[,4]), as.character(group2_data[,1])))
+    group2_ex <- group2_data[match(data[,4], as.character(group2_data[,1])),]
+    #return(group2_ex)
+    data_split <- split(data, group2_ex[,2])
+    #return(data_split)
+    a <- laply(names(data_split), function(x) {
+      pos_matrix <- positionMatrix(data_split[[x]], data_type=data_type)
+      write.table(pos_matrix, file=paste(out_path, paste(out_name, x, sep="_"), sep="/"),
+                  quote=FALSE, sep="\t", col.names=FALSE)
+      a <- gc()
+    }, .progress="text")
+  }  
+}
+  
 ## Run positionMatrix for specified sample set and given annotation
 ##     Arguments:  anno - annotation file
 ##                 data_type - directory and normalization type
@@ -34,7 +75,8 @@ positionMatrix.all <- function(anno, data_type="unnorm/mean") {
         print(sample)
         data <- read.delim(paste(profile2.path, "norm", data_type, anno, sample, sep="/"),
                        header=FALSE, colClasses=image.classes)
-   
+        #
+        #}
         pos_matrix <- positionMatrix(data, data_type=data_type)
  
         if (!file.exists(out_path)) dir.create(out_path)
@@ -100,7 +142,7 @@ MP.image <- function(vals) {
 MP.heat <- function(data, density="none", range=NULL, average=NULL, fname=NULL) {
   require(gplots)
   if (is.null(fname)) {
-    x11()
+    #x11()
   } else {
     pdf(file=paste("~/s2/analysis/profiles/plots", fname, sep="/"), 12,12)
     #pdf(file=fname, 12, 12)

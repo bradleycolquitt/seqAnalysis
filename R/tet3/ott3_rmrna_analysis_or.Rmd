@@ -1,0 +1,125 @@
+OMP-tTA x TetO-Tet3 rmRNA analysis - olfactory receptors
+========================================================
+
+```{r, fig.width=9, fig.height=6}
+rna.1log2 <-readRDS("~/s2/analysis/rna/rdata/omp_ott3_rmrna_1log2.rds")
+par(mfrow=c(1,3))
+a <- apply(rna.1log2, 2, function(x) plot(density(x)))
+
+```
+
+Scatter OMP and O/TT3 log2(FPKM+1).
+
+```{r, fig.width=4, fig.height=4}
+library(ggplot2)
+library(reshape)
+gg <- ggplot(rna.1log2, aes(omp, ott3))
+gg + geom_point(alpha=I(1/10)) + geom_abline(slope=1, intercept=0, linetype=2)
+```
+
+#### Scatter with ORs highlighted
+```{r, fig.width=5, fig.height=5}
+rna.1log2$or <- "Non-OR"
+rna.1log2$or[grep("Olfr", rownames(rna.1log2))] <- "OR"
+rna.1log2$ps <- "Non-pseudo"
+rna.1log2$ps[grep("-ps", rownames(rna.1log2))] <- "pseudo"
+```
+
+```{r "omp_ott3_rmrna_1log2_scatter_all_or_highlighted", dev=c('png', 'pdf')}
+gg <- ggplot(rna.1log2, aes(omp, ott3, color=or))
+gg <- gg + geom_point(alpha=I(1/5)) + geom_abline(slope=1, intercept=0, linetype=2) + scale_color_manual(name="", values=c("black", "red"))
+gg + theme(legend.position=c(.75, .25)) + coord_cartesian(xlim=c(0,15), ylim=c(0,15)) + ylab("O/TT3 log2(FPKM + 1)") + xlab("OMP log2(FPKM  + 1)")
+```
+
+Wilcoxon test
+```{r}
+with(rna.1log2[rna.1log2$or=="OR",], wilcox.test(omp, ott3))
+```
+
+#### Scatter, just ORs with pseudo highlighted
+```{r "omp_ott3_rmrna_1log2_scatter_or_highlight_pseudo", dev=c('png','pdf')}
+gg <- ggplot(rna.1log2[rna.1log2$or=="OR",], aes(omp, ott3, color=ps))
+gg <- gg + geom_point(alpha=I(1/2)) + geom_abline(slope=1, intercept=0, linetype=2) + scale_color_manual(name="", values=c("black", "red"))
+gg  + ylab("O/TT3 log2(FPKM + 1)") + xlab("OMP log2(FPKM  + 1") + theme(legend.position=c(.25, .75))
+
+```
+
+#### ORs that increase expression
+```{r}
+rna.1log2[rna.1log2$or=="OR" & rna.1log2$ott3.omp>0,]
+```
+
+
+Melt data frame, plot OR boxplot
+#```{r, fig.width=4, fig.height=6}
+#library(reshape2)
+#rna.1log2.m <- melt(rna.1log2, id.vars=c("or"))
+#rna.1log2.m$id <- rownames(rna.1log2)
+#gg <- ggplot(rna.1log2.m[rna.1log2.m$variable!="ott3.omp",], aes(variable, value))
+#gg + geom_boxplot() + facet_grid(.~or) + coord_cartesian(ylim=c(0,5)) + ylab("log2(FPKM+1") + xlab("")
+#```
+
+Vomeronasal receptor expression
+------------------
+```{r}
+rna.1log2.vmn <- rna.1log2[grep("Vmn", rownames(rna.1log2)),]
+boxplot(rna.1log2.vmn[,1:3])
+```
+
+
+Guidance molecule expression
+------------------
+
+Construct curated list of guidance molecules containing
+  * Ephrins
+  * Ephrin receptors
+  * Dscam
+  * Nephrin
+  * Kirrels
+  * Neuropilins
+  * Semaphorins
+  * Plexin
+  * Protocadherins
+  
+  
+```{r}
+gm <- c("Eph", "Efn", "Dscam", "Nphs", "Kirrel", "Nrp", "Plxn", "Sema", "Pchda", "Pchdb", "Pchdg")
+
+# Rownames as variable for plyr function
+rna.1log2 <- namerows(rna.1log2)
+rna.1log2.gm <- ldply(gm, function(x) rna.1log2[grep(x, rna.1log2$id),])
+```
+
+Filter for OMP expressed genes, i.e. log2(FPKM+1) >= 2
+```{r}
+rna.1log2.gm.ex <- rna.1log2.gm[rna.1log2.gm$omp >= 2,]
+rna.1log2.gm.ex.m <- melt(rna.1log2.gm.ex)
+levels(rna.1log2.gm.ex.m$variable) <- c("OMP", "O/Tet3", "O/Tet3 - OMP")
+```
+
+Plot boxplot
+```{r "omp_ott3_rmrna_guidance_boxplot", fig.width=2, fig.height=4, dev=c("png", "pdf")}
+gg <- ggplot(rna.1log2.gm.ex.m[rna.1log2.gm.ex.m$variable!="O/Tet3 - OMP",], aes(variable, value))
+gg + geom_boxplot() + xlab("") + ylab("log2(FPKM + 1)") + theme(axis.text.x=element_text(size=12, face="bold", color="black"))
+last_plot() + coord_cartesian(ylim=c(0, 7)) 
+```
+
+Wilcoxon test
+```{r}
+wilcox.test(rna.1log2.gm.ex$omp, rna.1log2.gm.ex$ott3)
+```
+
+OR 5hmC/5mC levels
+-------------------
+
+```{r}
+feat <- read.delim("~/s2/analysis/features/norm/rpkm/mean/summaries/tt3_min_refgene_chr_sqrt")
+feat.or <- feat[grep("Olfr", rownames(feat)),]
+boxplot(feat.or)
+```
+
+
+
+```{r}
+
+```

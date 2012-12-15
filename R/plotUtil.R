@@ -46,7 +46,7 @@ profileRead <- function(data.path, fun, select, select2=NULL) {
     #ci_files_1 <- sort(files[grep("mean_bootCI_1", files)])
     #ci_files_2 <- sort(files[grep("mean_bootCI_2", files)])
   }
-  #print(val_files)
+  print(val_files)
   #print(ci_files_1)
   #print(ci_files_2)
   val_data <- foreach(file=val_files, .combine="cbind") %do% {

@@ -1,8 +1,13 @@
+
+library("RColorBrewer")
+
 source("~/src/seqAnalysis/R/paths.R")
 source("~/src/seqAnalysis/R/blocks.R")
 source("~/src/seqAnalysis/R/profiles2.R")
 source("~/src/seqAnalysis/R/boot.R")
 source("~/src/seqAnalysis/R/modeling.R")
+
+
 
 registerDoMC(cores=3)
 

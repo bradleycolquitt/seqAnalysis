@@ -3,6 +3,8 @@ library(BSgenome.Mmusculus.UCSC.mm9)
 library(foreach)
 library(itertools)
 library(doMC)
+library(plyr)
+library(stringr)
 
 registerDoMC(cores=6)
 
@@ -321,6 +323,9 @@ trinuc <- expand.grid(c("A", "C", "G", "T"), c("A", "C", "G", "T"), c("A", "C", 
 trinuc <- apply(trinuc, 1, function(x) paste(as.character(x), collapse=""))
 trinuc <- cbind(trinuc, 1:length(trinuc))
 
+dicyto <- data.frame(as.character(c("CA", "CC", "CG", "CT", "TG", "GG", "AG")), 1:7)
+dicyto[,1] <- as.character(dicyto[,1])
+
 nuc_sets = list("mono"=mononuc, "di"=dinuc, "tri"=trinuc)
 
 # Compute expected frequency of nucleotide set (nuc_set) from 
@@ -348,22 +353,27 @@ expectedFrequencies.single <- function(test, monofreq) {
 ## Compute frequencies of nucleotide combinations by position
 ## Input: seq_list (list of sequences)
 ## Input: nuc_set (matrix of all possible nucleotide combinations for given pattern length)
-## Return: Matrix of frequeicnes 
+## Return: Matrix of frequencies - Pattern x position
+
 computeFrequencies <- function(seq_list, nuc_set=trinuc, norm=TRUE, fname=NULL) {
   
-  mindex <- foreach (i=1:nrow(nuc_set)) %dopar% {
+  # Loop through nucleodtide patterns
+  mindex <- llply(1:nrow(nuc_set), function(i) {
     print(i)
-    ms <- lapply(seq_list, function(x) {
+    
+    # Loop through sequences, finding position of nucleotide pattern
+    # Return list of start positions
+    ms <- llply(seq_list, function(x) {
       m <- matchPattern(nuc_set[i,1], x)
       m <- as.matrix(m)[,1]
-    })
-#    m <- matchPattern(nuc_set[i,1], seq)
-#    m <- as.matrix(m)[,1]
+    }, .progress="time")
+    
+    # Restructure start positions into vector
     ms <- do.call("c", ms)
     ms <- factor(ms, levels=1:nchar(seq_list[[1]]))
     b <- gc()
     return(ms)
-  }
+  }, .progress="time", .parallel=TRUE)
  
   names(mindex) <- nuc_set[,1]
   mindex <- lapply(mindex, table)
@@ -371,6 +381,7 @@ computeFrequencies <- function(seq_list, nuc_set=trinuc, norm=TRUE, fname=NULL) 
   mindex <- apply(mindex, 2, function(x) x/sum(x))
   mindex <- t(na.omit(t(mindex)))
 
+  # Normalize by expected frequency of occurance based on mononuc frequencies
   if (norm) {
     print("Normalizing...")
     mono <- na.omit(computeFrequencies.count(seq_list, mononuc))
@@ -378,7 +389,7 @@ computeFrequencies <- function(seq_list, nuc_set=trinuc, norm=TRUE, fname=NULL) 
     expfreq <- expectedFrequencies(mono, nuc_set)
     mindex <- mindex / expfreq
   }
-  #return(mindex)
+  
   if (!is.null(fname)) {
     write.table(mindex, file=fname, quote=F, sep="\t")
   }

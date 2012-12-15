@@ -21,6 +21,12 @@ if (set=="d3a") {
     rows <- 2
     columns <- 1
     orient <- 2
+  } else if (set=="d3a_hmc") {
+    samples <- list(list("moe_d3a_wt_hmc_rpkm", "moe_d3a_ko_hmc_rpkm"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
+    
   } else if (set=="d3a_rlm") {
     samples <- list(list("moe_wt_hmc_rlm", "moe_d3a_hmc_rlm"), list("moe_wt_mc_rlm", "moe_d3a_mc_rlm"))
     rows <- 2
@@ -76,7 +82,7 @@ if (set=="d3a") {
     columns <- 1
     orient <- 2
   } else if (set=="tfo_omp_rpkm") {
-    samples <- list(list("tfo_hmc_22M", "omp_hmc_rpkm"))
+    samples <- list(list("tfo_hmc_22M", "^omp_hmc_120424_rpkm"))
     rows <- 1
     columns <- 1
     orient <- 2
@@ -103,7 +109,13 @@ if (set=="d3a") {
     rows <- 2
     columns <- 1
     orient <- 2
-  } else if (set=="cells_nuc") {
+  } else if (set=="tt3_3") {
+    samples <- list(list("omp_hmc_120424_rpkm", "ott3_1_hmc_rpkm"),
+                    list("omp_mc_rpkm", "ott3_1_mc_rpkm"))
+    rows <- 2
+    columns <- 1
+    orient <- 2
+  }else if (set=="cells_nuc") {
     samples <- list(list("omp_nuc_0123", "icam_nuc_01234"))
     rows <- 1
     columns <- 1

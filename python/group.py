@@ -68,14 +68,10 @@ class tab:
             sample_chrs = [chr._v_name for chr in h5.getNode("/", sample)._f_iterNodes()]
             chrs_tbp = list(set(anno_chrs) & set(sample_chrs))
             tmp_path = tempfile.mkdtemp(suffix=os.path.basename(anno))
-
-        
-    
-            
             
             exp = 0
     
-            pool = Pool(processes=6)
+            pool = Pool(processes=4)
             for chr_tbp in chrs_tbp:
                 #tab_h5(self, anno, sample, chr_tbp, tmp_path, self.fun, exp)
                 pool.apply_async(tab_h5, (self, anno, sample, chr_tbp, tmp_path, self.fun, exp))
@@ -99,7 +95,7 @@ class tab:
         chrs_tbp = os.listdir(anno)
         tmp_path = tempfile.mkdtemp(suffix=os.path.basename(anno))
       
-        pool = Pool(processes=5)
+        pool = Pool(processes=4)
         #bam = pysam.Samfile(self.sample, 'rb')
         for chr_tbp in chrs_tbp:
             pool.apply_async(tab_bam, (self, chr_tbp, tmp_path))
@@ -202,8 +198,10 @@ def tab_bam(obj, chr_tbp , tmp_path):
    
     anno_data = open(obj.anno + "/" + chr_tbp)
     bam = pysam.Samfile(obj.sample, 'rb')
-    norm_val = float(bam.mapped) / 1E6
+    #norm_val = float(bam.mapped) / 1E6
     
+    # Normalize by Reads per million and by reads per kilobase
+    norm_val = 1e6 * 1e3 / (float(obj.window_size) * float(bam.mapped))
     anno_out_path = tmp_path + "/" + chr_tbp
     anno_out = open(anno_out_path, 'w')
     
@@ -271,7 +269,7 @@ def tab_bam(obj, chr_tbp , tmp_path):
             #if result > 4: pdb.set_trace()
             out = ""
             if obj.bam_attr == "count":
-                out = "\t".join([line, str(result / norm_val)]) + "\n"
+                out = "\t".join([line, str(result * norm_val)]) + "\n"
             else:
                 out = "\t".join([line, str(result)]) + "\n"
             

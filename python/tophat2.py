@@ -10,8 +10,8 @@ import pdb
 from subprocess import Popen
 
 fastq_dir = "/media/storage3/data/fastq"
-#bam_dir = "/media/storage2/data/rna/tophat"
-bam_dir = "/home/user/data/rna/tophat"
+bam_dir = "/media/storage2/data/rna/tophat"
+#bam_dir = "/home/user/data/rna/tophat"
 wig_dir = "/media/storage2/data/wig"
 
 class tophat_class:
@@ -26,9 +26,9 @@ class tophat_class:
                                     "_".join([self.sample, '1.fastq'])])
         else:
             self.input1 = "/".join([fastq_dir, date, sample, 
-                                  "_".join([self.sample, '1.fastq'])])
+                                  "_".join([self.sample, 'r1.fastq.gz'])])
             self.input2 = "/".join([fastq_dir, date, sample, 
-                                    "_".join([self.sample, '3.fastq'])])
+                                    "_".join([self.sample, 'r2.fastq.gz'])])
         self.mean = mean
         self.sd = sd
         self.gtf = gtf
@@ -59,14 +59,15 @@ class tophat_class:
             else:
                 if self.gtf != 'blank': 
                     cmd_args = ['tophat2',
-                                '-p', '10',
+                                '-p', '6',
                                 '-o', self.output, 
                                 '-r', self.mean,
                                 '--mate-std-dev', self.sd,
                                 '--max-multihits', '1',
                                 '-G', '/home/user/lib/Mus_musculus/Ensembl/NCBIM37/Annotation/Genes/genes_chr.gtf',
                                 '--transcriptome-index', '/home/user/lib/Mus_musculus/Ensembl/NCBIM37/Annotation/Genes/',
-                                '--prefilter-multihits',
+                                #'--prefilter-multihits',
+                                '--no-coverage-search',
                                 '--library-type', self.library_type, 
                                 self.species, self.input1, self.input2]
                 else:

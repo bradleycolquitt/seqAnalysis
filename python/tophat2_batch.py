@@ -34,9 +34,9 @@ def main(argv):
             #line_args = ['-d', date, '-s', sample, '-i', index]
         if single_end == "PE": single_end = ""
         try:
-            tophat2.tophat(date, sample, bool(single_end), index, mean, sd, gtf, library_type, species)
+            tophat2.tophat(date, sample, bool(single_end), mean, sd, gtf, library_type, species)
         except:
-            errorlog.write(str(sys.exc_info()[0]) + " ".join([str(index[0]), index[1]]) + "\n")
+            errorlog.write(str(sys.exc_info()[0]) + sample + "\n")
             raise
                 
         errorlog.close()   

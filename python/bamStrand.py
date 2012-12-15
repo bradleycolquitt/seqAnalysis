@@ -69,12 +69,14 @@ def main(argv):
     parser.add_argument('--paired-end', dest="pe", action="store_true")
     args = parser.parse_args()
     
+    # Split BAM by strand 
     split_bam = splitByStrand(args.bamfile, args.pe)
+    
     # Split BAM to Wig
     for bam in split_bam:
         print "BAM to WIG..."
         print bam
-        w = b2w.windower(bam, bam.split(".bam")[0] + ".wig", args.window, args.extend, args.pe, "", "")
+        w = b2w.windower(bam, bam.split(".bam")[0] + ".wig", args.window, args.extend, args.pe, "", "", "", "")
         w.window()
         
     #Wig to Track

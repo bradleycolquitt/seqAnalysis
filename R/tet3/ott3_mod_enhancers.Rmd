@@ -1,0 +1,29 @@
+OMP-tTA / tetO-Tet3 5hmC/5mC enhancers
+========================================================
+
+Make profiles
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+makeProfile2("omp_h3k4me1_default_inter_phastCons30way_intergenic_sorted_merge500_thresh500.bed_W25F200_both_chr", "omp_hmc_120424_rpkm", data_type="rpkm/mean")
+makeProfile2("omp_h3k4me1_default_inter_phastCons30way_intergenic_sorted_merge500_thresh500.bed_W25F200_both_chr", "ott3_1_hmc_rpkm", data_type="rpkm/mean")
+makeProfile2("omp_h3k4me1_default_inter_phastCons30way_intergenic_sorted_merge500_thresh500.bed_W25F200_both_chr", "omp_mc_rpkm", data_type="rpkm/mean")
+makeProfile2("omp_h3k4me1_default_inter_phastCons30way_intergenic_sorted_merge500_thresh500.bed_W25F200_both_chr", "ott3_1_mc_rpkm", data_type="rpkm/mean")
+```
+
+Plot OMP and O/TT3 5hmC
+```{r}
+plot2("omp_h3k4me1_default_inter_phastCons30way_intergenic_sorted_merge500_thresh500.bed_W25F200_both_chr", "omp_hmc_120424_rpkm", data_type="rpkm/mean", cols=1, fname="manual")
+```
+
+```{r}
+plot2("omp_h3k4me1_default_inter_phastCons30way_intergenic_sorted_merge500_thresh500.bed_W25F200_both_chr", "ott3_1_hmc_rpkm", data_type="rpkm/mean", cols=1, fname="manual")
+```
+
+Plot OMP and O/TT3 5mC
+```{r}
+plot2("omp_h3k4me1_default_inter_phastCons30way_intergenic_sorted_merge500_thresh500.bed_W25F200_both_chr", "omp_mc_rpkm", data_type="rpkm/mean", cols=1, fname="manual")
+```
+
+```{r}
+plot2("phastCons30way_intergenic_sorted_merge500_thresh500_inter_omp_h3k4me1_gc_F3.bed_W25F200_both_chr", "ott3_1_mc_rpkm", data_type="rpkm/mean", cols=1, fname="manual")
+```

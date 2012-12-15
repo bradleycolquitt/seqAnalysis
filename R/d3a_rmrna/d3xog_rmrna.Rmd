@@ -1,0 +1,12 @@
+Dnmt3a OMP-GFP rmRNA analysis
+========================================================
+
+Average entries with common gene names
+```
+cd2 <- read.delim("~/s2/data/rna/cuffdiff/d3xog_wt_ko_rmrna_masked_uq_comp_js/gene_exp.diff")
+rna2 <- data.frame(wt=cd2$value_1, ko=cd2$value_2, gene=cd2$gene)
+rna2.s <- ddply(rna2, .(gene), summarize, wt=mean(wt), ko=mean(ko), .progress="text")
+
+```
+
+

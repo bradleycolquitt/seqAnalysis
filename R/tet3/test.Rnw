@@ -1,0 +1,110 @@
+Omp-tTA X tetO-Tet3 ribominus-RNA analysis
+========================================================
+
+Extract FPKM values from Cuffdiff output
+```{r}
+cd <- read.delim("~/s2/data/rna/cuffdiff/omp_ott3_rmrna/gene_exp.diff")
+rna <- cd[,c("value_1", "value_2")]
+```
+
+Average entries with common gene names
+```
+library(plyr)
+rna[,3] <- cd$gene
+colnames(rna) <- c("omp", "ott3", "gene")
+rna.s <- ddply(rna, .(gene), summarize, omp=mean(omp), ott3=mean(ott3), .progress="text")
+rownames(rna.s) <- rna.s$gene
+rna.s <- rna.s[,c(2,3)]
+rna.1log2 <- colwise(function(x) log2(x+1))(rna.s)
+rownames(rna.1log2) <- rownames(rna.s)
+```
+
+
+```{r, fig.width=9, fig.height=6}
+rna.1log2 <-readRDS("~/s2/analysis/rna/rdata/omp_ott3_rmrna_1log2.rds")
+par(mfrow=c(1,2))
+a <- apply(rna.1log2, 2, function(x) plot(density(x)))
+
+```
+
+Scatter OMP and O/TT3 log2(FPKM+1).
+
+```{r, fig.width=4, fig.height=4}
+library(ggplot2)
+gg <- ggplot(rna.1log2, aes(omp, ott3))
+gg + geom_point(alpha=I(1/10)) + geom_abline(slope=1, intercept=0, linetype=2)
+```
+
+#### Scatter with ORs highlighted
+```{r, fig.width=5, fig.height=5}
+rna.1log2$or <- "Non-OR"
+rna.1log2$or[grep("Olfr", rownames(rna.1log2))] <- "OR"
+gg <- ggplot(rna.1log2, aes(omp, ott3, color=or))
+gg <- gg + geom_point(alpha=I(1/5)) + geom_abline(slope=1, intercept=0, linetype=2) + scale_color_manual(name="", values=c("black", "red"))
+gg + theme(legend.position=c(.75, .25)) + coord_cartesian(xlim=c(0,15), ylim=c(0,15)) + ylab("O/TT3 log2(FPKM + 1)") + xlab("OMP log2(FPKM  + 1")
+```
+
+Melt data frame, plot OR boxplot
+```{r, fig.width=4, fig.height=6}
+library(reshape2)
+rna.1log2.m <- melt(rna.1log2, id.vars=c("or"))
+rna.1log2.m$id <- rownames(rna.1log2)
+gg <- ggplot(rna.1log2.m, aes(variable, value))
+gg + geom_boxplot() + facet_grid(.~or) + coord_cartesian(ylim=c(0,5)) + ylab("log2(FPKM+1") + xlab("")
+```
+
+Import DNA modification levels, calculated from 2 to 7 kb downstream of TSS.
+```{r}
+dna <- readRDS("~/s2/analysis/features/norm/rpkm/mean/rdata/tt3_min_refgene_nodup_TSS2to7kb_hmc_mc_scores_rm_outliers_clean.rds")
+```
+
+Combine with RNA data
+```{r}
+comb <- dna
+comb$rmrna.omp <- rna.1log2[match(rownames(comb), rownames(rna.1log2)),1]
+comb$rmrna.tt3 <- rna.1log2[match(rownames(comb), rownames(rna.1log2)),2]
+comb <- na.omit(comb)
+dim(comb)
+```
+
+Pearson and Spearman correlations
+```{r}
+cor(comb)
+cor(comb, method="spearman")
+```
+
+Compute ratio scores
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
+comb <- transform(comb, 
+                  hmc.tt3.omp = computeScoreRatios(hmc.tt3, hmc.omp), 
+                  mc.tt3.omp = computeScoreRatios(mc.tt3, mc.omp),
+                  rmrna.tt3.omp = rmrna.tt3-rmrna.omp)
+cor(comb)
+cor(comb, method="spearman")
+
+```
+
+Plot rmRNA ratio versus 5hmC score 
+```{r, fig.width=6, fig.height=4}
+gg <- ggplot(comb, aes(hmc.tt3.omp, rmrna.tt3.omp))
+gg <- gg + geom_point(alpha=I(1/10)) + coord_cartesian(ylim=c(-5, 5)) + xlab("OTT3 / OMP 5hmC ratio") + ylab("OTT3 / OMP RNA ratio")
+gg + stat_smooth(method="lm") + annotate("text", x=1.5, y=4, label="Pearson R = 0.13")
+```
+
+Split genes by gain or loss of 5hmC, and plot boxplot of rmRNA ratio
+```{r, fig.width=4, fig.height=6}
+rna.1log2.m$hmc <- "No change"
+rna.1log2.m$hmc[rna.1log2.m$id %in% rownames(comb[comb$hmc.tt3.omp>0.2,])] <- "Increased"
+rna.1log2.m$hmc[rna.1log2.m$id %in% rownames(comb[comb$hmc.tt3.omp<0.2,])] <- "Decreased"
+hmc.levels <- factor(1:3, labels=c("Decreased", "No change", "Increased"))
+rna.1log2.m$hmc <- hmc.levels[match(rna.1log2.m$hmc, as.character(hmc.levels))]
+#var.levels <- factor(1:2, labels=c("omp", "ott3"))
+#rna.1log2.m$variable <- var.levels[match(rna.1log2.m$variable, as.character(var.levels))]
+levels(rna.1log2.m$variable) <- c("OMP", "O/TT3")
+gg <- ggplot(rna.1log2.m, aes(hmc, value, fill=variable))
+gg <- gg + geom_boxplot(outlier.size=0) + coord_cartesian(ylim=c(0,8)) + scale_fill_grey(name="", start=.4, end=.8) + xlab("O/TT3 vs. OMP 5hmC") + ylab("log2(FPKM + 1)")
+gg
+```
+
+

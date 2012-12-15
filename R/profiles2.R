@@ -8,6 +8,7 @@ library(MEDIPS)
 suppressPackageStartupMessages(library(colorspace))
 suppressPackageStartupMessages(library(cluster))
 suppressPackageStartupMessages(library(gplots))
+library(stringr)
 
 source("~/src/seqAnalysis/R/paths.R")
 source("~/src/seqAnalysis/R/boot.R")
@@ -256,7 +257,7 @@ plotAnno <- function(data, annotation, wsize, cols=NULL, lab=NULL,
        ylim=y.val,
        xlab="",
        ylab="",
-       ann=FALSE, axes=FALSE)
+       ann=FALSE, axes=FALSE, ...)
 
   # Send data to drawer  
   for(i in 1:length(data)) {
@@ -292,11 +293,8 @@ plotAnno <- function(data, annotation, wsize, cols=NULL, lab=NULL,
 
 ## Primary interface for drawing profile of a single sample 
 plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="mean", group2=NULL, group2_col=NULL,
-                     cols=1, lab=c("",""), y.vals=NULL, wsize=25, range=NULL, type="range", fname=NULL) {
+                     cols=1, lab=c("",""), y.vals=NULL, wsize=25, range=NULL, type="range", fname=NULL, ...) {
 
-  print(sample)
-  print(profile2.path)
-  
   ## Orient 1 data structure is no longer used (2/14/12)
   if (orient==1) {
     data <- profileRead(paste(profile2.path, sample, "profiles", sep="/"), fun,
@@ -343,7 +341,7 @@ plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="me
   
   ## Send data to plotAnno
   plotAnno(list(data), annotation, cols=cols, lab=lab,
-                y.val=y.vals, wsize=wsize) 
+                y.val=y.vals, wsize=wsize, ...) 
   
   mtext(paste(sample, " -> ", group2, sep=""), side=3, outer=T, cex=1.6)
   if (!is.null(fname)) {
@@ -384,7 +382,8 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
     print(paste("Saving to ", fname, sep=""))
     pdf(file=paste(profile2.path, "norm", "plots", fname, sep="/"), 6, 9)
   }
-  par(mfrow=c(rows, columns), mar=c(2,4,1,1) + 0.1, oma=c(1, 1, 1, 1))
+  par(mfrow=c(rows, columns))
+      #mar=c(2,4,1,1) + 0.1, oma=c(1, 1, 1, 1))
   
   # Read in data
   if (orient==1) {

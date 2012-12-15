@@ -30,6 +30,7 @@ plot2("gene_whole_W200N50F50_chr", "omp_hmc_120424_rmdup_plus_omp_hmc_120424_rmd
 
 ```
 ## [1] "omp_hmc_120424_rmdup_plus_omp_hmc_120424_rmdup_minus_W100_S25_omp_quartiles"
+## [1] "omp_hmc_120424_rmdup_plus_omp_hmc_120424_rmdup_minus_W100_S25_omp_quartiles_mean"
 ```
 
 ```
@@ -48,6 +49,7 @@ plot2("gene_whole_W200N50F50_chr", "ngn_hmc_120424_rmdup_plus_ngn_hmc_120424_rmd
 
 ```
 ## [1] "ngn_hmc_120424_rmdup_plus_ngn_hmc_120424_rmdup_minus_W100_S25_ngn_quartiles"
+## [1] "ngn_hmc_120424_rmdup_plus_ngn_hmc_120424_rmdup_minus_W100_S25_ngn_quartiles_mean"
 ```
 
 ```
@@ -67,6 +69,7 @@ plot2("gene_whole_W200N50F50_chr", "icam_hmc_120424_rmdup_plus_icam_hmc_120424_r
 
 ```
 ## [1] "icam_hmc_120424_rmdup_plus_icam_hmc_120424_rmdup_minus_W100_S25_icam_quartiles"
+## [1] "icam_hmc_120424_rmdup_plus_icam_hmc_120424_rmdup_minus_W100_S25_icam_quartiles_mean"
 ```
 
 ```
@@ -96,6 +99,7 @@ plot2("gene_whole_W200N50F50_chr", "omp_hmc_120424_rmdup_plus_omp_hmc_120424_rmd
 
 ```
 ## [1] "omp_hmc_120424_rmdup_plus_omp_hmc_120424_rmdup_minus_W100_S25_omp_deciles_trim0.02"
+## [1] "omp_hmc_120424_rmdup_plus_omp_hmc_120424_rmdup_minus_W100_S25_omp_deciles_trim0.02_mean"
 ```
 
 ```
@@ -119,6 +123,7 @@ plot2("gene_whole_W200N50F50_chr", "ngn_hmc_120424_rmdup_plus_ngn_hmc_120424_rmd
 
 ```
 ## [1] "ngn_hmc_120424_rmdup_plus_ngn_hmc_120424_rmdup_minus_W100_S25_ngn_deciles_trim0.02"
+## [1] "ngn_hmc_120424_rmdup_plus_ngn_hmc_120424_rmdup_minus_W100_S25_ngn_deciles_trim0.02_mean"
 ```
 
 ```
@@ -143,6 +148,7 @@ plot2("gene_whole_W200N50F50_chr", "icam_hmc_120424_rmdup_plus_icam_hmc_120424_r
 
 ```
 ## [1] "icam_hmc_120424_rmdup_plus_icam_hmc_120424_rmdup_minus_W100_S25_icam_deciles_trim0.02"
+## [1] "icam_hmc_120424_rmdup_plus_icam_hmc_120424_rmdup_minus_W100_S25_icam_deciles_trim0.02_mean"
 ```
 
 ```
@@ -167,6 +173,7 @@ plot2("gene_whole_W200N50F50_chr", "omp_mc_rmdup_plus_omp_mc_rmdup_minus_W100_S2
 
 ```
 ## [1] "omp_mc_rmdup_plus_omp_mc_rmdup_minus_W100_S25_omp_deciles_trim0.02"
+## [1] "omp_mc_rmdup_plus_omp_mc_rmdup_minus_W100_S25_omp_deciles_trim0.02_mean"
 ```
 
 ```
@@ -190,6 +197,7 @@ plot2("gene_whole_W200N50F50_chr", "ngn_mc_rmdup_plus_ngn_mc_rmdup_minus_W100_S2
 
 ```
 ## [1] "ngn_mc_rmdup_plus_ngn_mc_rmdup_minus_W100_S25_ngn_deciles_trim0.02"
+## [1] "ngn_mc_rmdup_plus_ngn_mc_rmdup_minus_W100_S25_ngn_deciles_trim0.02_mean"
 ```
 
 ```
@@ -214,6 +222,7 @@ plot2("gene_whole_W200N50F50_chr", "icam_mc_rmdup_plus_icam_mc_rmdup_minus_W100_
 
 ```
 ## [1] "icam_mc_rmdup_plus_icam_mc_rmdup_minus_W100_S25_icam_deciles_trim0.02"
+## [1] "icam_mc_rmdup_plus_icam_mc_rmdup_minus_W100_S25_icam_deciles_trim0.02_mean"
 ```
 
 ```
@@ -249,6 +258,7 @@ plot2("gene_whole_W200N50F50_chr", "omp_hmc_120424_rmdup_plus_omp_hmc_120424_rmd
 
 ```
 ## [1] "omp_hmc_120424_rmdup_plus_omp_hmc_120424_rmdup_minus_W100_S25_omp_quartiles_trim0.02"
+## [1] "omp_hmc_120424_rmdup_plus_omp_hmc_120424_rmdup_minus_W100_S25_omp_quartiles_trim0.02_mean"
 ```
 
 ```
@@ -272,6 +282,7 @@ plot2("gene_whole_W200N50F50_chr", "ngn_hmc_120424_rmdup_plus_ngn_hmc_120424_rmd
 
 ```
 ## [1] "ngn_hmc_120424_rmdup_plus_ngn_hmc_120424_rmdup_minus_W100_S25_ngn_quartiles_trim0.02"
+## [1] "ngn_hmc_120424_rmdup_plus_ngn_hmc_120424_rmdup_minus_W100_S25_ngn_quartiles_trim0.02_mean"
 ```
 
 ```
@@ -310,23 +321,22 @@ Load 5hmC matrices and compute mean flank and mid values
 ```r
 suppressPackageStartupMessages(source("~/src/seqAnalysis/R/strand2.R"))
 suppressPackageStartupMessages(source("~/src/seqAnalysis/R/ggplot.R"))
-cell.list <- lapply(c("omp", "ngn", "icam"), function(ct) lapply(c(0, 2, 3, 
-    4), function(x) read.delim(paste("~/s2/analysis/profiles/norm/strand_diff/mean/gene_whole_W200N50F50_chr/images/", 
-    ct, "_hmc_120424_rmdup_plus_", ct, "_hmc_120424_rmdup_minus_W100_S25_", 
-    ct, "_quartiles_", x, sep = ""), header = F, row.names = 1)))
-for (i in 1:length(cell.list)) {
-    names(cell.list[[i]]) <- c("0", "2", "3", "4")
+hmc.list <- lapply(c("omp", "ngn", "icam"), function(ct) lapply(c(0, 2, 3, 4), 
+    function(x) read.delim(paste("~/s2/analysis/profiles/norm/strand_diff/mean/gene_whole_W200N50F50_chr/images/", 
+        ct, "_hmc_120424_rmdup_plus_", ct, "_hmc_120424_rmdup_minus_W100_S25_", 
+        ct, "_quartiles_", x, sep = ""), header = F, row.names = 1)))
+for (i in 1:length(hmc.list)) {
+    names(hmc.list[[i]]) <- c("0", "2", "3", "4")
 }
-# names(omp.list) <- c('0','2', '3', '4')
-cell.list.df <- lapply(cell.list, compute_mean_gene_set)
-names(cell.list.df) <- c("omp", "ngn", "icam")
-cell.list.df2 <- ldply(cell.list.df)
+hmc.list.df <- lapply(hmc.list, compute_mean_gene_set)
+names(hmc.list.df) <- c("omp", "ngn", "icam")
+hmc.list.df2 <- ldply(hmc.list.df)
 
-cell.list.df2[, 2] <- as.factor(cell.list.df2[, 2])
-levels(cell.list.df2[, 2]) <- c("0-25%", "25-50%", "50-75%", "75-100%")
-cell.fac <- factor(1:3, labels = c("omp", "ngn", "icam"))
-cell.list.df2[, 1] <- cell.fac[match(as.character(cell.list.df2[, 1]), as.character(cell.fac))]
-levels(cell.list.df2[, 1]) <- c("mOSN", "GBC", "HBC")
+hmc.list.df2[, 2] <- as.factor(hmc.list.df2[, 2])
+levels(hmc.list.df2[, 2]) <- c("0-25%", "25-50%", "50-75%", "75-100%")
+hmc.fac <- factor(1:3, labels = c("omp", "ngn", "icam"))
+hmc.list.df2[, 1] <- hmc.fac[match(as.character(hmc.list.df2[, 1]), as.character(hmc.fac))]
+levels(hmc.list.df2[, 1]) <- c("mOSN", "GBC", "HBC")
 ```
 
 
@@ -334,13 +344,12 @@ Plot mean value, split by grouping
 
 ```r
 theme_set(theme_bw())
-cell.list.gg <- ggplot(cell.list.df2, aes(pos, val, fill = .id, color = .id))
-cell.list.gg <- cell.list.gg + stat_summary(geom = "bar", fun.y = "mean") + 
-    stat_sum_df("mean_cl_normal", geom = "errorbar") + facet_grid(.id ~ group) + 
-    scale_fill_grey() + scale_color_grey()
-cell.list.gg <- cell.list.gg + theme(legend.position = "none") + ylab("Coding - Template 5hmC") + 
+hmc.list.gg <- ggplot(hmc.list.df2, aes(pos, val, fill = .id, color = .id))
+hmc.list.gg <- hmc.list.gg + stat_summary(geom = "bar", fun.y = "mean") + stat_sum_df("mean_cl_normal", 
+    geom = "errorbar") + facet_grid(.id ~ group) + scale_fill_grey() + scale_color_grey()
+hmc.list.gg <- hmc.list.gg + theme(legend.position = "none") + ylab("Coding - Template 5hmC") + 
     xlab("")
-cell.list.gg
+hmc.list.gg
 ```
 
 ```
@@ -409,6 +418,68 @@ cell.list.gg
 
 ![plot of chunk omp_ngn_icam_hmc_strand_diff_flank_body](figure/omp_ngn_icam_hmc_strand_diff_flank_body.pdf) 
 
+
+Just mOSN data
+
+```r
+theme_set(theme_bw())
+hmc.list.gg <- ggplot(hmc.list.df2[hmc.list.df2$.id == "mOSN", ], aes(pos, val, 
+    fill = .id, color = .id))
+hmc.list.gg <- hmc.list.gg + stat_summary(geom = "bar", fun.y = "mean") + stat_sum_df("mean_cl_normal", 
+    geom = "errorbar") + facet_grid(.id ~ group) + scale_fill_grey() + scale_color_grey()
+hmc.list.gg <- hmc.list.gg + theme(legend.position = "none") + ylab("Coding - Template 5hmC") + 
+    xlab("") + coord_cartesian(ylim = c(-0.1, 0.025))
+hmc.list.gg
+```
+
+```
+## Warning: Removed 1 rows containing missing values (stat_summary).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (stat_summary).
+```
+
+```
+## Warning: Removed 2 rows containing missing values (stat_summary).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (stat_summary).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (stat_summary).
+```
+
+```
+## Warning: Removed 2 rows containing missing values (stat_summary).
+```
+
+![plot of chunk omp_hmc_strand_diff_flank_body](figure/omp_hmc_strand_diff_flank_body.png) 
+
+
+Wilcoxon p-values for Body/Flank comparisons
+
+```r
+sapply(levels(hmc.list.df2$.id), function(ct) sapply(levels(hmc.list.df2$group), 
+    function(x) with(hmc.list.df2[hmc.list.df2$.id == ct & hmc.list.df2$group == 
+        x, ], wilcox.test(val[pos == "Body"], val[pos == "Flank"])$p.value)))
+```
+
+```
+## Warning: cannot compute exact p-value with ties
+```
+
+```
+##              mOSN       GBC       HBC
+## 0-25%   1.414e-01 2.504e-02 5.110e-01
+## 25-50%  5.857e-07 6.738e-06 1.797e-32
+## 50-75%  1.970e-39 1.610e-42 6.380e-51
+## 75-100% 1.541e-81 1.679e-84 1.456e-55
+```
+
+
 Repeat for 5mC data.
 Construct position matrices for each cell type divided into expression quartiles
 ```
@@ -416,28 +487,28 @@ positionMatrix.group("gene_whole_W200N50F50_chr", "omp_mc_rmdup_plus_omp_mc_rmdu
 positionMatrix.group("gene_whole_W200N50F50_chr", "ngn_mc_rmdup_plus_ngn_mc_rmdup_minus_W100_S25", group2="ngn_quartiles", data_type="strand_diff/mean")
 positionMatrix.group("gene_whole_W200N50F50_chr", "icam_mc_rmdup_plus_icam_mc_rmdup_minus_W100_S25", group2="icam_quartiles", data_type="strand_diff/mean")
 ```
-Load 5hC matrices and compute mean flank and mid values
+Load 5mC matrices and compute mean flank and mid values
 
 ```r
 suppressPackageStartupMessages(source("~/src/seqAnalysis/R/strand2.R"))
 suppressPackageStartupMessages(source("~/src/seqAnalysis/R/ggplot.R"))
-cell.list <- lapply(c("omp", "ngn", "icam"), function(ct) lapply(c(0, 2, 3, 
-    4), function(x) read.delim(paste("~/s2/analysis/profiles/norm/strand_diff/mean/gene_whole_W200N50F50_chr/images/", 
-    ct, "_mc_rmdup_plus_", ct, "_mc_rmdup_minus_W100_S25_", ct, "_quartiles_", 
-    x, sep = ""), header = F, row.names = 1)))
-for (i in 1:length(cell.list)) {
-    names(cell.list[[i]]) <- c("0", "2", "3", "4")
+mc.list <- lapply(c("omp", "ngn", "icam"), function(ct) lapply(c(0, 2, 3, 4), 
+    function(x) read.delim(paste("~/s2/analysis/profiles/norm/strand_diff/mean/gene_whole_W200N50F50_chr/images/", 
+        ct, "_mc_rmdup_plus_", ct, "_mc_rmdup_minus_W100_S25_", ct, "_quartiles_", 
+        x, sep = ""), header = F, row.names = 1)))
+for (i in 1:length(mc.list)) {
+    names(mc.list[[i]]) <- c("0", "2", "3", "4")
 }
 
-cell.list.df <- lapply(cell.list, compute_mean_gene_set)
-names(cell.list.df) <- c("omp", "ngn", "icam")
-cell.list.df2 <- ldply(cell.list.df)
+mc.list.df <- lapply(mc.list, compute_mean_gene_set)
+names(mc.list.df) <- c("omp", "ngn", "icam")
+mc.list.df2 <- ldply(mc.list.df)
 
-cell.list.df2[, 2] <- as.factor(cell.list.df2[, 2])
-levels(cell.list.df2[, 2]) <- c("0-25%", "25-50%", "50-75%", "75-100%")
-cell.fac <- factor(1:3, labels = c("omp", "ngn", "icam"))
-cell.list.df2[, 1] <- cell.fac[match(as.character(cell.list.df2[, 1]), as.character(cell.fac))]
-levels(cell.list.df2[, 1]) <- c("mOSN", "GBC", "HBC")
+mc.list.df2[, 2] <- as.factor(mc.list.df2[, 2])
+levels(mc.list.df2[, 2]) <- c("0-25%", "25-50%", "50-75%", "75-100%")
+mc.fac <- factor(1:3, labels = c("omp", "ngn", "icam"))
+mc.list.df2[, 1] <- mc.fac[match(as.character(mc.list.df2[, 1]), as.character(mc.fac))]
+levels(mc.list.df2[, 1]) <- c("mOSN", "GBC", "HBC")
 ```
 
 
@@ -445,13 +516,12 @@ Plot mean value, split by grouping
 
 ```r
 theme_set(theme_bw())
-cell.list.gg <- ggplot(cell.list.df2, aes(pos, val, fill = .id, color = .id))
-cell.list.gg <- cell.list.gg + stat_summary(geom = "bar", fun.y = "mean") + 
-    stat_sum_df("mean_cl_normal", geom = "errorbar") + facet_grid(.id ~ group) + 
-    scale_fill_grey() + scale_color_grey()
-cell.list.gg <- cell.list.gg + theme(legend.position = "none") + ylab("Coding - Template 5mC") + 
+mc.list.gg <- ggplot(mc.list.df2, aes(pos, val, fill = .id, color = .id))
+mc.list.gg <- mc.list.gg + stat_summary(geom = "bar", fun.y = "mean") + stat_sum_df("mean_cl_normal", 
+    geom = "errorbar") + facet_grid(.id ~ group) + scale_fill_grey() + scale_color_grey()
+mc.list.gg <- mc.list.gg + theme(legend.position = "none") + ylab("Coding - Template 5mC") + 
     xlab("")
-cell.list.gg
+mc.list.gg
 ```
 
 ```
@@ -521,10 +591,64 @@ cell.list.gg
 ![plot of chunk omp_ngn_icam_mc_strand_diff_flank_body](figure/omp_ngn_icam_mc_strand_diff_flank_body.pdf) 
 
 
+Wilcoxon p-values for Body/Flank comparisons
+
+```r
+sapply(levels(mc.list.df2$.id), function(ct) sapply(levels(mc.list.df2$group), 
+    function(x) with(mc.list.df2[mc.list.df2$.id == ct & mc.list.df2$group == 
+        x, ], wilcox.test(val[pos == "Body"], val[pos == "Flank"])$p.value)))
+```
+
+```
+## Warning: cannot compute exact p-value with ties
+```
+
+```
+##              mOSN       GBC
+## 0-25%   1.201e-03 3.525e-02
+## 25-50%  2.169e-10 5.878e-06
+## 50-75%  4.575e-30 1.623e-36
+## 75-100% 3.882e-57 9.663e-66
+##                                                      HBC
+## 0-25%   0.5960581069557326916452666409895755350589752197
+## 25-50%  0.0000000000000000000000000000000152517470589623
+## 50-75%  0.0000000000000000000000000000000000244990657245
+## 75-100% 0.0000000000000000000000000000000000000000003272
+```
+
 TSS Heatmaps
 --------------------------------------------------------
 Matrix of plus/minus strand differences for a given sample. For genes, plus/minus strand designation adjusted as coding/template strand.
 First order MOE Dnmt3a WT polyA-RNA-seq by coding/template difference within the region -5 kb to 1.25 kb upstream of the TSS.
+
+To make TSS RNA difference matrix, In terminal while in omp_rmrna dir,
+
+
+```
+$ bamStrand.py -o ~/s2/data/h5/omp_rmrna_strand_25.trk -w 25 --paired-end omp_rmrna.bam
+$ bamStrand2.py -o ~/s2/data/h5/omp_rmrna_strand_diff_25.trk -w 100 -f diff omp_rmrna_strand_25.trk 
+$ group.py -t omp_rmrna_strand_diff_25.trk -a refGene_noRandom_order_outsides2_tss_W25F200_chr --data_type strand_diff --strand
+```
+
+
+```r
+positionMatrix.all("refGene_noRandom_order_outsides2_tss_W25F200_chr", data_type = "strand_diff/mean")
+```
+
+```
+## Error: could not find function "positionMatrix.all"
+```
+
+```r
+omp.rmrna <- makeImage("omp_rmrna_plus_omp_rmrna_minus_W100_S25", "refGene_noRandom_order_outsides2_tss_W25F200_chr", 
+    data_type = "strand_diff/mean", image = FALSE)
+```
+
+```
+## Error: could not find function "makeImage"
+```
+
+
 
 
 ```r

@@ -1,3 +1,9 @@
+library(ggplot2)
+
+stat_sum_df <- function(fun, geom="crossbar", ...) {
+  stat_summary(fun.data=fun, color="black", geom=geom, width=0.5, ...)
+}
+
 ## For 5hmC, 5mC, mRNA associations
 
 ggplot.2 <- function(data, label_thresh) {
