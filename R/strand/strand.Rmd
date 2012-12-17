@@ -74,7 +74,10 @@ abline(h=0, lty=2)
 plot2("gene_whole_W200N50F50_chr", "icam_mc_rmdup_plus_icam_mc_rmdup_minus_W100_S25", group2="icam_deciles_trim0.02", data_type="strand_diff/mean", cols=col4_mod[c(2,4)], wsize=200, fname="manual", group2_col=c(2,8), y.vals=c(-.3, .2), lab=c("TSS", "TES"))
 abline(h=0, lty=2)
 ```
-### Fraction
+
+
+Fraction
+--------------
 
 ### Top/bottom 2% removed at each position
 ```
@@ -85,9 +88,19 @@ makeProfile2("gene_whole_W200N50F50_chr", "ngn_mc_rmdup_plus_ngn_mc_rmdup_minus_
 makeProfile2("gene_whole_W200N50F50_chr", "icam_hmc_120424_rmdup_plus_icam_hmc_120424_rmdup_minus_W100_S25", group2="icam_quartiles", data_type="strand_fraction/mean", rm.outliers=0.02)
 makeProfile2("gene_whole_W200N50F50_chr", "icam_mc_rmdup_plus_icam_mc_rmdup_minus_W100_S25", group2="icam_quartiles", data_type="strand_fraction/mean", rm.outliers=0.02)
 ```
+### Deciles
+```
+makeProfile2("gene_whole_W200N50F50_chr", "omp_hmc_120424_rmdup_plus_omp_hmc_120424_rmdup_minus_W100_S25", group2="omp_deciles", data_type="strand_fraction/mean", rm.outliers=0.05)
+```
 
 #### OMP 5hmC (Coding - Template)/Total
-```{r, dev='pdf'}
+```{r "gene_whole_W200N50F50_omp_hmc_120424_rmdup_diff_decile10", dev=c('png','pdf')}
+plot2("gene_whole_W200N50F50_chr", "omp_hmc_120424_rmdup_plus_omp_hmc_120424_rmdup_minus_W100_S25", group2="omp_deciles_trim0.05", data_type="strand_fraction/mean", cols=col4_mod[c(4)], wsize=200, fname="manual", group2_col=c(8), y.vals=c(.35, .6))
+abline(h=0.5, lty=2)
+```
+
+#### OMP 5hmC (Coding - Template)/Total
+```{r, dev=c('png','pdf')}
 plot2("gene_whole_W200N50F50_chr", "omp_hmc_120424_rmdup_plus_omp_hmc_120424_rmdup_minus_W100_S25", group2="omp_quartiles_trim0.02", data_type="strand_fraction/mean", cols=col4_mod[c(1,4)], wsize=200, fname="manual", group2_col=c(1,4), y.vals=c(.3, .7))
 abline(h=0.5, lty=2)
 ```
@@ -319,14 +332,7 @@ MP.heat(as.matrix(moe.rna.ord.moe.rna.up), range=c(-.02, .02), average=50)
 ```
 
 
-Order MOE Dnmt3a WT 5hmC matrix by RNA coding/template difference. Plot in "refGene_noRandom_order_outsides2_tss_W25F200_chr_strand_diff_mean_moe_d3a_wt_hmc_plus_sub_minus_order_m5kbTom1250bp.pdf"
 
-```{r refGene_noRandom_order_outsides2_tss_W25F200_chr_strand_diff_mean_moe_d3a_wt_hmc_plus_sub_minus_order_m5kbTom1250bp, dev='pdf'}
-moe.hmc <- makeImage("moe_d3a_wt_hmc_plus_sub_minus", "refGene_noRandom_order_outsides2_tss_W25F200_chr", data_type="strand_diff/mean", image=FALSE)
-moe.hmc.ord.moe.rna.up <- moe.hmc[match(names(moe.rna.up.mean), rownames(moe.hmc)),]
-MP.heat(as.matrix(moe.hmc.ord.moe.rna.up), range=c(-.005, .005), average=100)
-
-```
 Repeat with developmental celltype data. First construct difference matrices. 
 
 ```
