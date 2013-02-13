@@ -84,25 +84,30 @@ class tab:
                 self.file_combine(tmp_path, sample + "_flank" + str(self.flank))
         
     def run_bam(self):
-        anno = self.anno
-        #pdb.set_trace()
+        
+        # Check if output file already exists
         if os.path.exists(self.out_path + "/" + self.sample.split(".bam")[0]):
             dec = raw_input("File exists. Overwrite? [y/n]")
             if dec == "n": return
-            
-        #print self.sample
         
+        if not os.path.exists(self.sample + ".bai"):
+            print "Indexing BAM..."
+            pysam.index(self.sample)
+            
+        # Determine what chromosomes to process
+        anno = self.anno     
         chrs_tbp = os.listdir(anno)
         tmp_path = tempfile.mkdtemp(suffix=os.path.basename(anno))
       
+      
         pool = Pool(processes=4)
-        #bam = pysam.Samfile(self.sample, 'rb')
         for chr_tbp in chrs_tbp:
             pool.apply_async(tab_bam, (self, chr_tbp, tmp_path))
             #tab_bam(self, chr_tbp, tmp_path)
         pool.close()
         pool.join()
-        #pdb.set_trace()
+        
+        # Combine chromosome files into one       
         if self.flank == 0:
             self.file_combine(tmp_path, os.path.basename(self.sample).split(".bam")[0])
         else:
@@ -193,30 +198,38 @@ def tab_h5(self, anno, track, chr_tbp, tmp_path, fun, exp):
         
 
 def tab_bam(obj, chr_tbp , tmp_path):
-    #pdb.set_trace()
-    print chr_tbp
    
+    print chr_tbp
+    
+    # Setup input annotation file and BAM file  
     anno_data = open(obj.anno + "/" + chr_tbp)
     bam = pysam.Samfile(obj.sample, 'rb')
-    #norm_val = float(bam.mapped) / 1E6
+    
     
     # Normalize by Reads per million and by reads per kilobase
     norm_val = 1e6 * 1e3 / (float(obj.window_size) * float(bam.mapped))
+    
+    # Setup output path
     anno_out_path = tmp_path + "/" + chr_tbp
     anno_out = open(anno_out_path, 'w')
     
+    # Pull out variables from group object
     flank = obj.flank
     window_size = obj.window_size
-    anno_line = anno_data.readline().strip().split()
     
+    #anno_line = anno_data.readline().strip().split()
+
+    # Initialize frequently altered variables
     vals = 0
-    
-    #pdb.set_trace()
     start = 0
-    end = 0
+    end = 0 
+    read_end = 0
+    # Loop through annotation records
     for line in anno_data:
         line = line.strip()
         sline = line.split()
+        
+        # Extract start and end values of annotation record
         if obj.flank == 0:
             start = [(atoi(sline[1]) - 1)]
             end = [(atoi(sline[2]) - 1)]
@@ -225,22 +238,57 @@ def tab_bam(obj, chr_tbp , tmp_path):
             start = [int(sline[1]) - 1 - flank, int(sline[2])]
             end = [int(sline[1]) - 2, int(sline[2]) + flank - 1]
             vals = np.zeros(flank * 2)
-        #vals = np.zeros(end - start + 1)
-        #pdb.set_trace()
-        j = 0
+        
+        # Loop allows flanking regions
+        # Generally, only single iteration
         for i in xrange(len(start)):
-            #it = bam.pileup(chr_tbp, start[i], end[i] + 1)
             try:
-                #for proxy in it:
-                #    pos = proxy.pos - start[i]
-                #    if pos < 0: continue
-                #    if proxy.pos == end[i] + 1: break
                 if obj.bam_attr == "count":
-                    vals = bam.count(chr_tbp, start[i], end[i] + 1)
-                    vals /= (float(end[i] + 1 - start[i]) / 1000)
-                   # vals[j] = proxy.n
+                    vals = 0
+                    
+                    # If strand option set, only count reads if
+                    # if read1 and aligning to same strand as feature.
+                    # if read2 and aligning to opposite strand
+                    if obj.strand:
+                        feature_is_reverse = line[5] == "-"
+                        reads = bam.fetch(chr_tbp, start[i], end[i] + 1)
+                        for read in reads:
+                            if read.is_read1 and read.is_reverse == feature_is_reverse:
+                                vals += 1
+                            elif read.is_read2 and read.is_reverse != feature_is_reverse:
+                                vals += 1
+                                
+                    # Count the number of reads the overlap annotation record
+                    else:
+                        vals = bam.count(chr_tbp, start[i], end[i] + 1)
+
+                    # Normalize by the length of the record
+                    vals /= (float(end[i] + 1 - start[i]))
+                
+                # Only count read is end aligns within record
+                elif obj.bam_attr == "count_ends":
+                    reads = bam.fetch(chr_tbp, start[i], end[i] + 1)
+                    # Reset count
+                    
+                    for read in reads:
+                        if read.is_reverse:
+                            read_end = read.aend
+                        else:
+                            #pdb.set_trace()
+                            read_end = read.pos
+                        if read_end >= start[i] and read_end <= end[i]:
+                            #pdb.set_trace()
+                            vals += 1
+                    
+                    # Sum
+                    vals = np.sum(vals)
+                    
+                    #Normalize by the length of the record
+                    vals /= (float(end[i] + 1 - start[i]))        
+                
+                # Extract insert sizes of read pairs overlapping record
                 elif obj.bam_attr == "isize":
-                    #pdb.set_trace()
+
                     it = bam.fetch(chr_tbp, start[i], end[i] + 1)
                     vals = 0
                     nreads = 0
@@ -252,7 +300,6 @@ def tab_bam(obj, chr_tbp , tmp_path):
                         vals = 0
                         continue
                     vals /= nreads
-                    #j = j + 1
             except IndexError:
                 pdb.set_trace()
             
@@ -261,21 +308,15 @@ def tab_bam(obj, chr_tbp , tmp_path):
                 out = "\t".join([line, str(val / norm_val)]) + "\n"
                 anno_out.write(out) 
         else:
-            fun = obj.fun
-            #pdb.set_trace()
-            #result = compute_result(vals, fun)
-            result = vals
-            
-            #if result > 4: pdb.set_trace()
             out = ""
+            
             if obj.bam_attr == "count":
-                out = "\t".join([line, str(result * norm_val)]) + "\n"
+                out = "\t".join([line, str(vals * norm_val)]) + "\n"
             else:
-                out = "\t".join([line, str(result)]) + "\n"
+                out = "\t".join([line, str(vals)]) + "\n"
             
             anno_out.write(out)
         
-    #pdb.set_trace()
     anno_data.close()
     anno_out.close()
    
