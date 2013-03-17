@@ -37,5 +37,34 @@ plot2("gene_whole_W200N50F50_chr", "o.tt3.1_mc_rmdup_plus_o.tt3.1_mc_rmdup_minus
 abline(h=0, lty=2)
 ```
 
+### Fraction 
+### Top/bottom 2% removed at each position, split by deciles, plot 20% and 100%
+```
+makeProfile2("gene_whole_W200N50F50_chr", "o.tt3.1_hmc_rmdup_plus_o.tt3.1_hmc_rmdup_minus_W100_S25", group2="omp_quartiles", data_type="strand_fraction/mean", rm.outliers=0.02)
+makeProfile2("gene_whole_W200N50F50_chr", "o.tt3.1_mc_rmdup_plus_o.tt3.1_mc_rmdup_minus_W100_S25", group2="omp_deciles", data_type="strand_fraction/mean", rm.outliers=0.02)
+```
+
+#### OMP 5hmC Coding - Template
+```{r omp_hmc_diff_deciles, fig.width=9, dev=c('png', 'pdf')}
+plot2("gene_whole_W200N50F50_chr", "omp_hmc_120424_rmdup_plus_omp_hmc_120424_rmdup_minus_W100_S25", group2="omp_quartiles_trim0.02", data_type="strand_fraction/mean", cols=col4_mod[c(4)], wsize=200, fname="manual", group2_col=c(4), y.vals=c(.4, .6), lab=c("TSS", "TES"))
+abline(h=.5, lty=2)
+```
+#### O/TT3 5hmC Coding - Template
+```{r ott3_hmc_diff_deciles, fig.width=9, dev=c('png', 'pdf')}
+plot2("gene_whole_W200N50F50_chr", "o.tt3.1_hmc_rmdup_plus_o.tt3.1_hmc_rmdup_minus_W100_S25", group2="omp_quartiles_trim0.02", data_type="strand_fraction/mean", cols=col4_mod[c(4)], wsize=200, fname="manual", group2_col=c(4), y.vals=c(.4, .6), lab=c("TSS", "TES"))
+abline(h=.5, lty=2)
+```
+
+#### OMP 5mC Coding - Template
+```{r omp_mc_diff_deciles, fig.width=9, dev=c('png', 'pdf')}
+plot2("gene_whole_W200N50F50_chr", "omp_mc_rmdup_plus_omp_mc_rmdup_minus_W100_S25", group2="omp_deciles_trim0.02", data_type="strand_diff/mean", cols=col4_mod[c(4)], wsize=200, fname="manual", group2_col=c(8), y.vals=c(-.2, .1), lab=c("TSS", "TES"))
+abline(h=0, lty=2)
+```
+#### O/TT3 5mC Coding - Template
+```{r ott3_mc_diff_deciles, fig.width=9, dev=c('png', 'pdf')}
+plot2("gene_whole_W200N50F50_chr", "o.tt3.1_mc_rmdup_plus_o.tt3.1_mc_rmdup_minus_W100_S25", group2="omp_deciles_trim0.02", data_type="strand_diff/mean", cols=col4_mod[c(4)], wsize=200, fname="manual", group2_col=c(8), lab=c("TSS", "TES"))
+abline(h=0, lty=2)
+```
+
 TSS Heatmaps
 ---------------------------------------

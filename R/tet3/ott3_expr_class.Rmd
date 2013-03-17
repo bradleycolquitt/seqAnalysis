@@ -1,0 +1,117 @@
+O/Tet3 - expression classification
+========================================================
+
+### First OMP vs. O/Tet3
+```{r}
+rna.1log2 <- readRDS("~/s2/analysis/rna/rdata/omp_ott3_rmrna_1log2.rds")
+```
+
+Remove values equal to 0
+```{r}
+rna.1log2.o0 <- rna.1log2[rna.1log2$omp>0,]
+rna.1log2.t0 <- rna.1log2[rna.1log2$ott3>0,]
+```
+
+Mclust to classify
+```{r}
+rna.1log2.o0.mc <- Mclust(rna.1log2.o0[,1], G=2)
+par(mfrow=c(2,2))
+plot(rna.1log2.o0.mc)
+
+rna.1log2.t0.mc <- Mclust(rna.1log2.t0[,2], G=2)
+par(mfrow=c(2,2))
+plot(rna.1log2.o0.mc)
+```
+
+Recombine classification to full set
+```{r}
+rna.1log2.o0$omp.class <- rna.1log2.o0.mc$classification
+rna.1log2.t0$ott3.class <- rna.1log2.t0.mc$classification
+
+rna.1log2$omp.class <- rna.1log2.o0$omp.class[match(rownames(rna.1log2), rownames(rna.1log2.o0))]
+rna.1log2$ott3.class <- rna.1log2.t0$ott3.class[match(rownames(rna.1log2), rownames(rna.1log2.t0))]
+
+rna.1log2$omp.class[rna.1log2$omp==0] <- 1
+rna.1log2$ott3.class[rna.1log2$ott3==0] <- 1]
+```
+
+```{r}
+table(rna.1log2[,4:5])
+```
+
+
+```{r}
+tt3.active <- rownames(rna.1log2)[rna.1log2$omp.class==1 & rna.1log2$ott3.class==2]
+omp.active <- rownames(rna.1log2)[rna.1log2$omp.class==2 & rna.1log2$ott3.class==1]
+```
+
+### Repeat for Ngn
+```{r}
+cells.rna.1log2 <- read.delim("~/s2/analysis/rna/summaries/omp_ngn_icam_mrna_dup_biasCorrect_plus1_log2")
+```
+
+Remove values equal to 0
+```{r}
+cells.rna.1log2.n0 <- cells.rna.1log2[cells.rna.1log2$ngn>0,]
+```
+
+Mclust to classify
+```{r}
+cells.rna.1log2.n0.mc <- Mclust(cells.rna.1log2.n0[,1], G=2)
+par(mfrow=c(2,2))
+plot(rna.1log2.n0.mc)
+
+```
+
+Recombine classification to full set
+```{r}
+cells.rna.1log2.n0$class <- cells.rna.1log2.n0.mc$classification
+
+cells.rna.1log2$ngn.class <- cells.rna.1log2.n0$class[match(rownames(cells.rna.1log2), rownames(cells.rna.1log2.n0))]
+
+cells.rna.1log2$ngn.class[cells.rna.1log2$ngn==0] <- 1
+```
+
+Combine with OMP, O/Tet3
+```{r}
+rna.1log2 <- cbind(rna.1log2, cells.rna.1log2[match(rownames(rna.1log2), rownames(cells.rna.1log2)),c("ngn", "ngn.class")])
+rna.1log2.c2 <- rna.1log2[rna.1log2$omp.class==2 & rna.1log2$ott3.class==2 & rna.1log2$ngn.class==2,]
+cor(na.omit(rna.1log2.c2[c(1,2,6)]))
+```
+
+
+### Devcell gene expression conditioned by OMP vs. O/Tet3 active
+```{r}
+cells.rna.1log2$ott3.class <- rna.1log2$ott3.class[match(rownames(cells.rna.1log2), rownames(rna.1log2))]
+cells.rna.1log2.m <- melt(cells.rna.1log2, id.vars=c("ngn.class", "ott3.class"))
+cells.rna.1log2.m$id <- rownames(cells.rna.1log2)
+cells.rna.1log2.m$tt3.active <- cells.rna.1log2.m$id %in% tt3.active
+gg <- ggplot(cells.rna.1log2.m, aes(variable, value))
+gg + geom_boxplot() + facet_grid(.~tt3.active)
+```
+
+Of course OMP is low; condition defined that way.
+
+Profiles 
+---------------
+```
+rg.tt3 <- rg[rg[,4] %in% tt3.active,]
+rg.omp <- rg[rg[,4] %in% omp.active,]
+write.table(rg.omp, file="~/lib/annotations_hires/gene_whole_W200N50F50_class_omp_2_ott3_1", quote=F, sep="\t", row.names=F, col.names=F)
+```
+
+
+
+```{r}
+source("~/src/seqAnalysis/R/profiles2.R")
+makeProfile2.allSamp("gene_whole_W200N50F50_class_omp_1_ott3_2_chr", data_type="rpkm/mean")
+makeProfile2.allSamp("gene_whole_W200N50F50_class_omp_2_ott3_1_chr", data_type="rpkm/mean")
+```
+
+```{r gene_whole_W200N50F50_class_omp_1_ott3_2_chr, dev=c('png', 'pdf'), fig.width=6, fig.height=4.5}
+plot2.several("gene_whole_W200N50F50_class_omp_1_ott3_2_chr", "tt3_3_hmc", data_type="rpkm/mean", cols=col2, fname="manual", wsize=200, lab=c("TSS", "TES"), y.vals=c(0, 1.2))
+```
+
+```{r gene_whole_W200N50F50_class_omp_2_ott3_1_chr, dev=c('png', 'pdf'), fig.width=6, fig.height=4.5}
+plot2.several("gene_whole_W200N50F50_class_omp_2_ott3_1_chr", "tt3_3_hmc", data_type="rpkm/mean", cols=col2, fname="manual", wsize=200, lab=c("TSS", "TES"), y.vals=c(0, 1.2))
+```

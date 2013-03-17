@@ -1,7 +1,7 @@
 Omp-tTA X tetO-Tet3 ribominus-RNA analysis
 ========================================================
 
-Intergenic densities
+
 --------------------------------------------------------
 
 Extract FPKM values from Cuffdiff output
@@ -28,6 +28,39 @@ write.table(rg.anno.down, file="~/lib/annotations_hires/gene_whole_W200N50F50_om
 
 ```
 
+K-mean clustering
+---------------------
+Limit analysis to refgene genes
+```{r}
+rg <- read.delim("/seq/lib/roi/refgene_nodup.bed", header=FALSE)
+rna.1log2.gene <- rna.1log2[rownames(rna.1log2) %in% rg[,4],]
+```
+
+Independently cluster OMP and O/TT3
+```{r}
+omp.k2 <- kmeans(rna.1log2.gene[,1], centers=2)
+ott3.k2 <- kmeans(rna.1log2.gene[,2], centers=2)
+rna.1log2.clus <- transform(rna.1log2.gene, omp.k2=omp.k2$cluster, ott3.k2=ott3.k2$cluster)
+```
+
+Table to identify expression clusters. Un/low expressed is larger cluster
+```{r}
+table(rna.1log2.clus[,4]) # 1 is high, 2 is low
+table(rna.1log2.clus[,5]) # 2 is high, 1 is low
+table(rna.1log2.clus[,4:5])
+```
+
+Of those that transition, what is their TSS/Gene body profile?
+```
+tss.anno <- read.delim("~/lib/annotations_hires/refGene_noRandom_order_outsides2_tss_W25F200", header=FALSE)
+tt3.active <- rownames(rna.1log2.clus)[rna.1log2.clus[,4]==2 & rna.1log2.clus[,5]==2]
+tss.anno.trans <- tss.anno[tss.anno[,4] %in%  rownames(rna.1log2.clus)[rna.1log2.clus[,4]==2 & rna.1log2.clus[,5]==2],] 
+write.table(tss.anno.trans, file="~/lib/annotations_hires/refGene_noRandom_order_outsides2_tss_W25F200_omp_to_ott3_kmeans_up", quote=FALSE, sep="\t", row.names=FALSE, col.names=FALSE)
+```
+
+
+
+
 Group with OMP and O/TT3 5hmC, 5mC. In terminal,
 ```
 group.py
@@ -47,4 +80,5 @@ plot2.several(annotation="gene_whole_W200N50F50_omp_ott3_rmrna_log2fc_ge2_fpkm1.
 ```{r "gene_whole_W200N50F50_omp_ott3_rmrna_log2fc_lem2_fpkm1_tt3_3_rpkm_mean", dev=c('png', 'pdf')}
 plot2.several(annotation="gene_whole_W200N50F50_omp_ott3_rmrna_log2fc_lem2_fpkm1.bed_chr", set="tt3_3", data_type="rpkm/mean", cols=col2, fname="manual")
 ```
+
 

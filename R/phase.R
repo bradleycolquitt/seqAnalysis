@@ -1,5 +1,7 @@
+library(RColorBrewer)
 source("~/src/seqAnalysis/R/paths.R")
 source("~/src/seqAnalysis/R/seqUtil.R")
+
 registerDoMC(cores=6)
 
 bugn <- c("dark blue", "dark green")
@@ -28,32 +30,26 @@ loadPhaseData <- function(path, filter=NULL, neg_filter=NULL) {
   return(data)
 }
 normPhaseData <- function(data, phase_ind=ind16, num_regions=NULL) {
-  #omp_data <- data[grep("omp_nuc", names(data))]
-  #icam_data <- data[grep("icam_nuc", names(data))]
-  #omp_count <- 73284106
-  #icam_count <- 106293504
-  #omp_data <- lapply(omp_data, function(x) 1E6 * x/omp_count)
-  #icam_data <- lapply(icam_data, function(x) 1E6 * x/icam_count)
- # data <- c(omp_data, icam_data)
   data <- lapply(data, function(x) x/sum(x))
-  
   data <- lapply(data, function(x) {
-    
     norm <- mean(x[phase_ind[(length(phase_ind) - 20):length(phase_ind)]])
     print(norm)
     return(x / norm)
   })  
-  #data <- lapply(1:length(data), function(x) data[[x]]/num_regions[x]) 
   return(data)
 }
 
-phase.fft <- function(data, phase_ind) {
-  pd_fft <- fft(data[phase_ind[2:(length(phase_ind) - 1)]])
+# Fourier transform nucleosome phasing data, return magnitudes
+phase.fft <- function(data, phase_ind=ind16, start=5) {
+  pd_fft <- fft(data[phase_ind[start:(length(phase_ind) - 1)]])
   pd_mag <- Mod(pd_fft)
   pd_mag <- pd_mag / min(pd_mag)
   return(pd_mag)
 }
 
+# Input phasogram output directory
+# Sort_ind : field number in "_" delimited name to sort by
+# Useful for constructing FPKM ordered phase data
 makeFFTmatrix <- function(data_path, filter=NULL, neg_filter=NULL, sort_ind=5, phase_ind=ind16) {
   pd <- loadPhaseData(path=data_path, filter=filter, neg_filter=neg_filter)
   if (sort_ind > 0) pd <- sortByName(pd, ind_pos=sort_ind)
@@ -63,8 +59,8 @@ makeFFTmatrix <- function(data_path, filter=NULL, neg_filter=NULL, sort_ind=5, p
   return(pd.fft.mat)
 }
 
-phase.plot.fft <- function(fft_data, step, ...) {
-  plot(fft_data[2:length(fft_data)/2], type="l", axes=T, ... )
+phase.plot.fft <- function(fft_data, start=2, ...) {
+  plot(fft_data[start:length(fft_data)/2], type="l", axes=T, ... )
   #print(length(fft_data)/2)
   #axis(1, at=seq(1, length(fft_data)/2, 10), labels=seq(0, length(fft_data)/2 * 10, 100))
   #axis(2)
@@ -85,14 +81,6 @@ plotPhase <- function(data, phase_ind, ...) {
 } 
 
 plotPhase.pair <- function(data, phase_ind, step, fname=NULL, cols=greens, ...) {
-  
-  #if (is.null(fname)) {
-  #  x11()
-  #} else {
-  #  pdf(file=paste("~/s2/analysis/nuc/plots", fname, sep="/"), 12, 4)
-  #}
-  #par(mfrow=c(1,4))
-  
   for(i in 1:(length(data)/2)) {
   #for (i in seq(1, length(data), 2)) {
     plot(phase_ind, data[[i]][phase_ind], type="l", col=cols[1],...)
@@ -105,11 +93,11 @@ plotPhase.pair <- function(data, phase_ind, step, fname=NULL, cols=greens, ...) 
   if (!is.null(fname)) dev.off()
 }
 
-plotPhase.triple <- function(data, phase_ind, step, ...) {
+plotPhase.triple <- function(data, phase_ind, step, cols, ...) {
   for (i in 1:(length(data)/3)) {
-    plot(phase_ind, data[[i]][phase_ind], type="l", col="dark red", ...)
-    lines(phase_ind, data[[i + step]][phase_ind], col="dark green")
-    lines(phase_ind, data[[i + 2 * step]][phase_ind], col="dark blue")
+    plot(phase_ind, data[[i]][phase_ind], type="l", col=cols[i], ...)
+    lines(phase_ind, data[[i + step]][phase_ind], col=cols[i+1])
+    lines(phase_ind, data[[i + 2 * step]][phase_ind], col=cols[i+2])
   }
 }
 
@@ -126,19 +114,25 @@ plotPhase.four <- function(data, phase_ind, step, ...) {
   }
 }
 
+# Report locations of nucleosome phasing peaks
 reportPhasePeaks <- function(data, phase_ind) {
   peaks <- c()
   for (ind in 3:(length(phase_ind)-2)) {
     curr_ind <- phase_ind[(ind-2):(ind+2)]
-    
-    #i2 <- phase_ind[ind + 1]
-    #i3 <- phase_ind[ind + 2]
     if (data[curr_ind[1]] < data[curr_ind[2]] & data[curr_ind[2]] < data[curr_ind[3]])
       if (data[curr_ind[3]] > data[curr_ind[4]] & data[curr_ind[4]] > data[curr_ind[5]]){
         peaks <- c(peaks, curr_ind[3])}
   }
   return(peaks)
 }
+
+# Determine slope from peak data
+slopeFromPeaks <- function(peaks) {
+  peak_data <- data.frame(peaks=peaks, index=1:length(peaks))
+  model <- lm(peaks~index, data=peak_data)
+  return(coefficients(model)[2])
+}
+
 #total_reads <- list(omp=73284106, icam=106293504)
 total_reads <- list(omp=128485884, icam=142654159)
 loadPileupData <- function(path) {

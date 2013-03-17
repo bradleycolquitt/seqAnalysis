@@ -1,0 +1,198 @@
+D3xOG rmRNA analysis -- Repeats
+========================================================
+
+What percentage of reads map to repeats?
+What classes of repeats are transcribed?
+How do the expression levels of these classes change in Dnmt3a KOs?
+
+Associate reads with repeats using both Cuffdiff and HTSeq-count
+
+```{r}
+suppressPackageStartupMessages(library(DESeq))
+library(ggplot2)
+```
+
+```{r}
+input <- data.frame(c("wt", "ko"), c("d3xog_wt_rmrna_blank_rmsk_count_nh20", "d3xog_ko_rmrna_blank_rmsk_count_nh20"), c("wt", "ko"))
+cds <- newCountDataSetFromHTSeqCount(input, "~/s2/data/rna/htseq/")
+cds <- estimateSizeFactors(cds)
+cds <- estimateDispersions(cds, method="blind", sharingMode="fit-only")
+cds.counts <- counts(cds, normalized=T)
+```
+
+```{r}
+ht.wt <- read.delim("~/s2/data/rna/htseq/d3xog_wt_rmrna_blank_rmsk_count_nh20", header=FALSE)
+ht.ko <- read.delim("~/s2/data/rna/htseq/d3xog_ko_rmrna_blank_rmsk_count_nh20", header=FALSE)
+
+ht.wt.no <- ht.wt[grep("no_feature", ht.wt[,1]),]
+ht.ko.no <- ht.ko[grep("no_feature", ht.wt[,1]),]
+
+# Percent reads mapped to repeats
+(sum(ht.wt[,2]) - ht.wt.no[,2]) / sum(ht.wt[,2])
+(sum(ht.ko[,2]) - ht.ko.no[,2]) / sum(ht.ko[,2])
+
+# Percent reads mapped to repeats, no rRNA/tRNA
+ht.wt.nrt <-ht.wt[-grep("rRNA|tRNA", ht.wt[,1]),]
+ht.ko.nrt <-ht.ko[-grep("rRNA|tRNA", ht.ko[,1]),]
+
+(sum(ht.wt.nrt[,2]) - ht.wt.no[,2]) / sum(ht.wt.nrt[,2])
+(sum(ht.ko.nrt[,2]) - ht.ko.no[,2]) / sum(ht.ko.nrt[,2])
+```
+
+*More reads mapping to repeats in KO than WT*
+
+```{r}
+cds.counts <- log2(cds.counts+1)
+cds.counts <- as.data.frame(cds.counts)
+cds.counts$ko.wt <- with(cds.counts, ko-wt)
+```
+
+```{r}
+gg <- ggplot(cds.counts, aes(wt, ko))
+gg + geom_point(alpha=I(1/5)) + geom_abline(slope=1, xintercept=0, color="red")
+
+```
+
+#### Annotate snRNAs and tRNA
+```{r}
+cds.counts$rna.class <- "NONE"
+cds.counts$rna.class[grep("^U", rownames(cds.counts))] <- "snRNA"
+cds.counts$rna.class[grep("tRNA", rownames(cds.counts))] <- "tRNA"
+```
+
+```{r}
+gg <- ggplot(cds.counts, aes(wt, ko, color=rna.class))
+gg + geom_point(alpha=I(1/5)) + geom_abline(slope=1, xintercept=0, color="red") + scale_color_manual(values=c("black", "red", "blue")) + theme(legend.position=c(.75, .25))
+```
+
+#### Aggregate by class
+```{r}
+rmsk2 <- read.delim("~/lib/features_general/rmsk2.bed", header=FALSE, colClasses=c("character", "numeric", "numeric", "character", "character", "character"))
+cds.counts$class <- rmsk2[match(rownames(cds.counts), rmsk2[,4]),5]
+cds.counts.class <- ddply(cds.counts, .(class), function(d) apply(d[,1:3], 2, median))
+```
+
+```{r}
+gg <- ggplot(cds.counts.class, aes(wt, ko))
+gg + geom_point() + geom_abline(slope=1, xintercept=0, color="red")
+```
+
+```{r}
+cds.counts.class$class <- factor(cds.counts.class$class, levels=cds.counts.class$class[order(cds.counts.class$ko.wt)])
+theme_set(theme_bw())
+gg <- ggplot(cds.counts.class, aes(class, ko.wt))
+gg <- gg + geom_bar(stat="identity")
+gg <- gg + labs(x="", y="log2(KO / WT + 1) Normalized reads")
+gg <- gg + theme(axis.text.x=element_text(face="bold"))
+gg
+```
+
+*Housekeeping, or functional, repeats seem to be upregulated*
+
+
+### 5mC/5hmC of snRNAs 
+
+```
+rmsk <- read.delim("~/s2/analysis/features/norm/rpkm/mean/summaries/d3a_bt2_rmsk2.bed_chr_sqrt", row.names=NULL)
+rmsk2 <- read.delim("~/lib/features_general/rmsk2.bed", header=F)
+m <- match(rmsk[,1], rmsk2[,4])
+rmsk <- as.data.frame(rmsk)
+rmsk$class <- rmsk2[m, 5]
+saveRDS(rmsk, file="~/s2/analysis/features/norm/rpkm/mean/rdata/d3a_bt2_rmsk2.bed_sqrt_class.rds")
+```
+
+```{r}
+rmsk <- readRDS("~/s2/analysis/features/norm/rpkm/mean/rdata/d3a_bt2_rmsk2.bed_sqrt_class.rds")
+
+# Remove high-valued outliers
+q <- min(apply(rmsk[,2:5], 2, quantile, c(.99)))
+
+rmsk <- rmsk[apply(rmsk[,2:5], 1, max) <= q,]
+
+rmsk.class <- ddply(rmsk, .(class), function(d) apply(d[,2:5], 2, median))
+rmsk.class.m <- melt(rmsk.class)
+```
+
+
+```{r}
+#gg <- ggplot(rmsk.class.m, aes(variable, value))
+#gg + geom_bar(stat="identity") + facet_wrap(~class)
+```
+
+```{r}
+rmsk.ratio <- data.frame(rmsk$row.names, rmsk$class, hmc.ko.wt=computeScoreRatios(rmsk$moe_d3a_ko_hmc_bt2_rpkm, rmsk$moe_d3a_wt_hmc_bt2_rpkm), mc.ko.wt=computeScoreRatios(rmsk$moe_d3a_ko_mc_bt2_rpkm, rmsk$moe_d3a_wt_mc_bt2_rpkm))
+rmsk.ratio.class <- ddply(rmsk.ratio, .(rmsk.class), function(d) apply(d[,3:4], 2, mean))
+rmsk.ratio.class.m <- melt(rmsk.ratio.class)
+#rmsk.ratio.class.m$rmsk.class <- factor(rmsk.ratio.class.m$rmsk.class, levels=levels(rmsk.ratio.class.m)[order(rmsk.ratio.class.m$value[rmsk.ratio.class.m$variable=="hmc.ko.wt"])])
+```
+
+
+```{r}
+gg <- ggplot(rmsk.ratio.class.m, aes(rmsk.class, value))
+gg + geom_bar(stat="identity") + facet_wrap(~variable) + coord_cartesian(ylim=c(-1, 1))
+```
+
+#### With htseq count output
+
+```{r}
+input <- data.frame(c("wt_hmc", "ko_hmc", "wt_mc", "ko_mc"), c("moe_d3a_wt_hmc_sort_bt2_rmsk_counts_nh20", "moe_d3a_ko_hmc_sort_bt2_rmsk_counts_nh20", "moe_d3a_wt_mc_sort_bt2_rmsk_counts_nh20", "moe_d3a_ko_mc_sort_bt2_rmsk_counts_nh20"), c("wt_hmc", "ko_hmc", "wt_mc", "ko_mc"))
+dna.cds <- newCountDataSetFromHTSeqCount(input, "~/s2/analysis/htseq/")
+dna.cds <- estimateSizeFactors(dna.cds)
+dna.counts <- counts(dna.cds, normalized=T)
+dna.counts <- data.frame(log2(dna.counts + 1))
+```
+
+```{r}
+gg <- ggplot(dna.counts, aes(wt_hmc, ko_hmc))
+gg + geom_point()
+```
+
+```{r}
+gg <- ggplot(dna.counts, aes(wt_mc, ko_mc))
+gg + geom_point()
+```
+
+```{r}
+dna.counts <- transform(dna.counts, hmc.ko.wt=ko_hmc - wt_hmc, mc.ko.wt=ko_mc - wt_mc)
+```
+
+```{r}
+dna.counts$class <- rmsk2[match(rownames(dna.counts), rmsk2[,4]),5]
+dna.counts.class <- ddply(dna.counts, .(class), function(d) apply(d[,1:6], 2, median))
+```
+
+```{r}
+gg <- ggplot(dna.counts.class, aes(wt_hmc, ko_hmc))
+gg + geom_point() + geom_abline(slope=1, xintercept=0, color="red")
+```
+
+```{r}
+dna.counts.class$class <- factor(dna.counts.class$class, levels=dna.counts.class$class[order(dna.counts.class$mc.ko.wt)])
+theme_set(theme_bw())
+gg <- ggplot(dna.counts.class, aes(class, mc.ko.wt))
+gg <- gg + geom_bar(stat="identity")
+gg <- gg + labs(x="", y="log2(KO / WT + 1) Normalized reads")
+gg <- gg + theme(axis.text.x=element_text(face="bold"))
+gg
+```
+
+Combine RNA and DNA modifications
+```{r}
+both.counts.class <- data.frame(cds.counts.class, dna.counts.class)
+both.counts.class <- both.counts.class[,-5]
+colnames(both.counts.class) <- c("class", "rna.wt", "rna.ko", "rna.ko.wt", "hmc.wt", "hmc.ko", "mc.wt", "mc.ko", "hmc.ko.wt", "mc.ko.wt")
+```
+
+```{r}
+gg <- ggplot(both.counts.class, aes(hmc.ko.wt, rna.ko.wt))
+gg + geom_point() + coord_cartesian(xlim=c(-.4, .4))
+```
+
+```{r}
+gg <- ggplot(both.counts.class, aes(mc.ko.wt, rna.ko.wt))
+gg + geom_point() + coord_cartesian(xlim=c(-.4, .4))
+```
+### Expression of adjacent loci
+### genomic plot
+
+

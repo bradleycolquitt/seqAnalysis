@@ -1,0 +1,19 @@
+MOE D3a 5hmC/5mC - repeats
+========================================================
+
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+```
+
+```{r}
+snrna <- c("U1", "U2", "U3", "U4", "U5", "U6", "U7", "U8", "U13", "U13_", "U14", "U17")
+sapply(snrna, function(x) makeProfile2.allSamp(paste("rmsk2_snRNA", x, "W25F200_both_chr", sep="_"), data_type="rpkm/mean"))
+```
+
+```{r}
+for (i in snrna) {
+  plot2.several(paste("rmsk2_snRNA", i, "W25F200_both_chr", sep="_"), "d3a_bt2", data_type="rpkm/mean", cols=col2, fname="manual")
+}  
+```
+
+No major differences. All flat except U6. 

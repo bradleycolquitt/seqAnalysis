@@ -42,7 +42,7 @@ writeModule <- function(out.path, sample, group2=NULL, fun, rm.outliers=0, profi
   } else {
     out.name <- paste(out.name, paste("trim", rm.outliers, sep=""), sep="_")
   }
-  
+  print(out.name)
   # Test if data list has multiple elements, indicating that profile has been split
   if (length(profile) > 1) {
     lapply(names(profile), function(name) {
@@ -101,14 +101,21 @@ profileCompute <- function(data, param) {
 ##                          e.g. 0.05 removes top and bottom 5% of values
 ##            sample_num - number of annotation observations to sample. 0 indicates to use whole set
 ##            write - write data to file
-makeProfile2 <- function(anno, samples, group2=NULL, data_type="unnorm/mean", fun="mean", rm.outliers=0, sample_num=0, write=TRUE) {
+makeProfile2 <- function(anno, samples, group2=NULL, data_type="unnorm/mean", fun="mean", rm.outliers=0, 
+                         sample_num=0, exclude_chr=NULL, write=TRUE) {
   sample_path <- paste(profile2.path, "norm", data_type, anno, sep="/")
   a <- sapply(samples, function(sample) {
+      print(sample)
       data <- read.delim(paste(sample_path, sample, sep="/"))
       colnames(data) <- c("chr", "start", "end", "name", "group", "strand", "norm")
       ind <- "norm"
       profile <- NULL
       CI <- NULL
+      
+      if (!is.null(exclude_chr)) {
+        data <- data[!(data$chr %in% exclude_chr),]
+      }
+      
       if (sample_num > 0) {
         print(sample_num)
         sample_names <- sample(unique(data$name), sample_num)
@@ -150,6 +157,10 @@ makeProfile2 <- function(anno, samples, group2=NULL, data_type="unnorm/mean", fu
           group2_out <- str_split(group2, "/")
           group2_out <- group2_out[length(group2_out)]
         }
+        if (!is.null(exclude_chr)) {
+          sample <- paste(sample, paste("exclude", exclude_chr, sep="-"), sep="_")
+          
+        }
         
         writeModule(out.path=out.path, sample=sample, group2=group2_out, fun=fun,
                     rm.outliers=rm.outliers, profile=profile, CI=CI)   
@@ -162,15 +173,18 @@ makeProfile2 <- function(anno, samples, group2=NULL, data_type="unnorm/mean", fu
 
 ## Wrapper to run makeProfile2 on all samples within a given profile direction
 ## Arguments as makeProfile2
-makeProfile2.allSamp <- function(anno, group2=NULL, data_type="unnorm/mean", fun="mean", rm.outliers=0, sample_num=0, write=T) {  
+makeProfile2.allSamp <- function(anno, group2=NULL, data_type="unnorm/mean", fun="mean", rm.outliers=0, sample_num=0, exclude_chr=NULL, write=T) {  
   sample_path <- paste(profile2.path, "norm", data_type, anno, sep="/")
   print(sample_path)
   samples <- list.files(sample_path)
   ind <- grep("profiles", samples)
   if (length(ind) > 0) samples <- samples[-ind]
   out_path = paste(sample_path, "profiles", sep="/")
-  data <- foreach(sample=samples) %dopar% {
+  data <- foreach(sample=samples) %do% {
     out_name <- sample
+    if (!is.null(exclude_chr)) {
+      out_name <- paste(out_name, paste("exclude", exclude_chr, sep="-"), sep="_")
+    }
     if (!is.null(group2)) {
       out_name <- paste(out_name, group2, sep="_")
     }
@@ -181,9 +195,9 @@ makeProfile2.allSamp <- function(anno, group2=NULL, data_type="unnorm/mean", fun
       print("Skipping")
       next 
     }
-    print(sample)
+    print(out_name)
     return(makeProfile2(anno, sample, data_type=data_type, fun=fun, group2=group2,
-                           rm.outliers=rm.outliers, sample_num=sample_num, write=write))
+                           rm.outliers=rm.outliers, sample_num=sample_num, exclude_chr=exclude_chr, write=write))
   }
 }
 
@@ -302,7 +316,7 @@ plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="me
   } else if (orient==2) {
     data <- profileRead(paste(profile2.path, "norm", data_type, annotation, "profiles", sep="/"), fun, sample, group2)
   }
-
+ # return(data)
   ## If group2_col is specified, select given column of data
   if (!is.null(group2_col)) {
     if (length(group2_col) == 1) {
@@ -311,12 +325,12 @@ plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="me
       data <- lapply(data, function(x) x[,group2_col])
     }
   }
-  
+  #return(data)
   ## If range specificed, trim profile by given values
   if (!is.null(range)) {
-      data <- lapply(data, function(x) x[range[1]:range[2],])
+      data <- lapply(data, function(x) matrix(x[range[1]:range[2],], ncol=1))
   }
-
+  #return(data)
   ## Set up graphics device
   if (is.null(fname))  {
     x11("", 6, 4)
@@ -350,7 +364,8 @@ plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="me
 }
 
 ## Plot several profiles in one graphic device
-plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2=NULL, cols=NULL, lab=c("",""), y.vals=NULL, wsize=25, standard=FALSE, range=NULL, baseline=FALSE,
+plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2=NULL, cols=NULL, lab=c("",""), 
+                          y.vals=NULL, wsize=25, standard=FALSE, range=NULL, baseline=FALSE, group2_col=NULL,
                           fun="mean", legend=FALSE, fname=NULL) {
   samples <- NULL
   orient <- 1
@@ -397,7 +412,22 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
                         profileRead(paste(profile2.path, "norm",
                                           data_type, annotation, "profiles", sep="/"), fun, s, group2)))
   }
-
+  #return(data)
+  ## If group2_col is specified, select given column of data
+  if (!is.null(group2_col)) {
+    if (length(group2_col) == 1) {
+      data <- lapply(data, function(x) lapply(x, function(y) lapply(y, function(z) matrix(z[,group2_col], ncol=1))))
+    } else {
+      data <- lapply(data, function(x) lapply(x, function(y) lapply(y, function(z) z[,group2_col])))
+    }
+  }
+  #if (!is.null(group2_col)) {
+  #  if (length(group2_col) == 1) {
+  #    data <- lapply(data, function(x) matrix(x[,group2_col], ncol=1))
+  #  } else {
+  #    data <- lapply(data, function(x) x[,group2_col])
+  #  }
+  #}
   ## If baseline is specified, normalize by mean start and end values  
   if (baseline) {
     data <- list(baselineNorm(data[[1]]))

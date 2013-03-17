@@ -1,0 +1,81 @@
+D3a DNase
+========================================================
+
+Intergenic DNase peaks in Dnmt3a het
+--------------------------------------
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+```
+
+### DNase
+```{r}
+plot2("d3a_het_dnase_sort_q30_F3_size500_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", "d3a_het_dnase_sort_q30_rmdup", data_type="bam/mean", group2="trim0.01", fname="manual", range=c(101,300))
+```
+
+### 5hmC
+```{r}
+plot2.several("d3a_het_dnase_sort_q30_F3_size500_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", "d3a_hmc", data_type="rpkm/mean", cols=col2, group2="trim0.01", fname="manual", range=c(101,300))
+```
+
+### 5mC
+```{r}
+plot2.several("d3a_het_dnase_sort_q30_F3_size500_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", "d3a_mc", data_type="rpkm/mean", cols=col2, group2="trim0.01", fname="manual", range=c(101,300))
+```
+
+### Nuc -- extended
+```{r}
+plot2.several("d3a_het_dnase_sort_q30_F3_size500_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", "d3a_nuc_extend", data_type="bam_extend/mean", cols=col2 , group2="trim0.01", fname="manual")
+```
+
+### Nuc -- dyad
+```{r}
+plot2.several("d3a_het_dnase_sort_q30_F3_size500_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", "d3a_nuc_dyad", data_type="bam_dyad/mean", cols=col2 , group2="trim0.01", fname="manual", range=c(101, 300))
+```
+
+### Nuc -- midpoint
+```{r}
+plot2.several("d3a_het_dnase_sort_q30_F3_size500_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", "d3a_nuc2", data_type="rpkm/mean", cols=col2 , group2="trim0.01", fname="manual", range=c(101, 300))
+```
+
+All DNase peaks in Dnmt3a het
+--------------------------------------
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+```
+
+### DNase
+```{r}
+makeProfile2.allSamp("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr", data_type="bam/mean", rm.outliers=0.01)
+makeProfile2.allSamp("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr", data_type="rpkm/mean", rm.outliers=0.01)
+  makeProfile2.allSamp("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr", data_type="bam_extend/mean", rm.outliers=0.01)
+makeProfile2.allSamp("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr", data_type="bam_dyad/mean", rm.outliers=0.01)
+```
+
+```{r}
+plot2("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr", "d3a_het_dnase_sort_q30_rmdup", data_type="bam/mean", group2="trim0.01", fname="manual")
+```
+
+### 5hmC
+```{r}
+plot2.several("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr", "d3a_hmc", data_type="rpkm/mean", cols=col2, group2="trim0.01", fname="manual")
+```
+
+### 5mC
+```{r}
+plot2.several("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr", "d3a_mc", data_type="rpkm/mean", cols=col2, group2="trim0.01", fname="manual")
+```
+
+### Nuc -- extended
+```{r}
+plot2.several("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr", "d3a_nuc_extend", data_type="bam_extend/mean", cols=col2 , group2="trim0.01", fname="manual")
+```
+
+### Nuc -- dyad
+```{r}
+plot2.several("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr", "d3a_nuc_dyad", data_type="bam_dyad/mean", cols=col2 , group2="trim0.01", fname="manual", range=c(101, 300))
+```
+
+### Nuc -- midpoint
+```{r}
+plot2.several("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr", "d3a_nuc2", data_type="rpkm/mean", cols=col2 , group2="trim0.01", fname="manual", baseline=T)
+```

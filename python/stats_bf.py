@@ -10,8 +10,9 @@ from math import *
 import argparse
 
 DATA_NAME = "genes.fpkm_tracking"
-SUMMARY_PATH_NORM = "/media/storage2/analysis/features/norm/summaries"
+#SUMMARY_PATH_NORM = "/media/storage2/analysis/features/norm/summaries"
 SUMMARY_PATH_RAW = "/media/storage2/analysis/features/norm/rpkm/mean/summaries"
+#SUMMARY_PATH_RAW = "/media/storage2/analysis/rna/summaries"
 INF = float('inf')
 
 # from MISO

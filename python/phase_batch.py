@@ -2,6 +2,7 @@
 
 import os, sys
 import argparse
+import pdb
 import tables as tb
 from subprocess import Popen
 
@@ -35,6 +36,8 @@ def main(argv):
     for track in nodes:
         print track
         for bed_file in bed_files:
+
+            if bed_file == "subset": continue
             out_file = "/".join([out_path, "_".join([track, bed_file, "N" + args.thresh, "L" + args.length])]) 
             if os.path.exists(out_file): continue
             print "--", bed_file

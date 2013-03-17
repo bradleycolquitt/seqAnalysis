@@ -1,0 +1,50 @@
+MOE D3a mRNA
+========================================================
+
+```{r}
+library(plyr)
+library(reshape2)
+library(ggplot2)
+```
+
+```{r}
+rna.1log2 <- read.delim("~/s2/analysis/rna/summaries/moe_d3a_wt_moe_d3a_ko_mrna_1log2")
+rna.1log2$ko.wt <- with(rna.1log2, ko - wt)
+rna.1log2.nz <- rna.1log2[apply(rna.1log2[,1:2], 1, prod)>0,]
+```
+
+
+```{r}
+gg <- ggplot(rna.1log2, aes(wt, ko))
+rna.gg <- gg + geom_point(alpha=I(1/5)) + geom_abline(slope=1, intercept=0, color="red") + labs(title="FPKM Total norm")
+rna.gg
+```
+
+#### MA plot
+```{r}
+rna.gg <- ggplot(rna.1log2.nz, aes(wt, ko.wt)) + geom_point(alpha=I(1/10)) + geom_density2d(breaks=seq(0, .5,.025)) + labs(title="FPKM UQ norm") + geom_hline(yintercept=0, color="red")
+rna.gg
+```
+
+*No assocation between fold change and wt expression*
+
+```{r}
+rna.1log2.nz.wt <- rna.1log2.nz[order(rna.1log2.nz$wt),1:3]
+rna.1log2.wt.m <- melt(rna.1log2.nz.wt)
+rna.1log2.wt.m$index <- 1:nrow(rna.1log2.nz.wt)
+```
+
+```{r}
+rna.1log2.wt.c100 <- as.data.frame(foreach(c=isplitRows(rna.1log2.nz.wt, chunks=100), .combine="rbind") %do% apply(c, 2, median))
+rna.1log2.wt.c100 <- melt(rna.1log2.wt.c100)
+rna.1log2.wt.c100$index <- 1:100
+levels(rna.1log2.wt.c100$variable) <- c("WT", "KO", "KO/WT")
+```
+
+```{r moe_d3a_wt_moe_d3a_ko_mrna_1log2_order_wt_chunk100, fig.height=4, fig.width=4, dev=c("png", "pdf")}
+library(ggplot2)    
+gg <- ggplot(rna.1log2.wt.c100, aes(index, value))
+gg <- gg + geom_point(aes(color=variable)) + scale_color_manual("Dnmt3a", values=col3)
+gg <- gg + theme(legend.position=c(.2, .8)) + labs(x="WT Rank", y="log2(FPKM + 1)") + scale_x_continuous(breaks=seq(0, 100, 5))
+gg
+```

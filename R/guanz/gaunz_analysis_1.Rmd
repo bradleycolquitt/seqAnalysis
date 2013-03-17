@@ -1,0 +1,55 @@
+Analysis for Guan
+========================================================
+
+**In each plot, 5hmC is on top and 5mC is on bottom.**
+**Blue is contra, red is ipsi**
+
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+```
+
+Dorsal
+-------
+
+### List 1 
+```{r}
+plot2.several("gene_whole_W200N50F50_guanz_list1_chr", set="guanz_dorsal", data_type="rpkm/mean", cols=col2, fname="manual")
+```
+
+### List 2
+```{r}
+plot2.several("gene_whole_W200N50F50_guanz_list2_chr", set="guanz_dorsal", data_type="rpkm/mean", cols=col2, fname="manual")
+```
+
+### List 3
+```{r}
+plot2.several("gene_whole_W200N50F50_guanz_list3_chr", set="guanz_dorsal", data_type="rpkm/mean", cols=col2, fname="manual")
+```
+
+
+### All genes 
+```{r}
+plot2.several("gene_whole_W200N50F50_chr", set="guanz_dorsal", data_type="rpkm/mean", cols=col2, fname="manual")
+```
+Ventral
+-------------------
+
+### List 1 
+```{r}
+plot2.several("gene_whole_W200N50F50_guanz_list1_chr", set="guanz_ventral", data_type="rpkm/mean", cols=col2, fname="manual")
+```
+
+### List 2
+```{r}
+plot2.several("gene_whole_W200N50F50_guanz_list2_chr", set="guanz_ventral", data_type="rpkm/mean", cols=col2, fname="manual")
+```
+
+### List 3
+```{r}
+plot2.several("gene_whole_W200N50F50_guanz_list3_chr", set="guanz_ventral", data_type="rpkm/mean", cols=col2, fname="manual")
+```
+
+### All genes
+```{r}
+plot2.several("gene_whole_W200N50F50_chr", set="guanz_ventral", data_type="rpkm/mean", cols=col2, fname="manual")
+```

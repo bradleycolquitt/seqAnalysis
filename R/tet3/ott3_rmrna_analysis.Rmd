@@ -28,26 +28,28 @@ cd3 <- read.delim("~/s2/data/rna/cuffdiff/omp_ott3_rmrna_masked_uq_comp_js/gene_
 
 Slight reduction in the FPKM of more lowly transcribed genes
 ```{r}
-rna3.1log2 <- readRDS("~/s2/analysis/rna/rdata/omp_ott3_rmrna_masked_uq_1log2.rds")
-rna4 <- data.frame(omp1=rna.1log2$omp, ott31=rna.1log2$ott3, omp3=rna3.1log2$omp[match(rna.1log2$id, rna3.1log2$gene)], ott33=rna3.1log2$ott3[match(rna.1log2$id, rna3.1log2$gene)])
-gg <- ggplot(rna4, aes(omp1, omp3))
-gg + geom_point(alpha=I(1/5))
-gg <- ggplot(rna4, aes(ott31, ott33))
-gg + geom_point(alpha=I(1/5))
+rna.1log2 <- readRDS("~/s2/analysis/rna/rdata/omp_ott3_rmrna_masked_uq_1log2.rds")
+rownames(rna.1log2) <- rna.1log2[,1]
+rna.1log2 <- rna.1log2[,2:4]
+#rna4 <- data.frame(omp1=rna.1log2$omp, ott31=rna.1log2$ott3, omp3=rna3.1log2$omp[match(rna.1log2$id, rna3.1log2$gene)], ott33=rna3.1log2$ott3[match(rna.1log2$id, rna3.1log2$gene)])
+#gg <- ggplot(rna4, aes(omp1, omp3))
+#gg + geom_point(alpha=I(1/5))
+#gg <- ggplot(rna4, aes(ott31, ott33))
+#gg + geom_point(alpha=I(1/5))
 
 ```
 
 
 
 ```{r, fig.width=9, fig.height=6}
-rna.1log2 <-readRDS("~/s2/analysis/rna/rdata/omp_ott3_rmrna_1log2.rds")
-par(mfrow=c(1,3))
-a <- apply(rna.1log2, 2, function(x) plot(density(x)))
+#rna.1log2 <-readRDS("~/s2/analysis/rna/rdata/omp_ott3_rmrna_1log2.rds")
+#par(mfrow=c(1,3))
+#a <- apply(rna.1log2, 2, function(x) plot(density(x)))
 
+#cor(rna.1log2)
 ```
 
 Scatter OMP and O/TT3 log2(FPKM+1).
-
 ```{r, fig.width=4, fig.height=4}
 library(ggplot2)
 gg <- ggplot(rna.1log2, aes(omp, ott3))
@@ -130,6 +132,11 @@ omp.hmc.pos.pc1 <- omp.hmc.pos[match(rownames(omp.hmc.pos.pred[order(omp.hmc.pos
 ott3.hmc.pos.pc1 <- ott3.hmc.pos[match(rownames(ott3.hmc.pos.pred[order(ott3.hmc.pos.pred[,1]),]), rownames(ott3.hmc.pos)),]
 omp.hmc.pos.ott3.pc1 <- omp.hmc.pos[match(rownames(ott3.hmc.pos.pred[order(ott3.hmc.pos.pred[,1]),]), rownames(omp.hmc.pos)),]
 ott3.hmc.pos.omp.pc1 <- ott3.hmc.pos[match(rownames(omp.hmc.pos.pred[order(omp.hmc.pos.pred[,1]),]), rownames(ott3.hmc.pos)),]
+
+omp.hmc.pos.pc2 <- omp.hmc.pos[match(rownames(omp.hmc.pos.pred[order(omp.hmc.pos.pred[,2]),]), rownames(omp.hmc.pos)),]
+ott3.hmc.pos.pc2 <- ott3.hmc.pos[match(rownames(ott3.hmc.pos.pred[order(ott3.hmc.pos.pred[,2]),]), rownames(ott3.hmc.pos)),]
+omp.hmc.pos.ott3.pc2 <- omp.hmc.pos[match(rownames(ott3.hmc.pos.pred[order(ott3.hmc.pos.pred[,2]),]), rownames(omp.hmc.pos)),]
+ott3.hmc.pos.omp.pc2 <- ott3.hmc.pos[match(rownames(omp.hmc.pos.pred[order(omp.hmc.pos.pred[,2]),]), rownames(ott3.hmc.pos)),]
 ```
 
 Order difference matrix
@@ -148,6 +155,7 @@ rna.1log2.ott3.pc1 <- na.omit(rna.1log2[match(rownames(ott3.hmc.pos.pc1), rownam
 
 Group in 100 chunks
 ```{r}
+source("~/src/seqAnalysis/R/boot.R")
 ott3.omp.hmc.pos.omp.pc1.c100 <- foreach(c=isplitRows(ott3.omp.hmc.pos.omp.pc1[,51:100], chunks=100), .combine="rbind") %do% mean(c, na.rm=TRUE)
 ott3.omp.hmc.pos.omp.pc1.c100 <- as.data.frame(ott3.omp.hmc.pos.omp.pc1.c100)
 ott3.omp.hmc.pos.omp.pc1.c100$index <- 100:1
@@ -158,12 +166,27 @@ ott3.omp.hmc.pos.ott3.pc1.c100$index <- 100:1
 rna.1log2.omp.pc1.c100 <- foreach(c=isplitRows(rna.1log2.omp.pc1[,c(1:3)], chunks=100), .combine="rbind") %do% apply(c, 2, mean, na.rm=TRUE)
 rna.1log2.omp.pc1.c100 <- as.data.frame(rna.1log2.omp.pc1.c100)
 rna.1log2.omp.pc1.c100$index <- 100:1
+rna.1log2.omp.pc1.c100.boot <- foreach(c=isplitRows(rna.1log2.omp.pc1[,c(1:3)], chunks=100), .combine="rbind") %do% apply(c, 2, bootCI)
+rna.1log2.omp.pc1.c100 <- cbind(rna.1log2.omp.pc1.c100, rna.1log2.omp.pc1.c100.boot[seq(1, nrow(rna.1log2.omp.pc1.c100.boot), 2),], rna.1log2.omp.pc1.c100.boot[seq(2, nrow(rna.1log2.omp.pc1.c100.boot), 2),])
+colnames(rna.1log2.omp.pc1.c100)[5:10] <- c("omp.lower", "ott3.lower", "ott3.omp.lower", "omp.upper", "ott3.upper", "ott3.omp.upper")
+
 rna.1log2.ott3.pc1.c100 <- foreach(c=isplitRows(rna.1log2.ott3.pc1[,c(1:3)], chunks=100), .combine="rbind") %do% apply(c, 2, mean, na.rm=TRUE)
 rna.1log2.ott3.pc1.c100 <- as.data.frame(rna.1log2.ott3.pc1.c100)
 rna.1log2.ott3.pc1.c100$index <- 100:1
+rna.1log2.ott3.pc1.c100.boot <- foreach(c=isplitRows(rna.1log2.ott3.pc1[,c(1:3)], chunks=100), .combine="rbind") %do% apply(c, 2, bootCI)
+rna.1log2.ott3.pc1.c100 <- cbind(rna.1log2.ott3.pc1.c100, rna.1log2.ott3.pc1.c100.boot[seq(1, nrow(rna.1log2.ott3.pc1.c100.boot), 2),], rna.1log2.ott3.pc1.c100.boot[seq(2, nrow(rna.1log2.ott3.pc1.c100.boot), 2),])
+colnames(rna.1log2.ott3.pc1.c100)[5:10] <- c("omp.lower", "ott3.lower", "ott3.omp.lower", "omp.upper", "ott3.upper", "ott3.omp.upper")
 ```
 
-#### Plot heatmaps
+```{r}
+rna.1log2.omp.pc1.c100$wilcox.FDR <- p.adjust(foreach(c=isplitRows(rna.1log2.omp.pc1[,1:3], chunks=100), .combine="rbind") %do% wilcox.test(c[,3])$p.value, method="fdr")
+rna.1log2.omp.pc1.c100$wilcox.FDR.05 <- cut(rna.1log2.omp.pc1.c100$wilcox.FDR, breaks=c(0, .05, 1))
+rna.1log2.ott3.pc1.c100$wilcox.FDR <- p.adjust(foreach(c=isplitRows(rna.1log2.ott3.pc1[,1:3], chunks=100), .combine="rbind") %do% wilcox.test(c[,3])$p.value, method="fdr")
+rna.1log2.ott3.pc1.c100$wilcox.FDR.05 <- cut(rna.1log2.ott3.pc1.c100$wilcox.FDR, breaks=c(0, .05, 1))
+
+```
+
+#### Plot heatmaps - PC1
 ```{r "gene_whole_W200N50F50_omp_hmc_120424_rpkm_mean_ordered_by_gene_body_pc1", fig.height=6, fig.width=6,dev=c('png', 'pdf')}
 MP.heat(omp.hmc.pos.pc1, range=c(0,1.5), average=50)
 ```
@@ -192,10 +215,11 @@ gg
 ```
 
 O/TT3 - OMP rmRNA ratio ordered by OMP 5hmC PC1
-```{r "ott3_omp_rmrna_1log2_ordered_by_omp_hmc_gene_body_pc1_mean_chunks100", fig.height=4, fig.width=2, dev=c('png', 'pdf')}
+```{r "ott3_omp_rmrna_1log2_ordered_by_omp_hmc_gene_body_pc1_mean_chunks100_nosig", fig.height=4, fig.width=2, dev=c('png', 'pdf')}
+theme_set(theme_gray())
 gg <- ggplot(rna.1log2.omp.pc1.c100, aes(ott3.omp, index))
 gg <- gg + geom_vline(xintercept=0, color="red")
-gg <- gg + geom_point() + xlab("log2(FPKM + 1)") + ylab("") + theme(axis.text.y=element_blank()) + labs(title=c("O/Tet3-OMP ratio RNA by OMP PC1"))
+gg <- gg + geom_errorbarh(aes(xmin=ott3.omp.lower, xmax=ott3.omp.upper), height=0, size=.1) + geom_point(size=2)  + xlab("log2(FPKM + 1)") + ylab("") + theme(legend.position="none", axis.text.y=element_blank()) + labs(title=c("O/Tet3-OMP ratio RNA by OMP PC1")) + scale_color_manual(values=c("red", "black"))
 gg
 ```
 
@@ -226,13 +250,104 @@ gg + geom_point() + xlab("log2(FPKM + 1)") + ylab("") + theme(axis.text.y=elemen
 ```
 
 Plot O/TT3 - OMP rmRNA ratio ordered by O/TT3 5hmC PC1
-```{r "ott3_omp_rmrna_1log2_ordered_by_ott3_hmc_gene_body_pc1_mean_chunks100", fig.height=4, fig.width=2, dev=c('png', 'pdf')}
+```{r "ott3_omp_rmrna_1log2_ordered_by_ott3_hmc_gene_body_pc1_mean_chunks100_nosig", fig.height=4, fig.width=2, dev=c('png', 'pdf')}
 gg <- ggplot(rna.1log2.ott3.pc1.c100, aes(ott3.omp, index))
 gg <- gg + geom_vline(xintercept=0, color="red")
-gg <- gg + geom_point() + xlab("log2(FPKM + 1)") + ylab("") + theme(axis.text.y=element_blank()) + labs(title=c("O/Tet3-OMP ratio RNA by O/Tet3 PC1"))
+gg <- gg + geom_errorbarh(aes(xmin=ott3.omp.lower, xmax=ott3.omp.upper), height=0, size=.1) + geom_point(size=2) + xlab("log2(FPKM + 1)") + ylab("") + theme(legend.position="none", axis.text.y=element_blank()) + labs(title=c("O/Tet3-OMP ratio RNA by O/Tet3 PC1")) + scale_color_manual(values=c("red", "black"))
 gg
 ```
 
+#### Prep RNA - PC2
+
+```{r}
+rna.1log2.omp.pc2 <- na.omit(rna.1log2[match(rownames(omp.hmc.pos.pc2), rownames(rna.1log2)),])
+rna.1log2.ott3.pc2 <- na.omit(rna.1log2[match(rownames(ott3.hmc.pos.pc2), rownames(rna.1log2)),])
+rna.1log2.omp.pc2.c100 <- foreach(c=isplitRows(rna.1log2.omp.pc2[,c(1:3)], chunks=100), .combine="rbind") %do% apply(c, 2, mean, na.rm=TRUE)
+rna.1log2.omp.pc2.c100 <- as.data.frame(rna.1log2.omp.pc2.c100)
+rna.1log2.omp.pc2.c100$index <- 100:1
+rna.1log2.omp.pc2.c100.boot <- foreach(c=isplitRows(rna.1log2.omp.pc2[,c(1:3)], chunks=100), .combine="rbind") %do% apply(c, 2, bootCI)
+rna.1log2.omp.pc2.c100 <- cbind(rna.1log2.omp.pc2.c100, rna.1log2.omp.pc2.c100.boot[seq(1, nrow(rna.1log2.omp.pc2.c100.boot), 2),], rna.1log2.omp.pc2.c100.boot[seq(2, nrow(rna.1log2.omp.pc2.c100.boot), 2),])
+colnames(rna.1log2.omp.pc2.c100)[5:10] <- c("omp.lower", "ott3.lower", "ott3.omp.lower", "omp.upper", "ott3.upper", "ott3.omp.upper")
+
+rna.1log2.ott3.pc2.c100 <- foreach(c=isplitRows(rna.1log2.ott3.pc2[,c(1:3)], chunks=100), .combine="rbind") %do% apply(c, 2, mean, na.rm=TRUE)
+rna.1log2.ott3.pc2.c100 <- as.data.frame(rna.1log2.ott3.pc2.c100)
+rna.1log2.ott3.pc2.c100$index <- 100:1
+rna.1log2.ott3.pc2.c100.boot <- foreach(c=isplitRows(rna.1log2.ott3.pc2[,c(1:3)], chunks=100), .combine="rbind") %do% apply(c, 2, bootCI)
+rna.1log2.ott3.pc2.c100 <- cbind(rna.1log2.ott3.pc2.c100, rna.1log2.ott3.pc2.c100.boot[seq(1, nrow(rna.1log2.ott3.pc2.c100.boot), 2),], rna.1log2.ott3.pc2.c100.boot[seq(2, nrow(rna.1log2.ott3.pc2.c100.boot), 2),])
+colnames(rna.1log2.ott3.pc2.c100)[5:10] <- c("omp.lower", "ott3.lower", "ott3.omp.lower", "omp.upper", "ott3.upper", "ott3.omp.upper")
+```
+
+#### Plot heatmaps - PC2
+
+```{r "gene_whole_W200N50F50_omp_hmc_120424_rpkm_mean_ordered_by_gene_body_pc2", fig.height=6, fig.width=6,dev=c('png', 'pdf')}
+MP.heat(omp.hmc.pos.pc2, range=c(0,1.5), average=50)
+```
+
+```{r "gene_whole_W200N50F50_ott3_1_hmc_rpkm_mean_ordered_by_omp_hmc_gene_body_pc2", fig.height=6, fig.width=6, dev=c('png', 'pdf')}
+MP.heat(ott3.hmc.pos.omp.pc2, range=c(0,1.5), average=50)
+```
+
+O/TT3 - OMP gene body 5hmC ordered by OMP 5hmC pc2
+```{r "ott3_sub_omp_gene_body_hmc_rmrna_1log2_ordered_by_omp_hmc_gene_body_pc2_mean_chunks100", fig.height=4, fig.width=2, dev=c('png', 'pdf')}
+gg <- ggplot(ott3.omp.hmc.pos.omp.pc2.c100, aes(V1, index))
+gg + geom_point() + xlab("RPM") + ylab("") + theme(axis.text.y=element_blank()) + coord_cartesian(xlim=c(-2, .5))
+```
+
+OMP rmRNA ordered by OMP 5hmC pc2
+```{r "omp_rmrna_1log2_ordered_by_omp_hmc_gene_body_pc2_mean_chunks100", fig.height=4, fig.width=2, dev=c('png', 'pdf')}
+gg <- ggplot(rna.1log2.omp.pc2.c100, aes(omp, index))
+gg + geom_point() + xlab("log2(FPKM + 1)") + ylab("") + theme(axis.text.y=element_blank()) + coord_cartesian(xlim=c(0,4))
+```
+
+O/TT3 rmRNA ordered by OMP 5hmC pc2
+```{r "ott3_rmrna_1log2_ordered_by_omp_hmc_gene_body_pc2_mean_chunks100", fig.height=4, fig.width=2, dev=c('png', 'pdf')}
+gg <- ggplot(rna.1log2.omp.pc2.c100, aes(ott3, index))
+gg <- gg + geom_point() + xlab("log2(FPKM + 1)") + ylab("") + theme(axis.text.y=element_blank()) + coord_cartesian(xlim=c(0,4))
+gg
+```
+
+O/TT3 - OMP rmRNA ratio ordered by OMP 5hmC pc2
+#```{r "ott3_omp_rmrna_1log2_ordered_by_omp_hmc_gene_body_pc2_mean_chunks100", fig.height=4, fig.width=2, dev=c('png', 'pdf')}
+theme_set(theme_gray())
+gg <- ggplot(rna.1log2.omp.pc2.c100, aes(ott3.omp, index))
+gg <- gg + geom_vline(xintercept=0, color="red")
+gg <- gg + geom_errorbarh(aes(xmin=ott3.omp.lower, xmax=ott3.omp.upper), height=0, size=.1) + geom_point(aes(color=wilcox.FDR.05), size=2)  + xlab("log2(FPKM + 1)") + ylab("") + theme(legend.position="none", axis.text.y=element_blank()) + labs(title=c("O/Tet3-OMP ratio RNA by OMP pc2")) + scale_color_manual(values=c("red", "black"))
+gg
+#```
+
+```{r "gene_whole_W200N50F50_omp_hmc_120424_rpkm_mean_ordered_by_ott3_1_hmc_gene_body_pc2", fig.height=6, fig.width=6, dev=c('png', 'pdf')}
+MP.heat(omp.hmc.pos.ott3.pc2, range=c(0,1.5), average=50)
+```
+
+```{r "gene_whole_W200N50F50_ott3_1_hmc_rpkm_mean_ordered_by_gene_body_pc2", fig.height=6, fig.width=6, dev=c('png', 'pdf')}
+MP.heat(ott3.hmc.pos.pc2, range=c(0,1.5), average=50)
+```
+
+O/TT3 - OMP gene body 5hmC ordered by O/TT3 5hmC pc2
+```{r "ott3_sub_omp_gene_body_hmc_1log2_ordered_by_ott3_hmc_gene_body_pc2_mean_chunks100", fig.height=4, fig.width=2, dev=c('png', 'pdf')}
+gg <- ggplot(ott3.omp.hmc.pos.ott3.pc2.c100, aes(V1, index))
+gg + geom_point() + xlab("RPM") + ylab("") + theme(axis.text.y=element_blank()) +  coord_cartesian(xlim=c(-.5, 1))
+```
+
+OMP rmRNA ordered by O/TT3 5hmC pc2
+```{r "omp_rmrna_1log2_ordered_by_ott3_1_hmc_gene_body_pc2_mean_chunks100", fig.height=4, fig.width=2, dev=c('png', 'pdf')}
+gg <- ggplot(rna.1log2.ott3.pc2.c100, aes(omp, index))
+gg + geom_point() + xlab("log2(FPKM + 1)") + ylab("") + theme(axis.text.y=element_blank()) + coord_cartesian(xlim=c(0,4)) + labs(title=c("OMP RNA by O/Tet3 pc2"))
+```
+
+O/TT3 rmRNA ordered by O/TT3 5hmC pc2
+```{r "ott3_rmrna_1log2_ordered_by_ott3_1_hmc_gene_body_pc2_mean_chunks100", fig.height=4, fig.width=2, dev=c('png', 'pdf')}
+gg <- ggplot(rna.1log2.ott3.pc2.c100, aes(ott3, index))
+gg + geom_point() + xlab("log2(FPKM + 1)") + ylab("") + theme(axis.text.y=element_blank()) + coord_cartesian(xlim=c(0,4)) + labs(title=c("O/Tet3 RNA by O/Tet3 pc2"))
+```
+
+Plot O/TT3 - OMP rmRNA ratio ordered by O/TT3 5hmC pc2
+#```{r "ott3_omp_rmrna_1log2_ordered_by_ott3_hmc_gene_body_pc2_mean_chunks100", fig.height=4, fig.width=2, dev=c('png', 'pdf')}
+gg <- ggplot(rna.1log2.ott3.pc2.c100, aes(ott3.omp, index))
+gg <- gg + geom_vline(xintercept=0, color="red")
+gg <- gg + geom_errorbarh(aes(xmin=ott3.omp.lower, xmax=ott3.omp.upper), height=0, size=.1) + geom_point(aes(color=wilcox.FDR.05), size=2) + xlab("log2(FPKM + 1)") + ylab("") + theme(legend.position="none", axis.text.y=element_blank()) + labs(title=c("O/Tet3-OMP ratio RNA by O/Tet3 pc2")) + scale_color_manual(values=c("red", "black"))
+gg
+#```
 
 ### 5mC heatmaps 
 Load omp, o/tt3 mc gene position matrices
@@ -240,6 +355,15 @@ Load omp, o/tt3 mc gene position matrices
 suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
 omp.mc.pos <- makeImage("omp_mc_rpkm", "gene_whole_W200N50F50_chr",  data_type="rpkm/mean", image=FALSE)
 ott3.mc.pos <- makeImage("ott3_1_mc_rpkm", "gene_whole_W200N50F50_chr",  data_type="rpkm/mean", image=FALSE)
+
+# Matrix means
+omp.mean <- mean(omp.mc.pos, na.rm=TRUE)
+ott3.mean <- mean(ott3.mc.pos, na.rm=TRUE)
+
+# Scale
+omp.mc.pos <- omp.mc.pos - omp.mean
+ott3.mc.pos <- ott3.mc.pos - ott3.mean
+
 ott3.omp.mc.pos <- ott3.mc.pos - omp.mc.pos
 ```
 
@@ -289,12 +413,12 @@ rna.1log2.ott3.pc1.c100$index <- 100:1
 
 #### Plot heatmaps
 
-```{r "gene_whole_W200N50F50_omp_mc_rpkm_mean_ordered_by_omp_hmc_gene_body_pc1", fig.height=6, fig.width=6,dev=c('png', 'pdf')}
-MP.heat(omp.mc.pos.omp.hmc.pc1, range=c(0,1), average=50)
+```{r "gene_whole_W200N50F50_omp_mc_rpkm_mean_ordered_by_omp_hmc_gene_body_pc1_mean_centered", fig.height=6, fig.width=6,dev=c('png', 'pdf')}
+MP.heat(omp.mc.pos.omp.hmc.pc1, range=c(-.5,.5), average=50, density="density")
 ```
 
-```{r "gene_whole_W200N50F50_ott3_1_mc_rpkm_mean_ordered_by_omp_hmc_gene_body_pc1", fig.height=6, fig.width=6, dev=c('png', 'pdf')}
-MP.heat(ott3.mc.pos.omp.hmc.pc1, range=c(0,1), average=50)
+```{r "gene_whole_W200N50F50_ott3_1_mc_rpkm_mean_ordered_by_omp_hmc_gene_body_pc1_mean_centered", fig.height=6, fig.width=6, dev=c('png', 'pdf')}
+MP.heat(ott3.mc.pos.omp.hmc.pc1, range=c(-.5,.5), average=50)
 ```
 
 O/TT3 - OMP gene body 5mC ordered by OMP 5hmC PC1

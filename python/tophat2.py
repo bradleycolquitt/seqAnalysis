@@ -35,7 +35,7 @@ class tophat_class:
         self.library_type = library_type
         self.species = species
         self.to_map = True
-        self.output = "/".join([bam_dir, self.date, self.sample])
+        self.output = "/".join([bam_dir, self.date, "_".join([self.sample, self.gtf])])
         if os.path.exists(self.output):
             dec = raw_input("Output file exists. Bypass mapping [y/n]? ")
             if dec == 'y': self.to_map = False
@@ -57,8 +57,21 @@ class tophat_class:
                         '--library-type', self.library_type,
                         self.species, self.input1]
             else:
-                if self.gtf != 'blank': 
-                    cmd_args = ['tophat2',
+                if self.gtf != 'blank':
+                    if self.gtf == "rmsk":
+                        cmd_args = ['tophat2',
+                                '-p', '6',
+                                '-o', self.output, 
+                                '-r', self.mean,
+                                '--mate-std-dev', self.sd,
+                                '-G', '/home/user/lib/gtf/rmsk.gtf',
+                                '--transcriptome-index=/home/user/lib/gtf/rmsk',
+                                '-T',
+                                '--no-coverage-search',
+                                '--library-type', self.library_type, 
+                                self.species, self.input1, self.input2]
+                    else:
+                        cmd_args = ['tophat2',
                                 '-p', '6',
                                 '-o', self.output, 
                                 '-r', self.mean,
@@ -66,7 +79,6 @@ class tophat_class:
                                 '--max-multihits', '1',
                                 '-G', '/home/user/lib/Mus_musculus/Ensembl/NCBIM37/Annotation/Genes/genes_chr.gtf',
                                 '--transcriptome-index', '/home/user/lib/Mus_musculus/Ensembl/NCBIM37/Annotation/Genes/',
-                                #'--prefilter-multihits',
                                 '--no-coverage-search',
                                 '--library-type', self.library_type, 
                                 self.species, self.input1, self.input2]
@@ -76,6 +88,7 @@ class tophat_class:
                                 '-p', '6',
                                 '-r', self.mean,
                                 '--mate-std-dev', self.sd,
+                                '--no-coverage-search',
                                 '--library-type', self.library_type,
                                 self.species, self.input1, self.input2]
             

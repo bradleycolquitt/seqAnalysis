@@ -1,0 +1,131 @@
+D3xOG rmRNA analysis 2
+========================================================
+
+Genomic feature correlation with expression changes
+---------------------------------------------------
+### Possible locations for 5hmC/5mc RNA correlates
+* TSS (-500 to +500 TSS)
+* Upstream downstream flanking
+  * promoter (1kb upstream)
+* most 5' 5hmC peak in WT
+  * No correlation
+* Exons
+  * No correlation
+* Introns
+* Whole gene body
+* Enhancers
+
+Differentially expressed gene promoter analysis
+------------------------------------------------
+Filter for genes with log2(FPKM + 1) > 1 in either condition and absolute fold change >= 1
+```{r}
+rna.1log2.fpkm1 <- rna.1log2[rna.1log2[,2]>1 | rna.1log2[,3]>1,]
+rna.1log2.fpkm1.fc1 <- rna.1log2.fpkm1[abs(rna.1log2.fpkm1[,4])>=1,]
+```
+
+```
+saveRDS(rna.1log2.fpkm1.fc1, file="~/s2/analysis/rna/rdata/d3xog_wt_ko_rmrna_masked_uq_comp_1log2_fpkm_gt1_fc_ge1.rds")
+```
+
+```{r}
+prom <- read.delim("~/lib/features_general/Refgene_1kb_up.bed", header=FALSE)
+rg <- read.delim("/seq/lib/roi/refgene_nodup.bed", header=FALSE)
+id <- read.delim("/seq/lib/id_name2", header=FALSE)
+prom$name2 <- id[match(prom[,4], id[,1]),2]
+prom$strand <- rg[match(prom$name2, rg[,4]),6]
+
+# Remove duplicate entries
+prom.s <- split(prom, prom[,1])
+prom.s <- lapply(prom.s, function(x) x[!duplicated(x[,2]),])
+prom <- ldply(prom.s)[,-1]
+
+prom.up <- prom[prom[,5] %in% rna.1log2.fpkm1.fc1$gene[rna.1log2.fpkm1.fc1[,4]>0],]
+prom.down <- prom[prom[,5] %in% rna.1log2.fpkm1.fc1$gene[rna.1log2.fpkm1.fc1[,4]<0],]
+prom.mid <- prom[prom[,5] %in% rna.1log2.fpkm1$gene[rna.1log2.fpkm1[,4]>(-.5) & rna.1log2.fpkm1[,4]<.5 ],]
+```
+
+Extract sequences
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/seqUtil.R"))
+proms <- list(up=prom.up, down=prom.down, mid=prom.mid)
+proms.seq <- lapply(proms, function(x) getSeq.masked(x))
+proms.seq <- lapply(proms.seq, na.omit)
+```
+
+```
+lapply(names(proms.seq), function(x) writeXStringSet(DNAStringSet(proms.seq[[x]]), file=paste("~/s2/analysis/sequences/d3a/Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_", x, "_seq.fasta", sep=""), format="fasta"))
+```
+
+#### Homer motif analysis
+
+Upregulated versus constant
+```
+$ findMotifs.pl Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_up_seq.fasta fasta ~/s2/data/homer/motifs/Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_up_seq_bg_Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_mid_seq -fasta Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_mid_seq.fasta
+```
+
+Downregulated versus constant
+```
+$ findMotifs.pl Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_down_seq.fasta fasta ~/s2/data/homer/motifs/Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_down_seq_bg_Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_mid_seq -fasta Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_mid_seq.fasta
+```
+
+Downregulated versus upregulated
+```
+$ findMotifs.pl Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_down_seq.fasta fasta ~/s2/data/homer/motifs/Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_down_seq_bg_Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_up_seq -fasta Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_up_seq.fasta
+```
+
+Upregulated versus downregulated
+```
+$ findMotifs.pl Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_up_seq.fasta fasta ~/s2/data/homer/motifs/Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_up_seq_bg_Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_down_seq -fasta Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_down_seq.fasta
+```
+
+### Conserved promoter elements
+```{r}
+cons <- read.delim("/seq/lib/roi/phastConsElements30way_len50_inter_Refgene_1kb_up.bed", header=F)
+cons$name2 <- id[match(cons[,10], id[,1]),2]
+cons$strand <- rg[match(cons$name2, rg[,4]),6]
+```
+
+```{r}
+cons.up <- cons[cons$name2 %in% rna.1log2.fpkm1.fc1$gene[rna.1log2.fpkm1.fc1[,4]>0],]
+cons.down <- cons[cons$name2 %in% rna.1log2.fpkm1.fc1$gene[rna.1log2.fpkm1.fc1[,4]<0],]
+cons.mid <- cons[prom$name2 %in% rna.1log2.fpkm1$gene[rna.1log2.fpkm1[,4]>(-.5) & rna.1log2.fpkm1[,4]<.5 ],]
+```
+
+```{r}
+conss <- list(up=cons.up, down=cons.down, mid=cons.mid)
+conss.seq <- lapply(conss, function(x) getSeq.masked(x[,c(1,2,3,4,5,12)]))
+conss.seq <- lapply(conss.seq, na.omit)
+```
+
+```
+lapply(names(conss.seq), function(x) writeXStringSet(DNAStringSet(conss.seq[[x]]), file=paste("~/s2/analysis/sequences/d3a/phastConsElements30way_len50_inter_Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_", x, "_seq.fasta", sep=""), format="fasta"))
+```
+
+#### Homer motif analysis
+
+Upregulated versus constant
+```
+$ findMotifs.pl phastConsElements30way_len50_inter_Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_up_seq.fasta fasta ~/s2/data/homer/motifs/phastConsElements30way_len50_inter_Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_up_seq_bg_phastConsElements30way_len50_inter_Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_mid_seq -fasta phastConsElements30way_len50_inter_Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_mid_seq.fasta
+```
+
+
+
+```
+$ findMotifs.pl Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_up_seq.fasta fasta ~/s2/data/homer/motifs/Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_up_seq_bg_Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_mid_seq -fasta Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_mid_seq.fasta
+```
+
+Downregulated versus constant
+```
+$ findMotifs.pl Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_down_seq.fasta fasta ~/s2/data/homer/motifs/Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_down_seq_bg_Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_mid_seq -fasta Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_mid_seq.fasta
+```
+
+Downregulated versus upregulated
+```
+$ findMotifs.pl Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_down_seq.fasta fasta ~/s2/data/homer/motifs/Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_down_seq_bg_Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_up_seq -fasta Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_up_seq.fasta
+```
+
+Upregulated versus downregulated
+```
+$ findMotifs.pl Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_up_seq.fasta fasta ~/s2/data/homer/motifs/Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_up_seq_bg_Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_down_seq -fasta Refgene_1kb_up_d3xog_wt_vs_ko_rmrna_fpkm1_fc1_down_seq.fasta
+```
+

@@ -1,4 +1,6 @@
 library(MASS)
+library(foreach)
+library(doMC)
 registerDoMC(cores=4)
 
 fitNormal <- function(vals, plot=TRUE) {
@@ -51,6 +53,8 @@ fitExp <- function(vals, plot=TRUE) {
     lines(x, y, col="red")
   }
 }
+
+
 
 plotDistModel <- function(vals, dfit) {
   step <- round((max(vals) - min(vals)) / 100)

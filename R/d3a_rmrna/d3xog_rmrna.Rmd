@@ -1,12 +1,325 @@
+tested <- c("Ncam1", "Clgn", "Adcy3", "Slc17a6", "Cntn4")
 Dnmt3a OMP-GFP rmRNA analysis
 ========================================================
 
+Summary
+---------------------
+
+* Possible overall reduction of transcription with 5hmC TSS-flanking depletion.
+* However KO RNA levels reduced as a whole relative to WT (see scatter and boxplots).
+
+
 Average entries with common gene names
 ```
-cd2 <- read.delim("~/s2/data/rna/cuffdiff/d3xog_wt_ko_rmrna_masked_uq_comp_js/gene_exp.diff")
-rna2 <- data.frame(wt=cd2$value_1, ko=cd2$value_2, gene=cd2$gene)
-rna2.s <- ddply(rna2, .(gene), summarize, wt=mean(wt), ko=mean(ko), .progress="text")
+cd <- read.delim("~/s2/data/rna/cuffdiff/d3xog_wt_ko_rmrna_masked_uq_comp_js/gene_exp.diff")
+rna <- data.frame(wt=cd$value_1, ko=cd$value_2, gene=cd$gene)
+rna.s <- ddply(rna, .(gene), summarize, wt=mean(wt), ko=mean(ko), .progress="text")
+rna.1log2 <- transform(rna.s, wt=log2(wt+1), ko=log2(ko+1))
+saveRDS(rna.1log2, file="~/s2/analysis/rna/rdata/d3xog_wt_ko_rmrna_masked_uq_comp_1log2.rds")
+```
 
+```{r}
+opts_knit$set(progress = TRUE, verbose = TRUE)
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+```
+
+#### Cufflinks generated FPKM
+```{r}
+rna.1log2 <- readRDS("~/s2/analysis/rna/rdata/d3xog_wt_ko_rmrna_masked_uq_comp_1log2.rds")
+rna.1log2$ko.wt <- with(rna.1log2, ko - wt)
+rna.1log2.nz <- rna.1log2[apply(rna.1log2[,2:3], 1, prod)>0,]
+cor(rna.1log2[,2:3])
+```
+
+```{r}
+summary(rna.1log2[,2:4])
+boxplot(rna.1log2.nz[,2:4])
+```
+
+#### Mapping, abudance estimation of protein-coding genes only
+```{r}
+rna2.1log2 <- readRDS("~/s2/analysis/rna/rdata/d3xog_wt_ko_rmrna_protein_masked_uq_comp_1log2.rds")
+rna2.1log2.nz <- rna2.1log2[apply(rna2.1log2[,2:3], 1, prod)>0,]
+cor(rna2.1log2[,2:3])
+```
+
+```{r}
+summary(rna2.1log2.nz)
+boxplot(rna2.1log2.nz[,2:4])
 ```
 
 
+#### Counts and normalization by DESeq
+```{r}
+suppressPackageStartupMessages(library(DESeq))
+rna.cds <- readRDS("~/s2/analysis/rna/deseq/d3xog_wt_ko_rmrna_counts.rds")
+rna.counts <- as.data.frame(counts(rna.cds, normalize=TRUE))
+
+ens <- read.delim("/seq/lib/ensembl")
+rna.counts$name2 <- ens[match(rownames(rna.counts), ens[,2]),3]
+
+rna.counts.1log2 <- transform(rna.counts, wt=log2(wt + 1), ko=log2(ko+1))
+rna.counts.1log2$ko.wt <- with(rna.counts.1log2, ko - wt)
+rna.counts.1log2.nz <- rna.counts.1log2[apply(rna.counts.1log2[,1:2], 1, sum)>0,]
+
+```
+
+```{r}
+summary(rna.counts.1log2.nz)
+boxplot(rna.counts.1log2.nz[,c("wt", "ko", "ko.wt")])
+
+```
+
+### Scatter plots
+#### FPKM
+```{r}
+library(ggplot2)
+library(gridExtra)
+gg <- ggplot(rna.1log2, aes(wt, ko))
+rna.gg <- gg + geom_point(alpha=I(1/5)) + geom_abline(slope=1, intercept=0, color="red") + labs(title="FPKM UQ norm")
+```
+
+```{r}
+gg <- ggplot(rna2.1log2, aes(wt, ko))
+rna2.gg <- gg + geom_point(alpha=I(1/5)) + geom_abline(slope=1, intercept=0, color="red") + labs(title="FPKM UQ norm, protein coding")
+```
+
+#### Counts
+
+```{r}
+gg <- ggplot(rna.counts.1log2, aes(wt, ko))
+rna.count.gg <- gg + geom_point(alpha=I(1/5)) + geom_abline(slope=1, intercept=0, color="red") + labs(title="Counts DESeq norm")
+```
+
+```{r, fig.width=9, fig.height=3}
+grid.arrange(rna.gg, rna2.gg, rna.count.gg, ncol=3)
+```
+
+### MAplots
+```{r, fig.width=12, fig.height=4}
+rna.gg <- ggplot(rna.1log2.nz, aes(wt, ko.wt)) + geom_point(alpha=I(1/10)) + geom_density2d(breaks=seq(0, .5,.025)) + labs(title="FPKM UQ norm") + geom_hline(yintercept=0, color="red")
+rna2.gg <- ggplot(rna.1log2.nz, aes(wt, ko.wt)) + geom_point(alpha=I(1/10)) + geom_density2d(breaks=seq(0, .5,.025)) + labs(title="FPKM Total norm")
+rna.count.gg <- ggplot(rna.counts.1log2.nz, aes(wt, ko.wt)) + geom_point(alpha=I(1/10)) + geom_density2d(breaks=seq(0, .5,.025)) + labs(title="Counts DESeq norm")
+grid.arrange(rna.gg, rna2.gg, rna.count.gg, ncol=3)
+```
+
+**Appears to be greater fold difference as WT expression increases.**
+
+```{r, fig.width=12, fig.height=4}
+rna.gg <- ggplot(rna.1log2.nz, aes(ko, ko.wt)) + geom_point(alpha=I(1/10)) + geom_density2d(breaks=seq(0, .5,.025)) + labs(title="FPKM UQ norm")
+rna2.gg <- ggplot(rna.1log2.nz, aes(ko, ko.wt)) + geom_point(alpha=I(1/10)) + geom_density2d(breaks=seq(0, .5,.025)) + labs(title="FPKM Total norm")
+rna.count.gg <- ggplot(rna.counts.1log2.nz, aes(ko, ko.wt)) + geom_point(alpha=I(1/10)) + geom_density2d(breaks=seq(0, .5,.025)) + labs(title="Counts DESeq norm")
+grid.arrange(rna.gg, rna2.gg, rna.count.gg, ncol=3)
+```
+
+#### Order by wildtype levels
+```{r}
+library(foreach)
+library(itertools)
+library(reshape2)
+rna.1log2.nz.wt <- rna.1log2.nz[order(rna.1log2.nz$wt),2:4]
+rna.1log2.wt.m <- melt(rna.1log2.nz.wt)
+rna.1log2.wt.m$index <- 1:nrow(rna.1log2.nz.wt)
+```
+
+```{r}
+rna.1log2.wt.c100 <- as.data.frame(foreach(c=isplitRows(rna.1log2.nz.wt, chunks=100), .combine="rbind") %do% apply(c, 2, median))
+rna.1log2.wt.c100 <- melt(rna.1log2.wt.c100)
+rna.1log2.wt.c100$index <- 1:100
+levels(rna.1log2.wt.c100$variable) <- c("WT", "KO", "KO/WT")
+```
+
+```{r d3xog_wt_ko_rmrna_masked_uq_comp_1log2_order_wt_chunk100, fig.height=4, fig.width=4, dev=c("png", "pdf")}
+library(ggplot2)    
+gg <- ggplot(rna.1log2.wt.c100, aes(index, value))
+gg <- gg + geom_point(aes(color=variable)) + scale_color_manual("Dnmt3a", values=col3)
+gg <- gg + theme(legend.position=c(.2, .8)) + labs(x="WT Rank", y="log2(FPKM + 1)") + scale_x_continuous(breaks=seq(0, 100, 5))
+gg
+```
+
+#### Protein-coding only
+```{r}
+rna2.1log2.nz.wt <- rna2.1log2.nz[order(rna2.1log2.nz$wt),2:4]
+rna2.1log2.wt.m <- melt(rna2.1log2.nz.wt)
+rna2.1log2.wt.m$index <- 1:nrow(rna2.1log2.nz.wt)
+rna2.1log2.wt.c100 <- as.data.frame(foreach(c=isplitRows(rna2.1log2.nz.wt, chunks=100), .combine="rbind") %do% apply(c, 2, median))
+rna2.1log2.wt.c100 <- melt(rna2.1log2.wt.c100)
+rna2.1log2.wt.c100$index <- 1:100
+levels(rna2.1log2.wt.c100$variable) <- c("WT", "KO", "KO/WT")
+```
+
+```{r d3xog_wt_ko_rmrna_protein_masked_uq_comp_1log2_order_wt_chunk100, fig.height=4, fig.width=4, dev=c("png", "pdf")}
+library(ggplot2)    
+gg <- ggplot(rna2.1log2.wt.c100, aes(index, value))
+gg <- gg + geom_point(aes(color=variable)) + scale_color_manual("Dnmt3a", values=col3)
+gg <- gg + theme(legend.position=c(.2, .8)) + labs(x="WT Rank", y="log2(FPKM + 1)") + scale_x_continuous(breaks=seq(0, 100, 10))
+gg
+```
+
+#### Order by KO levels
+```{r}
+rna.1log2.nz.ko <- rna.1log2.nz[order(rna.1log2.nz$ko),]
+rna.1log2.ko.c100 <- as.data.frame(foreach(c=isplitRows(rna.1log2.nz.ko[,2:3], chunks=100), .combine="rbind") %do% apply(c, 2, median, na.rm=T))
+rna.1log2.ko.c100 <- melt(rna.1log2.ko.c100)
+rna.1log2.ko.c100$index <- 1:100
+levels(rna.1log2.ko.c100$variable) <- c("WT", "KO")
+```
+
+```{r d3xog_wt_ko_rmrna_masked_uq_comp_1log2_order_ko_chunk100, fig.height=4, fig.width=4, dev=c("png", "pdf")}
+
+gg <- ggplot(rna.1log2.ko.c100, aes(index, value))
+gg <- gg + geom_point(aes(color=variable)) + scale_color_manual("Dnmt3a", values=col2)
+gg <- gg + theme(legend.position=c(.2, .8)) + labs(x="KO Rank", y="log2(FPKM + 1)")
+gg
+```
+
+TSS Heatmaps
+-----------------
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+hmc.wt <- makeImage("moe_d3a_wt_hmc_rpkm", "refGene_noRandom_order_outsides2_tss_W25F200_chr",  data_type="rpkm/mean", image=FALSE)
+hmc.ko <- makeImage("moe_d3a_ko_hmc_rpkm", "refGene_noRandom_order_outsides2_tss_W25F200_chr",  data_type="rpkm/mean", image=FALSE)
+hmc.ko.wt <- hmc.ko - hmc.wt
+```
+
+### TSS 5hmC values ordered by RNA changes
+```{r}
+hmc.wt.rna.ko.wt <- hmc.wt[match(rna.1log2$gene[order(rna.1log2$ko.wt)], rownames(hmc.wt)),]
+hmc.ko.rna.ko.wt <- hmc.ko[match(rna.1log2$gene[order(rna.1log2$ko.wt)], rownames(hmc.ko)),]
+hmc.ko.wt.rna.ko.wt <- hmc.ko.wt[match(rna.1log2.nz$gene[order(rna.1log2.nz$ko.wt)], rownames(hmc.ko.wt)),]
+hmc.ko.wt.rna.ko.wt <- na.omit(hmc.ko.wt.rna.ko.wt)
+
+```
+
+```{r}
+MP.heat(hmc.wt.rna.ko.wt, range=c(0,1.5), average=50)
+```
+
+```{r}
+MP.heat(hmc.ko.wt.rna.ko.wt, range=c(-.2,.1), average=50)
+```
+
+#### Group RNA ordered 5hmC KO-WT TSS maps into 100 chunks
+**Upstream**
+```{r}
+hmc.ko.wt.rna.ko.wt.up.c100 <- foreach(c=isplitRows(hmc.ko.wt.rna.ko.wt[,121:160], chunks=100), .combine="c") %do% mean(c, na.rm=TRUE)
+hmc.ko.wt.rna.ko.wt.up.c100 <- as.data.frame(hmc.ko.wt.rna.ko.wt.up.c100)
+hmc.ko.wt.rna.ko.wt.up.c100$index <- 100:1
+hmc.ko.wt.rna.ko.wt.up.c100.boot <- foreach(c=isplitRows(hmc.ko.wt.rna.ko.wt[,121:160], chunks=100), .combine="rbind") %do% bootCI(apply(c,1, mean, na.rm=T))
+hmc.ko.wt.rna.ko.wt.up.c100 <- cbind(hmc.ko.wt.rna.ko.wt.up.c100, hmc.ko.wt.rna.ko.wt.up.c100.boot)
+colnames(hmc.ko.wt.rna.ko.wt.up.c100)[3:4] <- c("lower", "upper")
+```
+
+```{r}
+hmc.ko.wt.rna.ko.wt.up.c100$wilcox.FDR <- p.adjust(foreach(c=isplitRows(hmc.ko.wt.rna.ko.wt[,121:160], chunks=100), .combine="c") %do% wilcox.test(c)$p.value, method="fdr")
+hmc.ko.wt.rna.ko.wt.up.c100$wilcox.FDR.05 <- cut(hmc.ko.wt.rna.ko.wt.up.c100$wilcox.FDR, breaks=c(0, .05, 1))
+```
+
+```{r refGene_noRandom_order_outsides2_tss_W25F200_moe_d3a_ko_sub_wt_hmc_upstream_ordered_by_d3xog_rmrna_ko_wt_fpkm, fig.width=2, fig.height=4, dev=c("png", "pdf")}
+theme_set(theme_gray())
+gg <- ggplot(hmc.ko.wt.rna.ko.wt.up.c100, aes(hmc.ko.wt.rna.ko.wt.up.c100, index))
+gg <- gg + geom_vline(xintercept=0, color="red")
+gg <- gg + geom_errorbarh(aes(xmin=lower, xmax=upper), height=0, size=.1) + geom_point(aes(color=wilcox.FDR.05), size=2)  + xlab("RPM") + ylab("") + theme(legend.position="none", axis.text.y=element_blank()) + labs(title=c("KO - WT 5hmC")) + scale_color_manual(values=c("red", "black"))
+gg
+```
+
+#### Order by counts
+
+```{r}
+hmc.ko.wt.rna.count.ko.wt <- hmc.ko.wt[match(rna.counts.1log2$name2[order(rna.counts.1log2$ko.wt)], rownames(hmc.ko.wt)),]
+hmc.ko.wt.rna.count.ko.wt <- na.omit(hmc.ko.wt.rna.count.ko.wt)
+```
+
+```{r}
+hmc.ko.wt.rna.count.ko.wt.up.c100 <- foreach(c=isplitRows(hmc.ko.wt.rna.count.ko.wt[,121:160], chunks=100), .combine="c") %do% mean(c, na.rm=TRUE)
+hmc.ko.wt.rna.count.ko.wt.up.c100 <- as.data.frame(hmc.ko.wt.rna.count.ko.wt.up.c100)
+hmc.ko.wt.rna.count.ko.wt.up.c100$index <- 100:1
+hmc.ko.wt.rna.count.ko.wt.up.c100.boot <- foreach(c=isplitRows(hmc.ko.wt.rna.count.ko.wt[,121:160], chunks=100), .combine="rbind") %do% bootCI(apply(c,1, mean, na.rm=T))
+hmc.ko.wt.rna.count.ko.wt.up.c100 <- cbind(hmc.ko.wt.rna.count.ko.wt.up.c100, hmc.ko.wt.rna.count.ko.wt.up.c100.boot)
+colnames(hmc.ko.wt.rna.count.ko.wt.up.c100)[3:4] <- c("lower", "upper")
+```
+
+```{r}
+hmc.ko.wt.rna.count.ko.wt.up.c100$wilcox.FDR <- p.adjust(foreach(c=isplitRows(hmc.ko.wt.rna.count.ko.wt[,121:160], chunks=100), .combine="c") %do% wilcox.test(c)$p.value, method="fdr")
+hmc.ko.wt.rna.count.ko.wt.up.c100$wilcox.FDR.05 <- cut(hmc.ko.wt.rna.count.ko.wt.up.c100$wilcox.FDR, breaks=c(0, .05, 1))
+```
+
+
+```{r refGene_noRandom_order_outsides2_tss_W25F200_moe_d3a_ko_sub_wt_hmc_upstream_ordered_by_d3xog_rmrna_ko_wt_counts, fig.width=2, fig.height=4, dev=c("png", "pdf")}
+theme_set(theme_gray())
+gg <- ggplot(hmc.ko.wt.rna.count.ko.wt.up.c100, aes(hmc.ko.wt.rna.count.ko.wt.up.c100, index))
+gg <- gg + geom_vline(xintercept=0, color="red")
+gg <- gg + geom_errorbarh(aes(xmin=lower, xmax=upper), height=0, size=.1) + geom_point(aes(color=wilcox.FDR.05), size=2)  + xlab("RPM") + ylab("") + theme(legend.position="none", axis.text.y=element_blank()) + labs(title=c("KO - WT 5hmC")) + scale_color_manual(values=c("red", "black"))
+gg
+```
+
+**Downstream**
+```{r}
+hmc.ko.wt.rna.ko.wt.down.c100 <- foreach(c=isplitRows(hmc.ko.wt.rna.ko.wt[,241:280], chunks=100), .combine="c") %do% mean(c, na.rm=TRUE)
+hmc.ko.wt.rna.ko.wt.down.c100 <- as.data.frame(hmc.ko.wt.rna.ko.wt.down.c100)
+hmc.ko.wt.rna.ko.wt.down.c100$index <- 100:1
+hmc.ko.wt.rna.ko.wt.down.c100.boot <- foreach(c=isplitRows(hmc.ko.wt.rna.ko.wt[,241:280], chunks=100), .combine="rbind") %do% bootCI(apply(c,1, mean, na.rm=T))
+hmc.ko.wt.rna.ko.wt.down.c100 <- cbind(hmc.ko.wt.rna.ko.wt.down.c100, hmc.ko.wt.rna.ko.wt.down.c100.boot)
+colnames(hmc.ko.wt.rna.ko.wt.down.c100)[3:4] <- c("lower", "upper")
+```
+
+```{r}
+hmc.ko.wt.rna.ko.wt.down.c100$wilcox.FDR <- p.adjust(foreach(c=isplitRows(hmc.ko.wt.rna.ko.wt[,241:280], chunks=100), .combine="c") %do% wilcox.test(c)$p.value, method="fdr")
+hmc.ko.wt.rna.ko.wt.down.c100$wilcox.FDR.05 <- cut(hmc.ko.wt.rna.ko.wt.down.c100$wilcox.FDR, breaks=c(0, .05, 1))
+```
+
+
+```{r refGene_noRandom_order_outsides2_tss_W25F200_moe_d3a_ko_sub_wt_hmc_downstream_ordered_by_d3xog_rmrna_ko_wt_fpkm, fig.width=4, fig.height=2, dev=c("png", "pdf")}
+theme_set(theme_gray())
+gg <- ggplot(hmc.ko.wt.rna.ko.wt.down.c100, aes(index, hmc.ko.wt.rna.ko.wt.down.c100))
+gg <- gg + geom_hline(yintercept=0, color="red")
+gg <- gg + geom_errorbarh(aes(xmin=lower, xmax=upper), height=0, size=.1) + geom_point(size=2)  + ylab("5hmC RPM") + xlab("KO / WT rmRNA ratio") + theme(legend.position="none") + labs(title=c("KO - WT Downstream TSS 5hmC")) + scale_color_manual(values=c("black"))
+gg
+```
+
+#### Order by protein-coding FPKM
+
+```{r}
+hmc.wt.rna.ko.wt <- hmc.wt[match(rna2.1log2$gene[order(rna2.1log2$ko.wt)], rownames(hmc.wt)),]
+hmc.ko.rna.ko.wt <- hmc.ko[match(rna2.1log2$gene[order(rna2.1log2$ko.wt)], rownames(hmc.ko)),]
+hmc.ko.wt.rna.ko.wt <- hmc.ko.wt[match(rna2.1log2.nz$gene[order(rna2.1log2.nz$ko.wt)], rownames(hmc.ko.wt)),]
+hmc.ko.wt.rna.ko.wt <- na.omit(hmc.ko.wt.rna.ko.wt)
+
+```
+
+```{r}
+MP.heat(hmc.wt.rna.ko.wt, range=c(0,1.5), average=50)
+```
+
+```{r}
+MP.heat(hmc.ko.wt.rna.ko.wt, range=c(-.2,.1), average=50)
+```
+#### Order by counts
+
+```{r}
+hmc.ko.wt.rna.count.ko.wt <- hmc.ko.wt[match(rna.counts.1log2$name2[order(rna.counts.1log2$ko.wt)], rownames(hmc.ko.wt)),]
+hmc.ko.wt.rna.count.ko.wt <- na.omit(hmc.ko.wt.rna.count.ko.wt)
+```
+
+```{r}
+hmc.ko.wt.rna.count.ko.wt.down.c100 <- foreach(c=isplitRows(hmc.ko.wt.rna.count.ko.wt[,241:280], chunks=100), .combine="c") %do% mean(c, na.rm=TRUE)
+hmc.ko.wt.rna.count.ko.wt.down.c100 <- as.data.frame(hmc.ko.wt.rna.count.ko.wt.down.c100)
+hmc.ko.wt.rna.count.ko.wt.down.c100$index <- 100:1
+hmc.ko.wt.rna.count.ko.wt.down.c100.boot <- foreach(c=isplitRows(hmc.ko.wt.rna.count.ko.wt[,241:280], chunks=100), .combine="rbind") %do% bootCI(apply(c,1, mean, na.rm=T))
+hmc.ko.wt.rna.count.ko.wt.down.c100 <- cbind(hmc.ko.wt.rna.count.ko.wt.down.c100, hmc.ko.wt.rna.count.ko.wt.down.c100.boot)
+colnames(hmc.ko.wt.rna.count.ko.wt.down.c100)[3:4] <- c("lower", "upper")
+```
+
+```{r}
+hmc.ko.wt.rna.count.ko.wt.down.c100$wilcox.FDR <- p.adjust(foreach(c=isplitRows(hmc.ko.wt.rna.count.ko.wt[,241:280], chunks=100), .combine="c") %do% wilcox.test(c)$p.value, method="fdr")
+hmc.ko.wt.rna.count.ko.wt.down.c100$wilcox.FDR.05 <- cut(hmc.ko.wt.rna.count.ko.wt.down.c100$wilcox.FDR, breaks=c(0, .05, 1))
+```
+
+```{r refGene_noRandom_order_outsides2_tss_W25F200_moe_d3a_ko_sub_wt_hmc_dowstream_ordered_by_d3xog_rmrna_ko_wt_counts, fig.width=2, fig.height=4, dev=c("png", "pdf")}
+theme_set(theme_gray())
+gg <- ggplot(hmc.ko.wt.rna.count.ko.wt.down.c100, aes(hmc.ko.wt.rna.count.ko.wt.down.c100, index))
+gg <- gg + geom_vline(xintercept=0, color="red")
+gg <- gg + geom_errorbarh(aes(xmin=lower, xmax=upper), height=0, size=.1) + geom_point(aes(color=wilcox.FDR.05), size=2)  + xlab("RPM") + ylab("") + theme(legend.position="none", axis.text.y=element_blank()) + labs(title=c("KO - WT 5hmC")) + scale_color_manual(values=c("red", "black"))
+gg
+```

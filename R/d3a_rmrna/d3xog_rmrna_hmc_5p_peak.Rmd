@@ -1,0 +1,39 @@
+D3xog rmRNA, 5hmC 5' peak
+========================================================
+
+```{r}
+peaks <- read.delim("~/s2/data/homer/peaks/moe_d3a_wt_hmc_gc/moe_d3a_wt_hmc_gc_input_moe_d3a_wt_in_gc_size1kb_F2_inter_refgene_nodup.bed", header=F)
+distances <- apply(peaks, 1,  function(line) ifelse(line[12]=="+", as.numeric(line[2]) - as.numeric(line[8]), as.numeric(line[9])-as.numeric(line[3])))
+names(distances) <- peaks[,4]
+distances.5kb <- distances[distances<=5000]
+
+```
+
+
+```{r}
+peaks.dna <- as.data.frame(makeFeatureMatrix2("moe_d3a_wt_hmc_gc_input_moe_d3a_wt_in_gc_size1kb_F2_inter_refgene_nodup.bed_chr", "d3a_rpkm", data_type="rpkm/mean"))
+peaks.dna$name2 <- peaks[match(rownames(peaks.dna), peaks[,4]), 10]
+peaks.dna$id <- rownames(peaks.dna)
+peaks.dna.5kb <- peaks.dna[rownames(peaks.dna) %in% names(distances.5kb),]
+```
+
+
+```{r}
+peaks.dna.5kb <- transform(peaks.dna.5kb, hmc.ko.wt = computeScoreRatios(moe_d3a_ko_hmc_rpkm, moe_d3a_wt_hmc_rpkm), mc.ko.wt=computeScoreRatios(moe_d3a_ko_mc_rpkm, moe_d3a_wt_mc_rpkm))
+```
+
+Combine with RNA
+```{r}
+peaks.dna.5kb.rna <- na.omit(data.frame(peaks.dna.5kb, rna.1log2[match(peaks.dna.5kb$name2, rna.1log2$gene ),]))
+```
+
+```{r}
+cor(peaks.dna.5kb.rna[,-c(5,6, 9)])
+```
+
+```{r}
+gg <- ggplot(peaks.dna.5kb.rna, aes(hmc.ko.wt, ko.wt))
+gg + geom_point(alpha=I(1/10))
+
+```
+

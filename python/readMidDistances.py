@@ -171,6 +171,8 @@ def bamToFragmentBed(infile, outfile, size):
     out = ""
     start = 0
     end = 0
+
+    # Extend by insert size
     if size == 0:
         for read in infile:    
             if read.is_read1:
@@ -268,13 +270,18 @@ def trimToDyad(bam, bed, surround):
         #pool.apply(trimToDyad_worker, (args,))
         trimToDyad_worker([bam, ref, bed, surround])
   
+
+# If type is "extend" and size equal to 0, will extend by insert size
 def extend_bam(bam, type, reheader, size=0):
     
     bam_prefix = bam.split(".bam")[0]
     bam_file = pysam.Samfile(bam, 'rb')
     tmp_name = bam_prefix + ".bed"
     tmp_bed = open(tmp_name, 'w')
-    out_name = "_".join([bam_prefix, type]) + ".bam"
+    size_name = str(size)
+    if size == 0 : size_name = "insert"
+    
+    out_name = "_".join([bam_prefix, type, size_name]) + ".bam"
     out_bam = open(out_name, 'w')
     #pdb.set_trace()
     ## Convert BAM to temporary BED
@@ -283,7 +290,7 @@ def extend_bam(bam, type, reheader, size=0):
         if type=="extend":
             bamToFragmentBed(bam_file, tmp_bed, size)
         elif type=="dyad":
-            trimToDyad(bam_file, tmp_bed, 20)
+            trimToDyad(bam_file, tmp_bed, size)
     except:
         print "BAM to BED conversion failed."
         print ">> " + ":".join(sys.exc_info()[1])

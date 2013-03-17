@@ -1,0 +1,16 @@
+O/Tet3 analysis - overview
+========================================================
+
+* Direct comparison between OMP and O/Tet3
+  * Gene body 5hmC PC1
+  * Promoter analysis 
+  * Activated gene analysis
+
+* Comparison of expression changes in OMP vs. O/Tet3 and developmental changes
+  * Similarity between O/Tet3 and Ngn
+  
+  
+* Analysis of OR, guidance molecule effects
+  * Expression
+  * Gene body 5hmC
+  * Targeting phenotype

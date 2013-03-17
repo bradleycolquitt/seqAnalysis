@@ -178,6 +178,7 @@ getSeq.bed <- function(bed, extend=0) {
     bed <- trimBed(bed, -1*extend)
     bed <- trimBed(bed, extend, "down")
   }
+  #seq <- getSeq(Mmusculus, bed[,1], bed[,2], bed[,3], strand=bed[,6], as.character=TRUE, allow.nonnarrowing=TRUE)
   seq <- getSeq(Mmusculus, bed[,1], bed[,2], bed[,3], strand=bed[,6], as.character=TRUE)
   names(seq) <- bed[,4]
   return(seq)
@@ -196,9 +197,14 @@ getSeq.masked <- function(bed) {
     chr.seq <- Mmusculus[[chr]]
     active(masks(chr.seq))['RM'] <- TRUE
     bed.curr <- bed.split[[chr]]
+    print(nrow(bed.curr))
+    if (nrow(bed.curr) == 0) {
+      return(NA)
+    }
+    
     bed.seq <- apply(bed.curr, 1, function(line) {
-      #tryCatch(return(getSeq.single(chr.seq, line)), error=function(e) return(NA))
-      return(getSeq.single(chr.seq, line))
+      tryCatch(return(getSeq.single(chr.seq, line)), error=function(e) return(NA))
+      #return(getSeq.single(chr.seq, line))
       #if (class(result) == "try-error") {
       #  return(NA)
       #} else {
@@ -366,6 +372,7 @@ computeFrequencies <- function(seq_list, nuc_set=trinuc, norm=TRUE, fname=NULL) 
     ms <- llply(seq_list, function(x) {
       m <- matchPattern(nuc_set[i,1], x)
       m <- as.matrix(m)[,1]
+      gc()
     }, .progress="time")
     
     # Restructure start positions into vector
@@ -827,4 +834,14 @@ removeClusteredGenes <- function(bed, N) {
   bed <- bed[id_index,]
   id_mir <- grep("Mir", bed[,4])
   return(bed[-id_mir,])
+}
+
+check_close_tss <- function(line, distance_thresh) {
+  distance <- ifelse(line[12]=="+", line[2] - line[8], line[9]-line[3])
+  if (distance <= distance_thresh) {
+    return(line)
+  } else {
+    return(NA)
+    
+  }
 }

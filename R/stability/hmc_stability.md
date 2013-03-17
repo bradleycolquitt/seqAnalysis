@@ -20,6 +20,21 @@ cor(tfo.gene)
 
 
 ```r
+wilcox.test(tfo.gene[, 1], tfo.gene[, 2])
+```
+
+```
+## 
+## 	Wilcoxon rank sum test with continuity correction
+## 
+## data:  tfo.gene[, 1] and tfo.gene[, 2] 
+## W = 226186306, p-value = 0.0000000000001939
+## alternative hypothesis: true location shift is not equal to 0
+```
+
+
+
+```r
 library(ggplot2)
 gg <- ggplot(tfo.gene, aes(omp_hmc_120424_full, tfo_hmc_full))
 gg + geom_point(alpha = I(1/5)) + coord_cartesian(xlim = c(0, 0.32), ylim = c(0, 
@@ -32,7 +47,8 @@ gg + geom_point(alpha = I(1/5)) + coord_cartesian(xlim = c(0, 0.32), ylim = c(0,
 last_plot() + geom_abline(slope = 1, intercept = 0, color = "red") + xlab(bquote(.("OMP 5hmC" ~ 
     sqrt(bar(RPM))))) + ylab(bquote(.("OMP-tTA x tetO-H2B-GFP 5hmC" ~ sqrt(bar(RPM))))) + 
     theme(axis.text.x = element_text(size = 20, color = "black"), axis.text.y = element_text(size = 20, 
-        color = "black"), axis.title.x = element_text(size = 24), axis.title.y = element_text(size = 24))
+        color = "black"), axis.title.x = element_text(size = 24), axis.title.y = element_text(size = 24), 
+        legend.position = "none")
 ```
 
 ![plot of chunk refgene_chr_sqrt_omp_hmc_120424_full_tfo_hmc_full_scatter](figure/refgene_chr_sqrt_omp_hmc_120424_full_tfo_hmc_full_scatter2.png) 
@@ -67,7 +83,7 @@ gg + geom_point(alpha = I(1/5)) + coord_cartesian(xlim = c(0, 0.32), ylim = c(0,
     0.32))
 ```
 
-![plot of chunk refgene_-1kbTSS+1kb_chr_sqrt_omp_hmc_120424_full_tfo_hmc_full_scatter](figure/refgene_-1kbTSS_1kb_chr_sqrt_omp_hmc_120424_full_tfo_hmc_full_scatter1.png) 
+![plot of chunk refgene_-1kbTSS+1kb_chr_sqrt_omp_hmc_120424_full_tfo_hmc_full_scatter](figure/refgene_-1kbTSS+1kb_chr_sqrt_omp_hmc_120424_full_tfo_hmc_full_scatter1.png) 
 
 ```r
 last_plot() + geom_abline(slope = 1, intercept = 0, color = "red") + xlab(bquote(.("OMP 5hmC" ~ 
@@ -76,14 +92,14 @@ last_plot() + geom_abline(slope = 1, intercept = 0, color = "red") + xlab(bquote
         color = "black"), axis.title.x = element_text(size = 24), axis.title.y = element_text(size = 24))
 ```
 
-![plot of chunk refgene_-1kbTSS+1kb_chr_sqrt_omp_hmc_120424_full_tfo_hmc_full_scatter](figure/refgene_-1kbTSS_1kb_chr_sqrt_omp_hmc_120424_full_tfo_hmc_full_scatter2.png) 
+![plot of chunk refgene_-1kbTSS+1kb_chr_sqrt_omp_hmc_120424_full_tfo_hmc_full_scatter](figure/refgene_-1kbTSS+1kb_chr_sqrt_omp_hmc_120424_full_tfo_hmc_full_scatter2.png) 
 
 ```r
 last_plot() + annotate("text", x = 0.08, y = 0.3, label = "Pearson R = 0.94", 
     size = 9)
 ```
 
-![plot of chunk refgene_-1kbTSS+1kb_chr_sqrt_omp_hmc_120424_full_tfo_hmc_full_scatter](figure/refgene_-1kbTSS_1kb_chr_sqrt_omp_hmc_120424_full_tfo_hmc_full_scatter3.png) 
+![plot of chunk refgene_-1kbTSS+1kb_chr_sqrt_omp_hmc_120424_full_tfo_hmc_full_scatter](figure/refgene_-1kbTSS+1kb_chr_sqrt_omp_hmc_120424_full_tfo_hmc_full_scatter3.png) 
 
 Gene 5hmC plot comparing OMP with OMP-tTA / tetO-H2B-GFP (+DOX)
 
@@ -108,11 +124,11 @@ plot2.several("gene_whole_W200N50F50_chr", "tfo_omp_rpkm", data_type = "rpkm/mea
 ## [1] "omp_hmc_120424_rpkm_mean"
 ```
 
+![plot of chunk gene_whole_W200N50F50_omp_hmc_120424_rpkm_tfo_hmc_22M](figure/gene_whole_W200N50F50_omp_hmc_120424_rpkm_tfo_hmc_22M.png) 
+
 ```
 ## [1] 0.2 0.9
 ```
-
-![plot of chunk gene_whole_W200N50F50_omp_hmc_120424_rpkm_tfo_hmc_22M](figure/gene_whole_W200N50F50_omp_hmc_120424_rpkm_tfo_hmc_22M.png) 
 
 
 Dnmt3a
@@ -133,11 +149,11 @@ plot2.several("gene_whole_W200N50F50_chr", "d3a_hmc", data_type = "rpkm/mean",
 ## [1] "moe_d3a_ko_hmc_rpkm_mean"
 ```
 
+![plot of chunk gene_whole_W200N50F50_moe_d3a_wt_ko_hmc_rpkm](figure/gene_whole_W200N50F50_moe_d3a_wt_ko_hmc_rpkm.png) 
+
 ```
 ## [1] 0.1 0.9
 ```
-
-![plot of chunk gene_whole_W200N50F50_moe_d3a_wt_ko_hmc_rpkm](figure/gene_whole_W200N50F50_moe_d3a_wt_ko_hmc_rpkm.png) 
 
 
 Compute permutation significance
@@ -164,12 +180,10 @@ ko <- makeImage("moe_d3a_ko_hmc_rpkm", "gene_whole_W200N50F50_chr", data_type = 
 
 
 Permutation test
-
-```r
-suppressPackageStartupMessages(source("~/src/seqAnalysis/R/modeling.R"))
-wt.ko.perm <- permutationTest.mat(wt, ko, N = 1000)
 ```
-
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/modeling.R"))
+wt.ko.perm <- permutationTest.mat(wt, ko, N=1000)
+```
 
 Add significance line to plot
 
@@ -184,6 +198,8 @@ plot2.several("gene_whole_W200N50F50_chr", "d3a_hmc", data_type = "rpkm/mean",
 ## [1] "moe_d3a_ko_hmc_rpkm_mean"
 ```
 
+![plot of chunk gene_whole_W200N50F50_moe_d3a_wt_ko_hmc_rpkm_sigLine](figure/gene_whole_W200N50F50_moe_d3a_wt_ko_hmc_rpkm_sigLine.png) 
+
 ```
 ## [1] 0.1 0.9
 ```
@@ -192,6 +208,8 @@ plot2.several("gene_whole_W200N50F50_chr", "d3a_hmc", data_type = "rpkm/mean",
 plotSigLine(sig_values = wt.ko.perm, step = 5, yval = 0.85, thresh = 0.01)
 ```
 
-![plot of chunk gene_whole_W200N50F50_moe_d3a_wt_ko_hmc_rpkm_sigLine](figure/gene_whole_W200N50F50_moe_d3a_wt_ko_hmc_rpkm_sigLine.png) 
+```
+## Error: could not find function "plotSigLine"
+```
 
 

@@ -27,6 +27,9 @@ ggplot.box <- function(data, thresh) {
   gg + geom_boxplot(aes(fill=thresh))
 }
 
+gg.scatter <- function(data, x, y, alpha, xlim=NULL, ylim=NULL) {
+  ggplot(data, aes(x,y)) + geom_point(alpha=I(1/alpha)) 
+}
 
 #gg.filt + geom <- point(aes(y=Value[Measure=="5mC"]), alpha=I(1/5)) + geom <- text(aes(x=Value[Measure=="5hmC" & ind.hmc], y=Value[Measure=="5mC" & ind.hmc], label=Gene[ind.hmc], color="blue", size=.5, hjust=-.25, vjust=-.5))
 

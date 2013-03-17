@@ -1,0 +1,27 @@
+Developmental 5hmC vs. RNA 
+========================================================
+```{r}
+rna.cells <- read.delim("~/s2/analysis/rna/summaries/omp_ngn_icam_mrna_dup_biasCorrect_plus1_log2")
+dna <- read.delim("~/s2/analysis/features/norm/rpkm/mean/summaries/cells_rpkm2_refgene_chr_sqrt")
+m <- match(rownames(dna), rownames(rna.cells))
+comb <- cbind(dna, rna.cells[m,])
+comb <- na.omit(comb)
+omp.k2 <- kmeans(comb[,7], centers=2)
+plot(density(comb[ngn.k2$cluster==1,8]))
+cor(comb[omp.k2$cluster==1,])
+cor.test(comb[omp.k2$cluster==1,1], comb[omp.k2$cluster==1,7])$p.value
+
+ngn.k2 <- kmeans(comb[,8], centers=2)
+plot(density(comb[ngn.k2$cluster==1,8]))
+cor(comb[ngn.k2$cluster==1,])
+cor.test(comb[omp.k2$cluster==1,2], comb[omp.k2$cluster==1,8])$p.value
+
+icam.k2 <- kmeans(comb[,9], centers=2)
+plot(density(comb[icam.k2$cluster==1,8]))
+cor(comb[icam.k2$cluster==1,])
+cor.test(comb[omp.k2$cluster==1,3], comb[omp.k2$cluster==1,9])$p.value
+
+cor.test(comb.nzo[,1], comb.nzo[,7])$p.value
+cor.test(comb.nzn[,2], comb.nzn[,8])$p.value
+cor.test(comb.nzi[,3], comb.nzi[,9])$p.value
+```

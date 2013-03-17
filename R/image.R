@@ -92,7 +92,7 @@ positionMatrix.all <- function(anno, data_type="unnorm/mean") {
 makeImage <- function(sample, anno, data_type="unnorm", image=TRUE, heat=TRUE, range=NULL, average=NULL) {
   image.path <- paste(profile2.path, "norm", data_type, anno, "images", sample, sep="/")
   print(image.path)
-  data <- as.matrix(read.delim(image.path, header=FALSE, row.names=1))
+  data <- as.matrix(read.delim(image.path, header=FALSE, row.names=1, as.is=T))
   #mp.data <- prepMP(mp.data)
   #mp.data <- thresh
   #out <- MP.positionMatrix(mp.data)
@@ -168,7 +168,7 @@ MP.heat <- function(data, density="none", range=NULL, average=NULL, fname=NULL) 
   }
   #return(data)
   rgb.palette <- colorRampPalette(c("yellow", "black", "blue"), space="rgb")
-  lab.palette <- colorRampPalette(brewer.pal(5,"YlGnBu"), space="Lab")
+  lab.palette <- colorRampPalette(brewer.pal(5,"Blues"), space="Lab")
   heatmap.2(data, Rowv=FALSE, Colv=FALSE, trace="none", dendrogram="none",
             hclustfun = .hclustWard,
             #col=blueyellow(100),

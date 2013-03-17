@@ -10,11 +10,15 @@ tfo.gene <- read.delim("~/s2/analysis/features/norm/rpkm/mean/summaries/tfo_refg
 cor(tfo.gene)
 ```
 
-```{r "refgene_chr_sqrt_omp_hmc_120424_full_tfo_hmc_full_scatter", fig.width=8, fig.height=8, dev=c("png", "pdf")}
+```{r}
+wilcox.test(tfo.gene[,1], tfo.gene[,2])
+```
+
+```{r "refgene_chr_sqrt_omp_hmc_120424_full_tfo_hmc_full_scatter", fig.width=8, fig.height=8, dev=c("png", "CairoPDF")}
 library(ggplot2)
 gg <- ggplot(tfo.gene, aes(omp_hmc_120424_full, tfo_hmc_full))
 gg + geom_point(alpha=I(1/5)) + coord_cartesian(xlim=c(0, .32), ylim=c(0, .32))
-last_plot() + geom_abline(slope=1, intercept=0, color="red") + xlab(bquote(.("OMP 5hmC" ~ sqrt(bar(RPM))))) + ylab(bquote(.("OMP-tTA x tetO-H2B-GFP 5hmC" ~ sqrt(bar(RPM))))) + theme(axis.text.x=element_text(size=20, color="black"), axis.text.y=element_text(size=20, color="black"), axis.title.x=element_text(size=24), axis.title.y=element_text(size=24))
+last_plot() + geom_abline(slope=1, intercept=0, color="red") + xlab(bquote(.("OMP 5hmC" ~ sqrt(bar(RPM))))) + ylab(bquote(.("OMP-tTA x tetO-H2B-GFP 5hmC" ~ sqrt(bar(RPM))))) + theme(axis.text.x=element_text(size=20, color="black"), axis.text.y=element_text(size=20, color="black"), axis.title.x=element_text(size=24), axis.title.y=element_text(size=24), legend.position="none")
 last_plot() + annotate("text", x=.08, y=.3, label="Pearson R = 0.94", size=9)
 
 ```
@@ -65,7 +69,7 @@ ko <- makeImage("moe_d3a_ko_hmc_rpkm", "gene_whole_W200N50F50_chr", data_type="r
 ```
 
 Permutation test
-```{r}
+```
 suppressPackageStartupMessages(source("~/src/seqAnalysis/R/modeling.R"))
 wt.ko.perm <- permutationTest.mat(wt, ko, N=1000)
 ```

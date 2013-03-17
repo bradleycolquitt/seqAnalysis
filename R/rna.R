@@ -1,3 +1,6 @@
+library(foreach)
+library(plyr)
+
 cuffdiff.path <- "~/s2/analysis/rna/cuffdiff"
 
 CL.thresh <- function(de.file, FPKM=1, ratio=2, sig=TRUE, N=NULL, FDR=0) {
@@ -180,4 +183,23 @@ computeRnaEcdf <- function(eg_dist, rna, summary_stat="mean") {
   ecdf_summary <- ddply(ecdf_long, .(cut), function(d) apply(d[,2:ncol(d)], 2, summary_stat))
   ecdf_summary2 <- cbind(ecdf_summary[,1], apply(ecdf_summary[,2:4], 2, function(x) range01(cumsum(x))))
   return(ecdf_summary2)
+}
+
+# Data is 7 column bed: Column 1-6 are standard bed fields, Column 7 is measure
+summarize_values_by_position <- function(data, window, step, FUN="mean") {
+  chr_lengths <- read.delim("/seq/lib/mouse.mm9.genome", header=FALSE)
+  data_split <- split(data, data[,1])
+  values <- foreach(chrom=names(data_split), .combine="rbind") %dopar% {
+    max_position <- chr_lengths[grep(paste(chrom, "$", sep=""), chr_lengths[,1]),2]
+    data_curr <- data_split[[chrom]]
+    values_curr <- foreach(pos=seq(1, max_position, step), .combine="c") %do% {
+      subset <- data_curr[data_curr[,2]>=pos & data_curr[,3]<=(pos+window),]
+      value <- do.call(FUN, list(subset[,7]))
+      return(value)
+    }
+    return(data.frame(chrom=chrom, pos=1:length(values_curr), values=values_curr))
+  }
+  #names(values) <- names(data_split)
+  return(values)
+  values_df <- ldply(values, function(d) cbind(pos=1:length(d), value=d))
 }

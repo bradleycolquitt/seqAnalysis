@@ -1,0 +1,45 @@
+D3xog rmRNA enhancers
+========================================================
+
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+```
+
+group omp and ott3 rmrna bam to enhancer file
+```
+$ for f in {wt,ko}; do BAMtoWIG.py -b 121126/d3xog_"$f"_rmrna/d3xog_"$f"_rmrna.bam -w 25 --paired_end --ends; done
+$ for f in {wt,ko}; do LoadData -i ~/s2/data/wig/rpkm/d3xog_"$f"_rmrna/d3xog_"$f"_rmrna_25_ends.wig -o ~/s2/data/h5/rpkm/d3xog_rmrna_25.trk -g ~/s2/genomedata/chromosomes.trk -n 25 -t d3xog_"$f"_rmrna; done
+$ group.py -t rpkm/d3xog_rmrna_25.trk -f phastCons30way_intergenic_sorted_merge500_thresh500_inter_omp_h3k4me1_gc_sub_refgene_extend5kb.bed_chr --data_type rpkm --function sum 
+```
+
+```
+$ group.py -t rpkm/d3a_unnorm_25.trk -f phastCons30way_intergenic_sorted_merge500_thresh500_inter_omp_h3k4me1_gc_sub_refgene_extend5kb.bed_chr --data_type rpkm --function sum 
+```
+
+Read in data
+```{r}
+#d3a.rmrna.en <- as.data.frame(makeFeatureMatrix2("phastCons30way_intergenic_sorted_merge500_thresh500_inter_omp_h3k4me1_gc_sub_refgene_extend5kb.bed_chr", set="d3a_rmrna", data_type="rpkm/sum"))
+d3a.rmrna.en <- as.data.frame(makeFeatureMatrix2("phastCons30way_intergenic_sorted_merge500_thresh500_inter_omp_h3k4me1_gc_F3_sub_igenome_ensembl_genes_extend5kb.bed_chr", set="d3a_rmrna", data_type="rpkm/sum"))
+#d3a.hmc.en <- as.data.frame(makeFeatureMatrix2("phastCons30way_intergenic_sorted_merge500_thresh500_inter_omp_h3k4me1_gc_sub_refgene_extend5kb.bed_chr", set="d3a_rpkm", data_type="rpkm/sum"))
+d3a.hmc.en <- as.data.frame(makeFeatureMatrix2("phastCons30way_intergenic_sorted_merge500_thresh500_inter_omp_h3k4me1_gc_F3_sub_igenome_ensembl_genes_extend5kb.bed_chr", set="d3a_rpkm", data_type="rpkm/mean"))
+
+d3a.rmrna.en$rmrna.ko.wt <- with(d3a.rmrna.en, computeScoreRatios(d3xog_ko_rmrna, d3xog_wt_rmrna))
+d3a.hmc.en$hmc.ko.wt <- with(d3a.hmc.en, computeScoreRatios(moe_d3a_ko_hmc_rpkm, moe_d3a_wt_hmc_rpkm))
+```
+
+Several enhancers appear to overlap unannotated genes
+```{r}
+par(mfrow=c(1,3))
+apply(d3a.rmrna.en, 2, function(x) plot(density(x)))
+```
+
+Combine data
+```{r}
+comb <- data.frame(d3a.rmrna.en, d3a.hmc.en)
+```
+
+```{r}
+cor(comb)
+```
+

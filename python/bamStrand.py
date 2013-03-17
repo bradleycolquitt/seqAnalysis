@@ -13,7 +13,7 @@ def splitByStrand(bamfile, pe):
     bam_prefix = bamfile.split(".bam")[0]
     #pdb.set_trace()
     if pe:
-        flags = [('-f 0x40', '-F 0x10', 'plus'), ('-f 0x40', '-F 0x20', 'minus')]
+        flags = [('-f 0x42', '-F 0x10', 'plus'), ('-f 0x42', '-F 0x20', 'minus')]
         cmd_args = [['samtools', 'view',
                  '-b', flag[0], flag[1], bamfile,
                  bam_prefix + "_" + flag[2] + ".bam"]for flag in flags]

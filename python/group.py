@@ -25,7 +25,8 @@ ANNO_OUT_PATH = '/media/storage2/analysis/profiles/norm'
 FEATURE_OUT_PATH = '/media/storage2/analysis/features/norm'
 
 class tab:
-    def __init__(self, anno, sample, sample_type, bam_attr, fun, type, flank, data_type, split_anno, strand):
+    def __init__(self, anno, sample, sample_type, bam_attr, fun, type, flank,
+                 data_type, split_anno, strand, norm_by_mean):
         self.anno = anno
         self.sample = sample
         self.sample_type = sample_type
@@ -34,7 +35,21 @@ class tab:
         self.data_type = data_type
         self.split_anno = split_anno
         self.strand = strand
+        self.norm_by_mean = norm_by_mean
+        if self.norm_by_mean:
+            self.data_type = "_".join([self.data_type, "chrom_mean"])
         self.window_size = 1
+        
+        # Check if mean chromosome values have been computed
+        # If so, read them into window_correct dictionary
+        #pdb.set_trace()
+        self.window_correct = {}
+        self.norm_path = ".".join([sample, "chr_means"])
+        if os.path.exists(self.norm_path):
+            for line in open(self.norm_path, 'r'):
+                sline = line.split()
+                self.window_correct[sline[0]] = float(sline[1])
+                
         self.flank = flank
         self.out_path = ""
         if type == "anno":
@@ -101,12 +116,27 @@ class tab:
       
       
         pool = Pool(processes=4)
-        for chr_tbp in chrs_tbp:
-            pool.apply_async(tab_bam, (self, chr_tbp, tmp_path))
-            #tab_bam(self, chr_tbp, tmp_path)
+        #for chr_tbp in chrs_tbp:
+        result = [pool.apply_async(tab_bam, (self, chr_tbp, tmp_path)) for chr_tbp in chrs_tbp]
+        
         pool.close()
         pool.join()
         
+        #pdb.set_trace()
+        #if self.norm_by_mean:
+        #    self.window_correct[chr_tbp] = result
+            
+        #tab_bam(self, chr_tbp, tmp_path)
+        pdb.set_trace()
+        # Write window_correct dictionary if not already present
+        if self.norm_by_mean:
+            if not os.path.exists(self.norm_path):
+                file = open(self.norm_path, 'w')
+                for item in result:
+                    item = item.get()
+                    out = "\t".join([item[0], str(item[1])]) + "\n"
+                    file.write(out)
+                
         # Combine chromosome files into one       
         if self.flank == 0:
             self.file_combine(tmp_path, os.path.basename(self.sample).split(".bam")[0])
@@ -150,14 +180,14 @@ def tab_h5(self, anno, track, chr_tbp, tmp_path, fun, exp):
         line = line.strip()
         sline = line.split()
         
+        #if sline[0] == "chr15": pdb.set_trace()
         if flank == 0:
             start = (atoi(sline[1]) - 1) / self.window_size
             end = (atoi(sline[2]) - 1) / self.window_size
-            vals = sample_data[start:(end+1)]
-            
+            vals = sample_data[start:(end+1)]            
         else:
-            start = [int(sline[1]) - 1 - flank, int(sline[2])]
-            end = [int(sline[1]) - 2, int(sline[2]) + flank - 1]
+            start = [(int(sline[1]) - 1 - flank) / self.window_size, int(sline[2]) / self.window_size]
+            end = [(int(sline[1]) - 2) / self.window_size, (int(sline[2]) + flank - 1) / self.window_size] 
             vals = np.append(sample_data[start[0]:(end[0] + 1)], sample_data[start[1]:(end[1] + 1)])
         
         if self.strand:
@@ -206,8 +236,11 @@ def tab_bam(obj, chr_tbp , tmp_path):
     bam = pysam.Samfile(obj.sample, 'rb')
     
     
-    # Normalize by Reads per million and by reads per kilobase
-    norm_val = 1e6 * 1e3 / (float(obj.window_size) * float(bam.mapped))
+    norm_val = 0
+    if not obj.norm_by_mean:
+        # Normalize by Reads per million and by reads per kilobase
+        norm_val = 1e6 * 1e3 / (float(obj.window_size) * float(bam.mapped))
+   
     
     # Setup output path
     anno_out_path = tmp_path + "/" + chr_tbp
@@ -311,6 +344,18 @@ def tab_bam(obj, chr_tbp , tmp_path):
             out = ""
             
             if obj.bam_attr == "count":
+                if obj.norm_by_mean:
+                    if norm_val == 0:
+                        total_n = 0
+                        count_n = 0
+                        print "Computing average values..."
+                        for column in bam.pileup(reference=chr_tbp):
+                            total_n += column.n
+                            count_n += 1
+                    
+                        norm_val = 1/ (total_n / float(count_n))
+                        print "Average coverage = {0}".format(norm_val)
+                    
                 out = "\t".join([line, str(vals * norm_val)]) + "\n"
             else:
                 out = "\t".join([line, str(vals)]) + "\n"
@@ -319,7 +364,12 @@ def tab_bam(obj, chr_tbp , tmp_path):
         
     anno_data.close()
     anno_out.close()
-   
+    
+    if obj.norm_by_mean:    
+        return [chr_tbp, norm_val]
+    else:
+        return 0
+
 def compute_result(vals, fun):
     result = 0
     if fun == "mean":
@@ -403,16 +453,19 @@ def val_energy(vals):
     result = sum(pow(vals - m, 2))
     return(result)
           
-def tab_worker(anno, sample, sample_type, bam_attr, fun, type, flank, data_type, split_anno, strand):
+def tab_worker(anno, sample, sample_type, bam_attr, fun, type, flank, data_type,
+               split_anno, strand, norm_by_mean):
     #print anno
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         if sample_type == "h5":
-            obj = tab(anno, sample, sample_type, bam_attr, fun, type, flank, data_type, split_anno, strand)
+            obj = tab(anno, sample, sample_type, bam_attr, fun, type, flank,
+                      data_type, split_anno, strand, norm_by_mean)
             obj.run_h5()
         elif sample_type == "bam":
             for bam in sample:
-                obj = tab(anno, bam, sample_type, bam_attr, fun, type, flank, data_type, split_anno, strand)
+                obj = tab(anno, bam, sample_type, bam_attr, fun, type, flank,
+                          data_type, split_anno, strand, norm_by_mean)
                 obj.run_bam()
     
 def main(argv):
@@ -433,6 +486,7 @@ def main(argv):
     parser.add_argument('--split', dest="split_anno", action="store_true", default=False)
     parser.add_argument('--flank', type=int, required=False, default=0, help="Size of regions flanking bed to compute values for")
     parser.add_argument('--strand', dest="strand", action="store_true", default=False)
+    parser.add_argument('--norm_by_mean', action="store_true", default=False)
     args = parser.parse_args()
     
     fun = args.fun
@@ -456,10 +510,14 @@ def main(argv):
         [tab_worker(feature, sample, sample_type, args.bam_attr, fun, "feature", args.flank, args.data_type, args.split_anno, args.strand) for feature in features]
     
     elif args.annotation:
-        tab_worker(ANNO_PATH + "/" + args.annotation, sample, sample_type, args.bam_attr, fun, "anno", args.flank, args.data_type, args.split_anno, args.strand)
+        tab_worker(ANNO_PATH + "/" + args.annotation, sample, sample_type,
+                   args.bam_attr, fun, "anno", args.flank, args.data_type,
+                   args.split_anno, args.strand, args.norm_by_mean)
     
     elif args.feature:
-        tab_worker(FEATURE_PATH + "/" + args.feature, sample, sample_type, args.bam_attr, fun, "feature", args.flank, args.data_type, args.split_anno, args.strand)
+        tab_worker(FEATURE_PATH + "/" + args.feature, sample, sample_type,
+                   args.bam_attr, fun, "feature", args.flank, args.data_type,
+                   args.split_anno, args.strand, args.norm_by_mean)
     
     
    

@@ -33,7 +33,7 @@ features_merge_toplot <- factor(1:11, labels=c("refgene_1to3kb_up_merged",
                                        "phastCons30way_intergenic_merge500_thresh500_merged",
                                        "intergenic_sub_rmsk_merged"))
 
-features_merge_toplot_short <- factor(1:11, labels=c("1 to 3 kb\n upstream",
+features_merge_toplot_short <- factor(1:11, labels=c("1 to 3 kb upstream",
                                  "1kb upstream",
                                  "CGI",
                                  "5' UTR",
@@ -41,8 +41,8 @@ features_merge_toplot_short <- factor(1:11, labels=c("1 to 3 kb\n upstream",
                                  "3' UTR",
                                  "Exon",
                                  "Intron",
-                                 "mOSN\n enhancer",
-                                 "Intergenic\n conserved",
+                                 "mOSN enhancer",
+                                 "Intergenic conserved",
                                  "Intergenic"))
 
 features_rmsk <- factor(1:10, labels=c("rmsk_LTR_chr", "rmsk_LINE_chr", "rmsk_SINE_chr",
@@ -119,6 +119,10 @@ makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type, tra
     samples <- samples.d3a_rpkm
   } else if (set=="d3a_2") {
     samples <- samples.d3a_2
+  } else if (set=="d3a_bt2") {
+    samples <- c("moe_d3a_wt_hmc_bt2_rpkm", "moe_d3a_ko_hmc_bt2_rpkm",
+                 "moe_d3a_wt_mc_bt2_rpkm", "moe_d3a_ko_mc_bt2_rpkm")
+    
   } else if (set=="d3a_strand") {
     samples <- c("moe_d3a_wt_hmc_plus_sub_minus", "moe_d3a_ko_hmc_plus_sub_minus",
                  "moe_d3a_wt_mc_plus_sub_minus", "moe_d3a_ko_mc_plus_sub_minus",
@@ -132,9 +136,13 @@ makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type, tra
   } else if (set=="cells_nuc") {
     samples <- c("omp_nuc_0123", "icam_nuc_01234")
   } else if (set=="d3a_nuc") {
-    samples <- samples.d3a_nuc
+    samples <- c("d3xog_wt_nuc_478_rmdup", "d3xog_ko_nuc_256_rmdup")
   } else if (set=="d3a_nuc_sub") {
     samples <- samples.d3a_nuc_sub
+  } else if (set=="d3a_nuc_extend") {
+    samples <- c("d3xog_wt_nuc_478_rmdup_q30_extend", "d3xog_ko_nuc_256_rmdup_q30_extend")
+  } else if (set=="d3a_nuc_exclude") {
+    samples <- c("d3xog_wt_nuc_478_rmdup_q30_exclude1", "d3xog_ko_nuc_256_rmdup_q30_exclude1")
   } else if (set=="d3a_kde") {
     samples <- c("d3xog_wt_nuc_478_p1", "d3xog_ko_nuc_256_p1")
   } else if (set=="tt3_min") {
@@ -144,6 +152,13 @@ makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type, tra
                  "omp_mc_rpkm", "ott3_1_mc_rpkm", "ott3_2_mc_rpkm")
   } else if (set=="tt3_sub") {
     samples <- c("ott3_2_hmc_21M_rpkm_sub_omp_hmc_120424_rpkm")
+  } else if (set=="tt3_rmrna") {
+    samples <- c("omp_rmrna", "ott3_rmrna")
+  } else if (set=="d3a_rmrna") {
+    samples <- c("d3xog_wt_rmrna", "d3xog_ko_rmrna")
+  } else if (set=="d3a_dnase") {
+    samples <- c("d3a_het_dnase_sort_q30", "d3a_ko_dnase_sort_q30")
+    
   } else if (set=="cpg") {
     samples <- c("mm9")
   } else if (set=="encode_dnase") {
@@ -157,6 +172,7 @@ makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type, tra
   if (!is.null(select)) {
     samples <- sapply(samples, function(x) paste(x, select, sep="_"))
   }
+
   print(samples)
   vals <- foreach (sample=samples, .combine="cbind") %dopar% {
     print(paste(feature_norm_path, data_type, feature, sample, sep="/"))
@@ -384,7 +400,15 @@ statSummary.allNorm <- function(set, data_type, toplot=TRUE, transf_name=NULL, t
 
 processIntersectSummary <- function(summary, features=features_merge_toplot) {
   data <- read.delim(summary)
+  colnames(data)[2] <- "reference_num"
   data$internal_norm <- with(data, fraction_norm/sum(fraction_norm))
+  expected_frac <- data$feature_span / sum(data$feature_span)
+  data$expected <- round(data$reference_num * expected_frac)
+  data$log2.obs.exp <- with(data, log2(count/expected))
+  #p <- sapply(1:nrow(data), function(x) fisher.test(matrix(c(data$count[x], data$reference_num[x], data$expected[x], data$reference_num[x]), ncol=2), alternative="greater")$p.value)
+  #print(p)
+  data$fisher.p <- sapply(1:nrow(data), function(x) fisher.test(matrix(c(data$count[x], data$reference_num[x], data$expected[x], data$reference_num[x]), ncol=2), alternative="greater")$p.value)
+  data$fisher.fdr <- p.adjust(data$fisher.p, method="fdr")
   data$feature.factor <- features[match(data$feature, as.character(features))]
   data$feature.pretty <- features_merge_toplot_short[as.numeric(data$feature.factor)]
   data$class <- featureMatrix[match(data$feature.pretty, featureMatrix[,3]),4]
@@ -513,6 +537,18 @@ splitByQ <- function(data, column, q=c(0, .25, .5, .75, 1), fname=NULL) {
   data_out <- data.frame(rownames(data), data_cut)
   if (!is.null(fname)) write.table(data_out, file=fname, quote=FALSE, sep="\t", row.names=F, col.names=F)
   return(data_out)
+}
+
+# Specify zero values as group
+# Find quantiles -- seq(0, 1, 1/(range-1)) of remaining entries
+
+splitByRange <- function(data, column, range=4, fname=NULL) {
+  qs <- quantile(data[data[,column]>0,column], probs=seq(0, 1, 1/(range-1)))
+  data_cut <- cut(data[,column], breaks=qs, labels=FALSE) + 1
+  data_cut[is.na(data_cut)] <- 1
+  out <- data.frame(rownames(data), data_cut)
+  if (!is.null(fname)) write.table(out, file=fname, quote=FALSE, sep="\t", row.names=F, col.names=F)
+  return(out)
 }
 
 saveBedBySubset <- function(data, bed, fname=NULL) {

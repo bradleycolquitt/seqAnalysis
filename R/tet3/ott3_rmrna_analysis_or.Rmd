@@ -2,9 +2,9 @@ OMP-tTA x TetO-Tet3 rmRNA analysis - olfactory receptors
 ========================================================
 
 ```{r, fig.width=9, fig.height=6}
-rna.1log2 <-readRDS("~/s2/analysis/rna/rdata/omp_ott3_rmrna_1log2.rds")
+rna.1log2 <-readRDS("~/s2/analysis/rna/rdata/omp_ott3_rmrna_masked_uq_1log2.rds")
 par(mfrow=c(1,3))
-a <- apply(rna.1log2, 2, function(x) plot(density(x)))
+a <- apply(rna.1log2[,2:4], 2, function(x) plot(density(x)))
 
 ```
 
@@ -20,20 +20,20 @@ gg + geom_point(alpha=I(1/10)) + geom_abline(slope=1, intercept=0, linetype=2)
 #### Scatter with ORs highlighted
 ```{r, fig.width=5, fig.height=5}
 rna.1log2$or <- "Non-OR"
-rna.1log2$or[grep("Olfr", rownames(rna.1log2))] <- "OR"
+rna.1log2$or[grep("Olfr", rna.1log2$gene)] <- "OR"
 rna.1log2$ps <- "Non-pseudo"
-rna.1log2$ps[grep("-ps", rownames(rna.1log2))] <- "pseudo"
+rna.1log2$ps[grep("-ps", rna.1log2$gene)] <- "pseudo"
 ```
 
 ```{r "omp_ott3_rmrna_1log2_scatter_all_or_highlighted", dev=c('png', 'pdf')}
 gg <- ggplot(rna.1log2, aes(omp, ott3, color=or))
 gg <- gg + geom_point(alpha=I(1/5)) + geom_abline(slope=1, intercept=0, linetype=2) + scale_color_manual(name="", values=c("black", "red"))
-gg + theme(legend.position=c(.75, .25)) + coord_cartesian(xlim=c(0,15), ylim=c(0,15)) + ylab("O/TT3 log2(FPKM + 1)") + xlab("OMP log2(FPKM  + 1)")
+gg + theme(legend.position=c(.75, .25)) + coord_cartesian(xlim=c(0,15), ylim=c(0,15)) + ylab("Tet3-tg log2(FPKM + 1)") + xlab("Control log2(FPKM  + 1)")
 ```
 
 Wilcoxon test
 ```{r}
-with(rna.1log2[rna.1log2$or=="OR",], wilcox.test(omp, ott3))
+with(rna.1log2[rna.1log2$or=="OR",], wilcox.test(omp, ott3))$p.value
 ```
 
 #### Scatter, just ORs with pseudo highlighted
@@ -49,15 +49,63 @@ gg  + ylab("O/TT3 log2(FPKM + 1)") + xlab("OMP log2(FPKM  + 1") + theme(legend.p
 rna.1log2[rna.1log2$or=="OR" & rna.1log2$ott3.omp>0,]
 ```
 
+### Number of expressed ORs with reduced expression
+```{r}
+rna.1log2.olfr <- rna.1log2[grep("Olfr", rna.1log2$gene),]
+rna.1log2.olfr.gt0 <- rna.1log2.olfr[rna.1log2.olfr[,1]>0,]
+table(rna.1log2.olfr.gt0[,3]<0)
+
+```
 
 Melt data frame, plot OR boxplot
-#```{r, fig.width=4, fig.height=6}
-#library(reshape2)
-#rna.1log2.m <- melt(rna.1log2, id.vars=c("or"))
-#rna.1log2.m$id <- rownames(rna.1log2)
-#gg <- ggplot(rna.1log2.m[rna.1log2.m$variable!="ott3.omp",], aes(variable, value))
-#gg + geom_boxplot() + facet_grid(.~or) + coord_cartesian(ylim=c(0,5)) + ylab("log2(FPKM+1") + xlab("")
-#```
+```{r omp_ott3_rmrna_or_boxplot, dev=c("png", "pdf"), fig.width=6, fig.height=2.5}
+library(reshape2)
+theme_set(theme_bw())
+rna.1log2.m <- melt(rna.1log2)
+levels(rna.1log2.m$variable) <- c("Control", "Tet3-tg", "Tet3-tg / Control")
+gg <- ggplot(rna.1log2.m[rna.1log2.m$variable!="Tet3-tg / Control" & rna.1log2.m$or=="OR",], aes(variable, value, fill=variable))
+gg <- gg + geom_boxplot() + ylab("log2(FPKM+1") + xlab("") + scale_fill_brewer(palette="Blues")
+gg <- gg + theme(legend.position="none", axis.text.y=element_text(size=12, face="bold"))  
+gg <- gg + coord_flip(ylim=c(0, 5)) + scale_x_discrete(limits=rev(levels(rna.1log2.m$variable))[2:3])
+gg
+```
+
+```{r}
+with(rna.1log2.m[rna.1log2.m$or=="OR",], wilcox.test(value[variable=="Control"], value[variable=="Tet3-tg"]))$p.value
+```
+
+### 5hmC levels
+
+```{r}
+rg <- read.delim("~/s2/analysis/features/norm/rpkm/mean/summaries/tt3_min_refgene_chr_sqrt")
+rg.olfr <- rg[grep("Olfr", rownames(rg)),]
+rg.olfr <- transform(rg.olfr, ott3.omp.hmc = ott3_1_hmc_rpkm / omp_hmc_120424_rpkm)  
+rg.olfr.dna.nz <- rg.olfr[rg.olfr[,1]>0,]
+wilcox.test(rg.olfr.dna.nz[,1], rg.olfr.dna.nz[,2])
+```
+
+```{r}
+rg.olfr.dna.nz.m <- melt(rg.olfr.dna.nz)
+rg.olfr.dna.nz.m$id <- rownames(rg.olfr.dna.nz)
+levels(rg.olfr.dna.nz.m$variable) <- c("Control", "Tet3-tg", "Tet3-tg 2 5hmC", "Control 5mC", "Tet3-tg 5mC", "Tet3-tg 2 5mC", "5hmC ratio")
+rg.olfr.dna.nz.m.hmc <- rg.olfr.dna.nz.m[rg.olfr.dna.nz.m$variable %in% c("Control", "Tet3-tg"),]
+rg.olfr.dna.nz.m.hmc$or <- "OR"
+```
+
+```{r refgene_olfr_omp_hmc_120424_ott3_1_hmc_rpkm_nozero_boxplot, fig.width=6, fig.height=2.5, dev=c("png", "pdf")}
+
+gg <- ggplot(rg.olfr.dna.nz.m.hmc, aes(variable, value, fill=variable))
+gg <- gg + geom_boxplot(outlier.size=0) + coord_cartesian(ylim=c(0, 1)) + scale_fill_brewer(palette="Blues") + xlab("") + ylab(bquote(.("5hmC" ~ sqrt(bar(RPM)))))
+gg <- gg + theme(legend.position="none", axis.text.y=element_text(size=12, face="bold")) 
+gg <- gg + coord_flip(ylim=c(0, 1)) + scale_x_discrete(limits=rev(levels(rg.olfr.dna.nz.m.hmc$variable))[6:7]) 
+gg
+```
+
+```{r refgene_olfr_omp_hmc_120424_ott3_1_hmc_rpkm_both_nozero_ratio_boxplot, fig.width=2, fig.height=4, dev=c("png", "pdf")}
+
+gg <- ggplot(rg.olfr.both.nz.m[rg.olfr.both.nz.m$variable=="5hmC ratio",], aes(variable, log2(value)))
+gg + geom_boxplot() + coord_cartesian(ylim=c(-2.5,2.5))
+```
 
 Vomeronasal receptor expression
 ------------------
@@ -80,33 +128,73 @@ Construct curated list of guidance molecules containing
   * Semaphorins
   * Plexin
   * Protocadherins
+  * Contactin
   
   
 ```{r}
-gm <- c("Eph", "Efn", "Dscam", "Nphs", "Kirrel", "Nrp", "Plxn", "Sema", "Pchda", "Pchdb", "Pchdg")
+gm <- c("Eph", "Efn", "Dscam", "Nphs", "Kirrel", "Nrp", "Plxn", "Sema", "Pchda", "Pchdb", "Pchdg", "Ctcn", "Robo", "Slit")
 
 # Rownames as variable for plyr function
-rna.1log2 <- namerows(rna.1log2)
-rna.1log2.gm <- ldply(gm, function(x) rna.1log2[grep(x, rna.1log2$id),])
+#rna.1log2 <- namerows(rna.1log2)
+rna.1log2$gm <- "Non-GM"
+rna.1log2.gm <- ldply(gm, function(x) rna.1log2[grep(x, rna.1log2$gene),])
+rna.1log2$gm[rna.1log2$gene %in% rna.1log2.gm$gene] <- "Guidance"
 ```
 
-Filter for OMP expressed genes, i.e. log2(FPKM+1) >= 2
+Filter for OMP or O/Tet3 expressed genes, i.e. log2(FPKM+1) >= 2
 ```{r}
-rna.1log2.gm.ex <- rna.1log2.gm[rna.1log2.gm$omp >= 2,]
-rna.1log2.gm.ex.m <- melt(rna.1log2.gm.ex)
-levels(rna.1log2.gm.ex.m$variable) <- c("OMP", "O/Tet3", "O/Tet3 - OMP")
+rna.1log2.ex <- rna.1log2[rna.1log2$omp >= 2 | rna.1log2$ott3 >= 2,]
+rna.1log2.ex.m <- melt(rna.1log2.ex)
+levels(rna.1log2.ex.m$variable) <- c("Control", "Tet3-tg", "O/Tet3 - OMP")
 ```
+
 
 Plot boxplot
-```{r "omp_ott3_rmrna_guidance_boxplot", fig.width=2, fig.height=4, dev=c("png", "pdf")}
-gg <- ggplot(rna.1log2.gm.ex.m[rna.1log2.gm.ex.m$variable!="O/Tet3 - OMP",], aes(variable, value))
-gg + geom_boxplot() + xlab("") + ylab("log2(FPKM + 1)") + theme(axis.text.x=element_text(size=12, face="bold", color="black"))
-last_plot() + coord_cartesian(ylim=c(0, 7)) 
+```{r "omp_ott3_rmrna_guidance_boxplot", fig.width=6, fig.height=2.5, dev=c("png", "pdf")}
+gg <- ggplot(rna.1log2.ex.m[rna.1log2.ex.m$variable!="O/Tet3 - OMP" & rna.1log2.ex.m$gm=="Guidance",], aes(variable, value, fill=variable))
+gg <- gg + geom_boxplot() + ylab("log2(FPKM+1") + xlab("") + scale_fill_brewer(palette="Reds") + coord_cartesian(ylim=c(0,7))
+gg <- gg + theme(legend.position="none", axis.text.y=element_text(size=12, face="bold"), strip.text.x=element_text(size=12, face="bold")) 
+gg <- gg + coord_flip(ylim=c(0, 7)) + scale_x_discrete(limits=rev(levels(rna.1log2.ex.m$variable))[2:3]) 
+gg
 ```
 
 Wilcoxon test
 ```{r}
-wilcox.test(rna.1log2.gm.ex$omp, rna.1log2.gm.ex$ott3)
+with(rna.1log2.ex[rna.1log2.ex$gm=="Guidance",], wilcox.test(omp, ott3))
+```
+
+#### Guidance molecule increased/decreased counts
+```{r}
+table(rna.1log2.gm.ex[,3]<0)
+```
+
+
+### Guidance molecule 5hmC levels
+```{r}
+
+feat <- read.delim("~/s2/analysis/features/norm/rpkm/mean/summaries/tt3_min_refgene_chr_sqrt")
+feat <- namerows(feat)
+feat.gm <- ldply(gm, function(x) feat[grep(x, rownames(feat)),])
+feat.gm.ex <- feat.gm[feat.gm$id %in% rna.1log2.ex$gene[rna.1log2.ex$gm=="Guidance"],]
+```
+
+```{r}
+feat.gm.ex.m <- melt(feat.gm.ex[,c(1,2,7)])
+levels(feat.gm.ex.m$variable) <- c("Control", "Tet3-tg")
+feat.gm.ex.m$gm <- "Guidance"
+```
+
+Plot boxplot
+```{r "omp_ott3_hmc_guidance_boxplot", fig.width=6, fig.height=2.5, dev=c("png", "pdf")}
+gg <- ggplot(feat.gm.ex.m, aes(variable, value, fill=variable))
+gg <- gg + geom_boxplot(outlier.size=0) + scale_fill_brewer(palette="Reds") + xlab("") + ylab(bquote(.("5hmC" ~ sqrt(bar(RPM)))))
+gg <- gg + theme(legend.position="none", axis.text.y=element_text(size=12, face="bold")) 
+gg <- gg + coord_flip(ylim=c(.4, 1.8)) + scale_x_discrete(limits=rev(levels(feat.gm.ex.m$variable))[1:2]) 
+gg
+```
+
+```{r}
+wilcox.test(feat.gm.ex[,1], feat.gm.ex[,2])
 ```
 
 OR 5hmC/5mC levels
@@ -115,11 +203,53 @@ OR 5hmC/5mC levels
 ```{r}
 feat <- read.delim("~/s2/analysis/features/norm/rpkm/mean/summaries/tt3_min_refgene_chr_sqrt")
 feat.or <- feat[grep("Olfr", rownames(feat)),]
-boxplot(feat.or)
+rna.1log2.or <- rna.1log2[grep("Olfr", rownames(rna.1log2)), ]
+comb.or <- na.omit(cbind(feat.or, rna.1log2.or[match(rownames(feat.or), rownames(rna.1log2.or)),]))
+plot(density(rna.1log2.or[,1]))
+rna.1log2.or.ex <- rna.1log2.or[rna.1log2.or[,1]>=1,]
+feat.or.ex <- feat.or[rownames(feat.or) %in% rownames(rna.1log2.or.ex),]
+boxplot(feat.or.ex)
 ```
 
-
+### Profiles
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+makeProfile2.allSamp("refGene_noRandom_order_outsides2_tss_W25F200_olfr_chr", data_type="rpkm/mean")
+```
 
 ```{r}
-
+plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_olfr_chr", "tt3_3", data_type="rpkm/mean", cols=col2, fname="manual")
 ```
+
+```{r}
+positionMatrix.all("refGene_noRandom_order_outsides2_tss_W25F200_olfr_chr", data_type="rpkm/mean")
+omp <- makeImage("omp_hmc_120424_rpkm", "refGene_noRandom_order_outsides2_tss_W25F200_olfr_chr", data_type="rpkm/mean", image=F)
+ott3 <- makeImage("ott3_1_hmc_rpkm", "refGene_noRandom_order_outsides2_tss_W25F200_olfr_chr", data_type="rpkm/mean", image=F)
+```
+
+#```{r}
+#omp.pca <- prcomp(omp[,201:240])
+#omp.pred <- predict(omp.pca, omp)
+#omp.ord.omp <- omp[match(rownames(omp.pred[order(omp.pred[,1]),]), rownames(omp)),]
+#ott3.ord.omp <- ott3[match(rownames(omp.pred[order(omp.pred[,1]),]), rownames(ott3)),]
+
+#omp.mean <- mean(omp, na.rm=TRUE)
+#ott3.mean <- mean(ott3, na.rm=TRUE)
+
+omp.scale <- omp - omp.mean
+ott3.scale <- ott3 - ott3.mean
+
+omp.scale.ord.omp <- omp.scale[match(rownames(omp.pred[order(omp.pred[,1]),]), rownames(omp.scale)),]
+ott3.scale.ord.omp <- ott3.scale[match(rownames(omp.pred[order(omp.pred[,1]),]), rownames(ott3.scale)),]
+#```
+
+#```{r}
+MP.heat(omp.scale.ord.omp, range=c(-.25, .25))
+#```
+
+#```{r}
+MP.heat(ott3.ord.omp, range=c(-1, 1))
+#```
+
+
+

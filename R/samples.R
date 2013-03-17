@@ -27,6 +27,19 @@ if (set=="d3a") {
     columns <- 1
     orient <- 2
     
+  } else if (set=="d3a_mc") {
+    samples <- list(list("moe_d3a_wt_mc_rpkm", "moe_d3a_ko_mc_rpkm"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
+    
+  } else if (set=="d3a_bt2") {
+    samples <- list(list("moe_d3a_wt_hmc_bt2_rpkm",  "moe_d3a_ko_hmc_bt2_rpkm"),
+                    list("moe_d3a_wt_mc_bt2_rpkm", "moe_d3a_ko_mc_bt2_rpkm"))
+    rows <- 2
+    columns <- 1
+    orient <- 2
+    
   } else if (set=="d3a_rlm") {
     samples <- list(list("moe_wt_hmc_rlm", "moe_d3a_hmc_rlm"), list("moe_wt_mc_rlm", "moe_d3a_mc_rlm"))
     rows <- 2
@@ -35,8 +48,12 @@ if (set=="d3a") {
     samples <- list(list("moe_wt_mc_rf", "moe_d3a_mc_rlm"))
     rows <- 1
     columns <- 1
-  }
-  else if (set=="cells") {
+  } else if (set=="d3a_dnase") {
+    samples <- list(list("d3a_het_dnase_sort_q30", "d3a_ko_dnase_sort_q30"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
+  } else if (set=="cells") {
     samples <- list(list("omp_hmedip.bed", "ngn_hmedip.bed", "icam_hmedip.bed"),
                     list("omp_medip.bed", "ngn_medip.bed", "icam_medip.bed"))
     rows <- 2
@@ -86,6 +103,12 @@ if (set=="d3a") {
     rows <- 1
     columns <- 1
     orient <- 2
+  } else if (set=="tfo_omp_ac") {
+    samples <- list(list("tfo_hmc_22M", "^omp_hmc_120424_rpkm_ac"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
+
   } else if (set=="tfo_omp_d3a") {
     samples <- list(list("tfo_hmc", "omp_hmc", "moe_d3a_wt_hmc", "moe_d3a_ko_hmc"),
                     list("tfo_mc", "omp_mc", "moe_d3a_wt_mc", "moe_d3a_ko_mc"))
@@ -115,7 +138,25 @@ if (set=="d3a") {
     rows <- 2
     columns <- 1
     orient <- 2
-  }else if (set=="cells_nuc") {
+  } else if (set=="tt3_3_hmc") {
+    samples <- list(list("omp_hmc_120424_rpkm", "ott3_1_hmc_rpkm"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
+    
+  } else if (set=="tt3_3_mc") {
+    samples <- list(list("omp_mc_rpkm", "ott3_1_mc_rpkm"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
+    
+  } else if (set=="tt3_rmrna") {
+    samples <- list(list("omp_rmrna", "ott3_rmrna"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
+    
+  } else if (set=="cells_nuc") {
     samples <- list(list("omp_nuc_0123", "icam_nuc_01234"))
     rows <- 1
     columns <- 1
@@ -126,12 +167,53 @@ if (set=="d3a") {
     rows <- 1
     columns <- 1
     orient <- 2
+  } else if (set=="d3a_nuc2") {
+    samples <- list(list("d3xog_wt_nuc_478_rmdup", "d3xog_ko_nuc_256_rmdup"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
+  } else if (set=="d3a_nuc3") {
+    samples <- list(list("d3xog_wt_nuc_478", "d3xog_ko_nuc_256"))
+    rows <- 1
+    columns <- 1
+    orient <- 2 
+  } else if (set=="d3a_nuc3_sub_naked") {
+    samples <- list(list("d3xog_wt_nuc_478_rmdup_sub_omp_naked_s78", "d3xog_ko_nuc_256_rmdup_sub_omp_naked_s78"))
+    rows <- 1
+    columns <- 1
+    orient <- 2 
+  } else if (set=="d3a_nuc_extend") {
+    samples <- list(list("d3xog_wt_nuc_478_rmdup_q30_extend", "d3xog_ko_nuc_256_rmdup_q30_extend"))
+    rows <- 1
+    columns <- 1
+    orient <- 2 
+  } else if (set=="d3a_nuc_dyad") {
+    samples <- list(list("d3xog_wt_nuc_478_rmdup_q30_dyad", "d3xog_ko_nuc_256_rmdup_q30_dyad"))
+    rows <- 1
+    columns <- 1
+    orient <- 2 
+  } else if (set=="d3a_nuc_dyad_1") {
+    samples <- list(list("d3xog_wt_nuc_478_rmdup_q30_dyad_1", "d3xog_ko_nuc_256_rmdup_q30_dyad_1"))
+    rows <- 1
+    columns <- 1
+    orient <- 2 
   } else if (set=="encode_dnase") {
     samples <- list(list("wgEncodeUwDnaseCerebrumC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseCerebellumC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseRetinaC57bl6MAdult1wksAlnRep1",
                     "wgEncodeUwDnaseHeartC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseLiverC57bl6MAdult8wksAlnRep1"))
     rows <- 1
     columns <- 1
     orient <- 2
+  } else if (set=="guanz_dorsal") {
+    samples <- list(list("cd_hmc", "id_hmc"), list("cd_mc", "id_mc"))
+    rows <- 2
+    columns <- 1
+    orient <- 2
+  } else if (set=="guanz_ventral") {
+    samples <- list(list("cv_hmc", "iv_hmc"), list("cv_mc", "iv_mc"))
+    rows <- 2
+    columns <- 1
+    orient <- 2
+    
   }
 
 return(list(samples, rows, columns, orient))

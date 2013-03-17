@@ -1,0 +1,54 @@
+D3a DNase
+========================================================
+
+Intergenic DNase peaks in Dnmt3a het
+--------------------------------------
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+```
+
+### DNase
+```{r}
+plot2("d3a_het_dnase_sort_q30_F3_size500_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", "d3a_het_dnase_sort_q30_rmdup", data_type="bam/mean", group2="exclude-chrX_trim0.01", fname="manual", range=c(101,300))
+```
+
+### 5hmC
+```{r}
+plot2.several("d3a_het_dnase_sort_q30_F3_size500_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", "d3a_hmc", data_type="rpkm/mean", cols=col2, group2="exclude-chrX_trim0.01", fname="manual", range=c(101,300))
+```
+
+### 5mC
+```{r}
+plot2.several("d3a_het_dnase_sort_q30_F3_size500_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", "d3a_mc", data_type="rpkm/mean", cols=col2, group2="exclude-chrX_trim0.01", fname="manual", range=c(101,300))
+```
+
+### Nuc -- midpoint
+```{r}
+plot2.several("d3a_het_dnase_sort_q30_F3_size500_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", "d3a_nuc2", data_type="rpkm/mean", cols=col2 , group2="exclude-chrX_trim0.01", fname="manual", range=c(101, 300))
+```
+
+All DNase peaks in Dnmt3a het
+--------------------------------------
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+```
+
+### DNase
+```{r}
+plot2("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr", "d3a_het_dnase_sort_q30_rmdup", data_type="bam/mean", group2="exclude-chrX_trim0.01", fname="manual",  range=c(101, 300))
+```
+
+### 5hmC
+```{r}
+plot2.several("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr", "d3a_hmc", data_type="rpkm/mean", cols=col2, group2="exclude-chrX_trim0.01", fname="manual",  range=c(101, 300))
+```
+
+### 5mC
+```{r}
+plot2.several("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr", "d3a_mc", data_type="rpkm/mean", cols=col2, group2="exclude-chrX_trim0.01", fname="manual",  range=c(101, 300))
+```
+
+### Nuc -- midpoint
+```{r}
+plot2.several("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr", "d3a_nuc2", data_type="rpkm/mean", cols=col2 , group2="exclude-chrX_trim0.01", fname="manual", baseline=F,  range=c(101, 300))
+```

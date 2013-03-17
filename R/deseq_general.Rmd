@@ -1,0 +1,46 @@
+DESeq - general 
+========================================================
+
+Models per-gene dispersions to assess differential expression
+
+Dispersion = square of the coefficient of variation
+### Normalization
+
+>A comprehensive evaluation of
+>normalization methods for Illumina
+>high-throughput RNA sequencing
+>data analysis
+ 
+Indicates that DESeq and edgeR normalization methods perform better for DE than others (RPKM, total count, upper quartile, quantile)
+
+1. Geometric means of rows are computed
+2. Columns are divided by these means
+3. Median of these columns used for size factor, which is used to normalize values
+
+### Variance stabilizing transformation
+Introduces parametric vst with better variance stabilization of low-count genes.
+Called with 
+
+```
+varianceStabilizingTransformation(cds)
+```
+
+where 'cds' is a countDataSet
+
+### Filtering
+```{r}
+rs = rowSums ( counts ( cds ))
+theta = 0.5
+use = (rs > quantile(rs, probs=theta))
+table(use)
+cdsFilt = cds[ use, ]
+```
+
+```{r}
+res <- nbinomTest(cds, "wt", "ko")
+resFilt <- nbinomTest(cdsFilt, "wt", "ko")
+```
+
+```{r}
+plot(rank(rs)/length(rs), -log10(res$pval), pch=16, cex=0.45)
+```

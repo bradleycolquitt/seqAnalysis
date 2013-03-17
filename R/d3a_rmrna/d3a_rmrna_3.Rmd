@@ -1,0 +1,38 @@
+D3xOG rmRNA analysis - mid/high expression
+========================================================
+
+Compare 5hmC/5mC profiles of high expressed (top 5%) vs. mid expressed (mid 80%)
+
+```{r}
+rna.1log2 <- readRDS("~/s2/analysis/rna/rdata/d3xog_wt_ko_rmrna_protein_masked_uq_comp_1log2.rds")
+q <- quantile(rna.1log2$wt, probs=c(.75, .8, .95, 1))
+rna.1log2.mid <- rna.1log2[rna.1log2$wt>=q[1] & rna.1log2$wt<=q[2],]
+rna.1log2.hi <- rna.1log2[rna.1log2$wt>=q[3] & rna.1log2$wt<=q[4],]
+```
+
+```{r}
+plot(density(rna.1log2.mid$ko.wt))
+plot(density(rna.1log2.hi$ko.wt))
+```
+
+```
+tss.anno <- read.delim("~/lib/annotations_hires/refGene_noRandom_order_outsides2_tss_W25F200", header=F)
+tss.anno.mid <- tss.anno[tss.anno[,4] %in% rna.1log2.mid$gene,]
+tss.anno.hi <- tss.anno[tss.anno[,4] %in% rna.1log2.hi$gene,]
+write.table(tss.anno.mid, file="~/lib/annotations_hires/refGene_noRandom_order_outsides2_tss_W25F200_d3xog_wt_ko_rmrna_protein_masked_uq_comp_1log2_q75_80", quote=F, sep="\t", row.names=F, col.names=F)
+write.table(tss.anno.hi, file="~/lib/annotations_hires/refGene_noRandom_order_outsides2_tss_W25F200_d3xog_wt_ko_rmrna_protein_masked_uq_comp_1log2_q95_100", quote=F, sep="\t", row.names=F, col.names=F)
+```
+
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+makeProfile2.allSamp("refGene_noRandom_order_outsides2_tss_W25F200_d3xog_wt_ko_rmrna_protein_masked_uq_comp_1log2_q75_80_chr", data_type="rpkm/mean")
+makeProfile2.allSamp("refGene_noRandom_order_outsides2_tss_W25F200_d3xog_wt_ko_rmrna_protein_masked_uq_comp_1log2_q95_100_chr", data_type="rpkm/mean")
+```
+
+```{r}
+plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_d3xog_wt_ko_rmrna_protein_masked_uq_comp_1log2_q75_80_chr", set="d3a_4", data_type="rpkm/mean", cols=col2, fname="manual")
+```
+
+```{r}
+plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_d3xog_wt_ko_rmrna_protein_masked_uq_comp_1log2_q95_100_chr", set="d3a_4", data_type="rpkm/mean", cols=col2, fname="manual")
+```

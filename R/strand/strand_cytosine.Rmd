@@ -6,14 +6,14 @@ suppressPackageStartupMessages(source("~/src/seqAnalysis/R/seqUtil.R"))
 ```
 
 ### Full TSS set
-Load TSS bed (-1kb to +1kb)
+Load TSS bed (-5kb to +5kb)
 ```{r}
-tss <- read.delim("~/lib/features_general/refgene_-1kbTSS+1kb", header=F)
+tss <- read.delim("~/lib/features_general/refgene_m5kbTSSp5kb.bed", header=F)
 ```
 
 Extract sequences.
 ```{r}
-tss.fa <- getSeq.bed(tss[1:10,])
+tss.fa <- getSeq.bed(tss)
 ```
 
 #### Compute cytosine dinucleotide positions
@@ -38,20 +38,95 @@ legend(1, 1, legend=c(dicyto[1:4,1]), col=1:4, lty=1, horiz=T)
 
 #### Compute cytosine positions
 ```
-tss.fa.mono <- computeFrequencies(tss.fa, mononuc, fname="refgene_-1kbTSS+1kb_mono", norm=FALSE)
+tss.fa.mono <- computeFrequencies(tss.fa, mononuc, fname="refgene_m5kbTSSp5kb_mono", norm=FALSE)
 ```
 
 Subtract C from G (Coding - Template)
 ```{r}
-tss.fa.mono <- read.delim("refgene_-1kbTSS+1kb_mono")
+tss.fa.mono <- read.delim("refgene_m5kbTSSp5kb_mono")
 tss.fa.mono.sub <- tss.fa.mono[2,] - tss.fa.mono[3,]
+tss.fa.mono.perc <- (tss.fa.mono[2,] - tss.fa.mono[3,]) / (tss.fa.mono[2,] + tss.fa.mono[3,]) * 100
 ```
 
 Plot
-```{r "refgene_-1kbTSS+1kb_c_coding_sub_template", dev=c("png", "pdf")}
-plot(1,1, xlim=c(1,2000), ylim=c(-1,1), type="n")
-lines(1:2000, tss.fa.mono.sub)
+```{r "refgene_m5kbTSSp5kb_c_coding_template_percent", dev=c("png", "pdf")}
+plot(1,1, xlim=c(1,10000), ylim=c(-40,25), type="n")
+lines(1:10001, tss.fa.mono.perc)
+abline(h=0, lty=2)
 ```
+
+#### Across genes
+
+```{r}
+rg <- read.delim("/seq/lib/roi/refgene_nodup.bed", header=F)
+rg.up <- rg
+rg.up[,2] <- rg.up[,2] - 10000
+rg.up[,3] <- rg[,2]
+rg.down <- rg
+rg.down[,3] <- rg.down[3] + 10000
+rg.down[,2] <- rg[,3]
+
+```
+
+```{r}
+rg.fa <- getSeq.bed(rg)
+rg.fa.c <- llply(rg.fa, function(x) matchPattern("C", x), .progress="text")
+rg.fa.g <- llply(rg.fa, function(x) matchPattern("G", x), .progress="text")
+```
+
+```{r}
+rg.fa.c.len <- unlist(lapply(rg.fa.c, length))
+rg.fa.g.len <- unlist(lapply(rg.fa.g, length))
+rg.len <- rg[,3] - rg[,2]
+rg.fa.c.len.norm <- rg.fa.c.len / rg.len
+rg.fa.g.len.norm <- rg.fa.g.len / rg.len
+rg.fa.cg.len.norm <- rg.fa.c.len.norm - rg.fa.g.len.norm
+summary(rg.fa.cg.len.norm)
+plot(density(rg.fa.cg.len.norm))
+wilcox.test(rg.fa.cg.len.norm)
+```
+
+```{r}
+rg.fa.cg.len <- (rg.fa.c.len - rg.fa.g.len) / (rg.fa.c.len + rg.fa.g.len) * 100
+summary(rg.fa.cg.len)
+plot(density(rg.fa.cg.len))
+
+```
+
+#### By quartiles
+```{r}
+quar <- read.delim("~/storage/analysis/group2/omp_quartiles", header=FALSE)
+rg.fa.cg.len.quar <- data.frame(rg.fa.cg.len, group=quar[match(names(rg.fa.cg.len), quar[,1]),2])
+```
+
+```{r}
+#rg.fa.quar.c <- llply(rg.fa.quar, function(x) matchPattern("C", x), .progress="text")
+#rg.fa.quar.g <- llply(rg.fa.quar, function(x) matchPattern("G", x), .progress="text")
+```
+
+Up and downstream 
+```{r}
+rg.flank.fa <- lapply(list(rg.up, rg.down), getSeq.bed)
+
+rg.flank.fa.c <- lapply(rg.flank.fa, function(y) lapply(y, function(x) matchPattern("C", x)))
+rg.flank.fa.g <- lapply(rg.flank.fa, function(y) lapply(y, function(x) matchPattern("G", x)))
+```
+
+```{r}
+rg.flank.fa.c.len <- unlist(lapply(rg.flank.fa.c, function(x) lapply(x, length)))
+
+rg.flank.fa.g.len <- unlist(lapply(rg.flank.fa.g, length)))
+rg.flank.len <- rg[,3] - rg[,2]
+rg.flank.fa.c.len.norm <- rg.flank.fa.c.len / rg.len
+rg.flank.fa.g.len.norm <- rg.flank.fa.g.len / rg.len
+rg.flank.fa.cg.len.norm <- rg.flank.fa.c.len.norm - rg.flank.fa.g.len.norm
+summary(rg.flank.fa.cg.len.norm)
+plot(density(rg.flank.fa.cg.len.norm))
+wilcox.test(rg.flank.fa.cg.len.norm)
+```
+
+intron
+
 
 ### Top 10% mOSN expressors
 Make deciles

@@ -1,0 +1,91 @@
+D3xOG rmRNA and nucleosomes
+========================================================
+
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+nuc.wt <- makeImage("d3xog_wt_nuc_478", "refGene_noRandom_order_outsides2_tss_W25F200_chr", data_type="rpkm/mean", image=F)
+nuc.ko <- makeImage("d3xog_ko_nuc_256", "refGene_noRandom_order_outsides2_tss_W25F200_chr", data_type="rpkm/mean", image=F)
+
+nuc.na <- which(is.na(nuc.wt), arr.ind=TRUE)
+nuc.wt[nuc.na] <- 0
+
+nuc.na <- which(is.na(nuc.ko), arr.ind=TRUE)
+nuc.ko[nuc.na] <- 0
+
+nuc.ko.wt <- nuc.ko - nuc.wt
+```
+
+```{r}
+rna <- readRDS("~/s2/analysis/rna/rdata/d3xog_wt_ko_rmrna_masked_uq_comp_1log2.rds")
+
+nuc.ko.wt.ord.rna <- nuc.ko.wt[match(rna$gene[order(rna$ko.wt)], rownames(nuc.ko.wt)),]
+nuc.ko.wt.ord.rna <- na.omit(nuc.ko.wt.ord.rna)
+```
+
+```{r}
+MP.heat(nuc.ko.wt, range=c(-1, 1), average=50)
+```
+
+```{r}
+nuc.ko.wt.ord.rna.down <- apply(nuc.ko.wt.ord.rna[,201:220], 1, mean)
+nuc.ko.wt.ord.rna.down.c100 <- foreach(c=isplitVector(nuc.ko.wt.ord.rna.down, chunks=100), .combine="c") %do% mean(c, na.rm=TRUE)
+nuc.ko.wt.ord.rna.down.c100 <- as.data.frame(nuc.ko.wt.ord.rna.down.c100)
+nuc.ko.wt.ord.rna.down.c100$index <- 100:1
+nuc.ko.wt.ord.rna.down.c100.boot <- foreach(c=isplitVector(nuc.ko.wt.ord.rna.down, chunks=100), .combine="rbind") %do% bootCI(c)
+nuc.ko.wt.ord.rna.down.c100 <- cbind(nuc.ko.wt.ord.rna.down.c100, nuc.ko.wt.ord.rna.down.c100.boot)
+colnames(nuc.ko.wt.ord.rna.down.c100)[3:4] <- c("lower", "upper")
+```
+
+```{r}
+nuc.ko.wt.ord.rna.down.c100$wilcox.FDR <- p.adjust(foreach(c=isplitVector(nuc.ko.wt.ord.rna.down, chunks=100), .combine="c") %do% wilcox.test(c)$p.value, method="fdr")
+nuc.ko.wt.ord.rna.down.c100$wilcox.FDR.05 <- cut(nuc.ko.wt.ord.rna.down.c100$wilcox.FDR, breaks=c(0, .05, 1))
+```
+
+```{r refGene_noRandom_order_outsides2_tss_W25F200_d3xog_nuc_ko_sub_wt_down1kb_ordered_by_d3xog_rmrna_ko_wt_fpkm, fig.width=2, fig.height=4, dev=c("png", "pdf")}
+theme_set(theme_gray())
+gg <- ggplot(nuc.ko.wt.ord.rna.down.c100, aes(nuc.ko.wt.ord.rna.down.c100, index))
+gg <- gg + geom_vline(xintercept=0, color="red")
+gg <- gg + geom_errorbarh(aes(xmin=lower, xmax=upper), height=0, size=.1) + geom_point(aes(color=wilcox.FDR.05), size=2)  + xlab("RPM") + ylab("") + theme(legend.position="none", axis.text.y=element_blank()) + labs(title=c("KO - WT 5hmC")) + scale_color_manual(values=c("red", "black"))
+gg
+```
+
+**General reduction of nucleosome occupancy from TSS to 1kb downstream, irrspective of transcriptional change**
+
+### Profiles
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+```
+
+#### Top expressors
+**Nucleosomes**
+```{r}
+plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr", "d3a_nuc2", group2="d3xog_ko_rmrna_fpkm_range4", data_type="rpkm/mean", cols=col2, fname="manual", group2_col=4, lab=c("TSS"))
+
+```
+
+**5hmC**
+```{r }
+a <- plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr", "d3a_hmc", group2="moe_d3a_wt_mrna_range4", data_type="rpkm/mean", cols=col2, fname="manual", group2_col=4, lab=c("TSS"))
+```
+
+**5mC**
+```{r }
+a <- plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr", "d3a_mc", group2="moe_d3a_wt_mrna_range4", data_type="rpkm/mean", cols=col2, fname="manual", group2_col=4, lab=c("TSS"))
+```
+
+#### Silent (FPKM = 0)
+**Nucleosomes**
+```{r}
+plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr", "d3a_nuc2", group2="d3xog_ko_rmrna_fpkm_range4", data_type="rpkm/mean", cols=col2, fname="manual", group2_col=1, lab=c("TSS"))
+```
+
+**5hmC**
+```{r }
+a <- plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr", "d3a_hmc", group2="moe_d3a_wt_mrna_range4", data_type="rpkm/mean", cols=col2, fname="manual", group2_col=1, lab=c("TSS"))
+```
+
+**5mC**
+```{r }
+a <- plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr", "d3a_mc", group2="moe_d3a_wt_mrna_range4", data_type="rpkm/mean", cols=col2, fname="manual", group2_col=1, lab=c("TSS"))
+```
