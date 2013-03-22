@@ -307,7 +307,7 @@ plotAnno <- function(data, annotation, wsize, cols=NULL, lab=NULL,
 
 ## Primary interface for drawing profile of a single sample 
 plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="mean", group2=NULL, group2_col=NULL,
-                     cols=1, lab=c("",""), y.vals=NULL, wsize=25, range=NULL, type="range", fname=NULL, ...) {
+                     cols=1, lab=c("",""), y.vals=NULL, wsize=25, range=NULL, type="range", fname="manual", ...) {
 
   ## Orient 1 data structure is no longer used (2/14/12)
   if (orient==1) {
@@ -366,7 +366,7 @@ plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="me
 ## Plot several profiles in one graphic device
 plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2=NULL, cols=NULL, lab=c("",""), 
                           y.vals=NULL, wsize=25, standard=FALSE, range=NULL, baseline=FALSE, group2_col=NULL,
-                          fun="mean", legend=FALSE, fname=NULL) {
+                          fun="mean", legend=FALSE, fname="manual") {
   samples <- NULL
   orient <- 1
   rows <- 1
@@ -381,6 +381,7 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
   # setup graphic device
   if (is.null(fname))  {
     x11("", 5, 6)
+    par(mfrow=c(rows, columns))
   } else if (fname=="manual") {
     # do nothing, device has already been set
     
@@ -392,13 +393,13 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
       } else {
         fname <- paste(annotation, set, dt, fun, paste("y", paste(y.vals, collapse="_"), sep=""), sep="_")        
       }
-    }  
+    }
+    par(mfrow=c(rows, columns))
     fname <- paste(fname, ".pdf", sep="")
     print(paste("Saving to ", fname, sep=""))
     pdf(file=paste(profile2.path, "norm", "plots", fname, sep="/"), 6, 9)
   }
-  par(mfrow=c(rows, columns))
-      #mar=c(2,4,1,1) + 0.1, oma=c(1, 1, 1, 1))
+        #mar=c(2,4,1,1) + 0.1, oma=c(1, 1, 1, 1))
   
   # Read in data
   if (orient==1) {

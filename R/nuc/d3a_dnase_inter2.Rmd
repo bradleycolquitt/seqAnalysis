@@ -1,0 +1,66 @@
+D3a - DNase peaks 2 
+========================================================
+
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+```
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, results='hide'}
+makeProfile2.allSamp("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", data_type="bam_extend/mean_chrom_mean", rm.outliers=0.01)
+makeProfile2.allSamp("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", data_type="bam_ends/mean", rm.outliers=0.01)
+makeProfile2.allSamp("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", data_type="rpkm/mean", rm.outliers=0.01)
+```
+
+```{r, results='hide', error=FALSE}
+makeProfile2.allSamp("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_shuffle.bed_W25F200_both_chr", data_type="bam_extend/mean_chrom_mean", rm.outliers=0.01)
+makeProfile2.allSamp("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_shuffle.bed_W25F200_both_chr", data_type="bam_ends/mean", rm.outliers=0.01)
+makeProfile2.allSamp("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_shuffle.bed_W25F200_both_chr", data_type="rpkm/mean", rm.outliers=0.01)
+```
+
+#### 5hmC
+```{r}
+par(mfrow=c(1,2), mar=c(2,2,2,2))
+plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", "d3a_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(0, 1))
+plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_shuffle.bed_W25F200_both_chr", "d3a_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(0, 1))
+```
+
+#### 5mC
+```{r}
+par(mfrow=c(1,2), mar=c(2,2,2,2))
+plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", "d3a_mc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(0, .6))
+plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_shuffle.bed_W25F200_both_chr", "d3a_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(0, 1))
+```
+
+#### Nucleosomes
+```{r}
+plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr","d3a_nuc_extend", data_type="bam_extend/mean_chrom_mean", group2="trim0.01", cols=col2, y.vals=c(.7, 1.1))
+```
+
+Random genomic sites
+```{r}
+plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_shuffle.bed_W25F200_both_chr","d3a_nuc_extend", data_type="bam_extend/mean_chrom_mean", group2="trim0.01", cols=col2, y.vals=c(.7, 1.1))
+```
+
+
+#### DNase
+```{r}
+plot2("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr","d3a_het_dnase_sort_q30", data_type="bam_ends/mean", group2="trim0.01", y.vals=c(0, .7))
+```
+
+Expression of genes adjacent to intergenic DNase HS sites with increased nuc occupancy
+------------------
+```{r}
+d3.inter.q75.rg <- read.delim("~/s2/data/homer/peaks/d3a_het_dnase_sort_q30/d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex_mid1kb_d3xog_ko_wt_ratio_q75_closest_refgene_nodup.bed", header=F)
+rna.1log2 <- readRDS("~/s2/analysis/rna/rdata/d3xog_wt_ko_rmrna_masked_uq_comp_1log2.rds")
+rna.1log2$d3.inter.q75 <- FALSE
+rna.1log2$d3.inter.q75[rna.1log2$gene %in% d3.inter.q75.rg[,10]] <- TRUE
+
+```
+
+```{r}
+theme_set(theme_bw())
+gg <- ggplot(rna.1log2, aes(x=ko.wt, color=d3.inter.q75))
+gg <- gg + geom_density() + coord_cartesian(xlim=c(-3, 3)) + scale_color_manual(values=c("black", "red"))
+gg <- gg + labs(x=c("KO / WT log2(FPKM + 1)"))
+gg
+```

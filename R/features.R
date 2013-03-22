@@ -189,7 +189,7 @@ makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type, tra
   fname <- paste(feature_norm_path, data_type, "summaries", paste(set, feature, sep="_"), sep="/")
   if (!is.null(transf)) fname <- paste(fname, transf, sep="_")
   if (write) write.table(vals, file=fname, quote=FALSE, sep="\t")
-  return(vals)
+  return(as.data.frame(vals))
 }
 
 makeFeatureMatrix2.all <- function(set, data_type, transf=NULL) {

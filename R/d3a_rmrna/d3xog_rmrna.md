@@ -250,54 +250,356 @@ levels(rna.1log2.wt.c100$variable) <- c("WT", "KO", "KO/WT")
 
 
 
+```r
+library(ggplot2)
+gg <- ggplot(rna.1log2.wt.c100, aes(index, value))
+gg <- gg + geom_point(aes(color = variable)) + scale_color_manual("Dnmt3a", 
+    values = col3)
+gg <- gg + theme(legend.position = c(0.2, 0.8)) + labs(x = "WT Rank", y = "log2(FPKM + 1)") + 
+    scale_x_continuous(breaks = seq(0, 100, 5))
+gg
+```
+
+![plot of chunk d3xog_wt_ko_rmrna_masked_uq_comp_1log2_order_wt_chunk100](figure/d3xog_wt_ko_rmrna_masked_uq_comp_1log2_order_wt_chunk100.png) 
+
+
+#### Protein-coding only
+
+```r
+rna2.1log2.nz.wt <- rna2.1log2.nz[order(rna2.1log2.nz$wt), 2:4]
+rna2.1log2.wt.m <- melt(rna2.1log2.nz.wt)
+```
+
+```
+## Using as id variables
+```
+
+```r
+rna2.1log2.wt.m$index <- 1:nrow(rna2.1log2.nz.wt)
+rna2.1log2.wt.c100 <- as.data.frame(foreach(c = isplitRows(rna2.1log2.nz.wt, 
+    chunks = 100), .combine = "rbind") %do% apply(c, 2, median))
+rna2.1log2.wt.c100 <- melt(rna2.1log2.wt.c100)
+```
+
+```
+## Using as id variables
+```
+
+```r
+rna2.1log2.wt.c100$index <- 1:100
+levels(rna2.1log2.wt.c100$variable) <- c("WT", "KO", "KO/WT")
+```
+
+
+
+```r
+library(ggplot2)
+gg <- ggplot(rna2.1log2.wt.c100, aes(index, value))
+gg <- gg + geom_point(aes(color = variable)) + scale_color_manual("Dnmt3a", 
+    values = col3)
+gg <- gg + theme(legend.position = c(0.2, 0.8)) + labs(x = "WT Rank", y = "log2(FPKM + 1)") + 
+    scale_x_continuous(breaks = seq(0, 100, 10))
+gg
+```
+
+![plot of chunk d3xog_wt_ko_rmrna_protein_masked_uq_comp_1log2_order_wt_chunk100](figure/d3xog_wt_ko_rmrna_protein_masked_uq_comp_1log2_order_wt_chunk100.png) 
+
+
+#### Order by KO levels
+
+```r
+rna.1log2.nz.ko <- rna.1log2.nz[order(rna.1log2.nz$ko), ]
+rna.1log2.ko.c100 <- as.data.frame(foreach(c = isplitRows(rna.1log2.nz.ko[, 
+    2:3], chunks = 100), .combine = "rbind") %do% apply(c, 2, median, na.rm = T))
+rna.1log2.ko.c100 <- melt(rna.1log2.ko.c100)
+```
+
+```
+## Using as id variables
+```
+
+```r
+rna.1log2.ko.c100$index <- 1:100
+levels(rna.1log2.ko.c100$variable) <- c("WT", "KO")
+```
+
+
+
+```r
+
+gg <- ggplot(rna.1log2.ko.c100, aes(index, value))
+gg <- gg + geom_point(aes(color = variable)) + scale_color_manual("Dnmt3a", 
+    values = col2)
+gg <- gg + theme(legend.position = c(0.2, 0.8)) + labs(x = "KO Rank", y = "log2(FPKM + 1)")
+gg
+```
+
+![plot of chunk d3xog_wt_ko_rmrna_masked_uq_comp_1log2_order_ko_chunk100](figure/d3xog_wt_ko_rmrna_masked_uq_comp_1log2_order_ko_chunk100.png) 
+
+
+TSS Heatmaps
+-----------------
+
+```r
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+hmc.wt <- makeImage("moe_d3a_wt_hmc_rpkm", "refGene_noRandom_order_outsides2_tss_W25F200_chr", 
+    data_type = "rpkm/mean", image = FALSE)
+```
+
+```
+## [1] "/media/storage2/analysis/profiles/norm/rpkm/mean/refGene_noRandom_order_outsides2_tss_W25F200_chr/images/moe_d3a_wt_hmc_rpkm"
+```
+
+```r
+hmc.ko <- makeImage("moe_d3a_ko_hmc_rpkm", "refGene_noRandom_order_outsides2_tss_W25F200_chr", 
+    data_type = "rpkm/mean", image = FALSE)
+```
+
+```
+## [1] "/media/storage2/analysis/profiles/norm/rpkm/mean/refGene_noRandom_order_outsides2_tss_W25F200_chr/images/moe_d3a_ko_hmc_rpkm"
+```
+
+```r
+hmc.ko.wt <- hmc.ko - hmc.wt
+```
+
+
+### TSS 5hmC values ordered by RNA changes
+
+```r
+hmc.wt.rna.ko.wt <- hmc.wt[match(rna.1log2$gene[order(rna.1log2$ko.wt)], rownames(hmc.wt)), 
+    ]
+hmc.ko.rna.ko.wt <- hmc.ko[match(rna.1log2$gene[order(rna.1log2$ko.wt)], rownames(hmc.ko)), 
+    ]
+hmc.ko.wt.rna.ko.wt <- hmc.ko.wt[match(rna.1log2.nz$gene[order(rna.1log2.nz$ko.wt)], 
+    rownames(hmc.ko.wt)), ]
+hmc.ko.wt.rna.ko.wt <- na.omit(hmc.ko.wt.rna.ko.wt)
+```
+
+
+
+```r
+MP.heat(hmc.wt.rna.ko.wt, range = c(0, 1.5), average = 50)
+```
+
+![plot of chunk unnamed-chunk-20](figure/unnamed-chunk-20.png) 
+
+
+
+```r
+MP.heat(hmc.ko.wt.rna.ko.wt, range = c(-0.2, 0.1), average = 50)
+```
+
+![plot of chunk unnamed-chunk-21](figure/unnamed-chunk-21.png) 
+
+
+#### Group RNA ordered 5hmC KO-WT TSS maps into 100 chunks
+**Upstream**
+
+```r
+hmc.ko.wt.rna.ko.wt.up.c100 <- foreach(c = isplitRows(hmc.ko.wt.rna.ko.wt[, 
+    121:160], chunks = 100), .combine = "c") %do% mean(c, na.rm = TRUE)
+hmc.ko.wt.rna.ko.wt.up.c100 <- as.data.frame(hmc.ko.wt.rna.ko.wt.up.c100)
+hmc.ko.wt.rna.ko.wt.up.c100$index <- 100:1
+hmc.ko.wt.rna.ko.wt.up.c100.boot <- foreach(c = isplitRows(hmc.ko.wt.rna.ko.wt[, 
+    121:160], chunks = 100), .combine = "rbind") %do% bootCI(apply(c, 1, mean, 
+    na.rm = T))
+hmc.ko.wt.rna.ko.wt.up.c100 <- cbind(hmc.ko.wt.rna.ko.wt.up.c100, hmc.ko.wt.rna.ko.wt.up.c100.boot)
+colnames(hmc.ko.wt.rna.ko.wt.up.c100)[3:4] <- c("lower", "upper")
+```
+
+
+
+```r
+hmc.ko.wt.rna.ko.wt.up.c100$wilcox.FDR <- p.adjust(foreach(c = isplitRows(hmc.ko.wt.rna.ko.wt[, 
+    121:160], chunks = 100), .combine = "c") %do% wilcox.test(c)$p.value, method = "fdr")
+hmc.ko.wt.rna.ko.wt.up.c100$wilcox.FDR.05 <- cut(hmc.ko.wt.rna.ko.wt.up.c100$wilcox.FDR, 
+    breaks = c(0, 0.05, 1))
+```
+
+
+
+```r
+theme_set(theme_gray())
+gg <- ggplot(hmc.ko.wt.rna.ko.wt.up.c100, aes(hmc.ko.wt.rna.ko.wt.up.c100, index))
+gg <- gg + geom_vline(xintercept = 0, color = "red")
+gg <- gg + geom_errorbarh(aes(xmin = lower, xmax = upper), height = 0, size = 0.1) + 
+    geom_point(aes(color = wilcox.FDR.05), size = 2) + xlab("RPM") + ylab("") + 
+    theme(legend.position = "none", axis.text.y = element_blank()) + labs(title = c("KO - WT 5hmC")) + 
+    scale_color_manual(values = c("red", "black"))
+gg
+```
+
+![plot of chunk refGene_noRandom_order_outsides2_tss_W25F200_moe_d3a_ko_sub_wt_hmc_upstream_ordered_by_d3xog_rmrna_ko_wt_fpkm](figure/refGene_noRandom_order_outsides2_tss_W25F200_moe_d3a_ko_sub_wt_hmc_upstream_ordered_by_d3xog_rmrna_ko_wt_fpkm.png) 
+
+
+#### Order by counts
+
+
+```r
+hmc.ko.wt.rna.count.ko.wt <- hmc.ko.wt[match(rna.counts.1log2$name2[order(rna.counts.1log2$ko.wt)], 
+    rownames(hmc.ko.wt)), ]
+hmc.ko.wt.rna.count.ko.wt <- na.omit(hmc.ko.wt.rna.count.ko.wt)
+```
+
+
+
+```r
+hmc.ko.wt.rna.count.ko.wt.up.c100 <- foreach(c = isplitRows(hmc.ko.wt.rna.count.ko.wt[, 
+    121:160], chunks = 100), .combine = "c") %do% mean(c, na.rm = TRUE)
+hmc.ko.wt.rna.count.ko.wt.up.c100 <- as.data.frame(hmc.ko.wt.rna.count.ko.wt.up.c100)
+hmc.ko.wt.rna.count.ko.wt.up.c100$index <- 100:1
+hmc.ko.wt.rna.count.ko.wt.up.c100.boot <- foreach(c = isplitRows(hmc.ko.wt.rna.count.ko.wt[, 
+    121:160], chunks = 100), .combine = "rbind") %do% bootCI(apply(c, 1, mean, 
+    na.rm = T))
+hmc.ko.wt.rna.count.ko.wt.up.c100 <- cbind(hmc.ko.wt.rna.count.ko.wt.up.c100, 
+    hmc.ko.wt.rna.count.ko.wt.up.c100.boot)
+colnames(hmc.ko.wt.rna.count.ko.wt.up.c100)[3:4] <- c("lower", "upper")
+```
+
+
+
+```r
+hmc.ko.wt.rna.count.ko.wt.up.c100$wilcox.FDR <- p.adjust(foreach(c = isplitRows(hmc.ko.wt.rna.count.ko.wt[, 
+    121:160], chunks = 100), .combine = "c") %do% wilcox.test(c)$p.value, method = "fdr")
+hmc.ko.wt.rna.count.ko.wt.up.c100$wilcox.FDR.05 <- cut(hmc.ko.wt.rna.count.ko.wt.up.c100$wilcox.FDR, 
+    breaks = c(0, 0.05, 1))
+```
 
 
 
 
+```r
+theme_set(theme_gray())
+gg <- ggplot(hmc.ko.wt.rna.count.ko.wt.up.c100, aes(hmc.ko.wt.rna.count.ko.wt.up.c100, 
+    index))
+gg <- gg + geom_vline(xintercept = 0, color = "red")
+gg <- gg + geom_errorbarh(aes(xmin = lower, xmax = upper), height = 0, size = 0.1) + 
+    geom_point(aes(color = wilcox.FDR.05), size = 2) + xlab("RPM") + ylab("") + 
+    theme(legend.position = "none", axis.text.y = element_blank()) + labs(title = c("KO - WT 5hmC")) + 
+    scale_color_manual(values = c("red", "black"))
+gg
+```
+
+![plot of chunk refGene_noRandom_order_outsides2_tss_W25F200_moe_d3a_ko_sub_wt_hmc_upstream_ordered_by_d3xog_rmrna_ko_wt_counts](figure/refGene_noRandom_order_outsides2_tss_W25F200_moe_d3a_ko_sub_wt_hmc_upstream_ordered_by_d3xog_rmrna_ko_wt_counts.png) 
+
+
+**Downstream**
+
+```r
+hmc.ko.wt.rna.ko.wt.down.c100 <- foreach(c = isplitRows(hmc.ko.wt.rna.ko.wt[, 
+    241:280], chunks = 100), .combine = "c") %do% mean(c, na.rm = TRUE)
+hmc.ko.wt.rna.ko.wt.down.c100 <- as.data.frame(hmc.ko.wt.rna.ko.wt.down.c100)
+hmc.ko.wt.rna.ko.wt.down.c100$index <- 100:1
+hmc.ko.wt.rna.ko.wt.down.c100.boot <- foreach(c = isplitRows(hmc.ko.wt.rna.ko.wt[, 
+    241:280], chunks = 100), .combine = "rbind") %do% bootCI(apply(c, 1, mean, 
+    na.rm = T))
+hmc.ko.wt.rna.ko.wt.down.c100 <- cbind(hmc.ko.wt.rna.ko.wt.down.c100, hmc.ko.wt.rna.ko.wt.down.c100.boot)
+colnames(hmc.ko.wt.rna.ko.wt.down.c100)[3:4] <- c("lower", "upper")
+```
+
+
+
+```r
+hmc.ko.wt.rna.ko.wt.down.c100$wilcox.FDR <- p.adjust(foreach(c = isplitRows(hmc.ko.wt.rna.ko.wt[, 
+    241:280], chunks = 100), .combine = "c") %do% wilcox.test(c)$p.value, method = "fdr")
+hmc.ko.wt.rna.ko.wt.down.c100$wilcox.FDR.05 <- cut(hmc.ko.wt.rna.ko.wt.down.c100$wilcox.FDR, 
+    breaks = c(0, 0.05, 1))
+```
 
 
 
 
+```r
+theme_set(theme_gray())
+gg <- ggplot(hmc.ko.wt.rna.ko.wt.down.c100, aes(index, hmc.ko.wt.rna.ko.wt.down.c100))
+gg <- gg + geom_hline(yintercept = 0, color = "red")
+gg <- gg + geom_errorbarh(aes(xmin = lower, xmax = upper), height = 0, size = 0.1) + 
+    geom_point(size = 2) + ylab("5hmC RPM") + xlab("KO / WT rmRNA ratio") + 
+    theme(legend.position = "none") + labs(title = c("KO - WT Downstream TSS 5hmC")) + 
+    scale_color_manual(values = c("black"))
+gg
+```
+
+![plot of chunk refGene_noRandom_order_outsides2_tss_W25F200_moe_d3a_ko_sub_wt_hmc_downstream_ordered_by_d3xog_rmrna_ko_wt_fpkm](figure/refGene_noRandom_order_outsides2_tss_W25F200_moe_d3a_ko_sub_wt_hmc_downstream_ordered_by_d3xog_rmrna_ko_wt_fpkm.png) 
+
+
+#### Order by protein-coding FPKM
+
+
+```r
+hmc.wt.rna.ko.wt <- hmc.wt[match(rna2.1log2$gene[order(rna2.1log2$ko.wt)], rownames(hmc.wt)), 
+    ]
+hmc.ko.rna.ko.wt <- hmc.ko[match(rna2.1log2$gene[order(rna2.1log2$ko.wt)], rownames(hmc.ko)), 
+    ]
+hmc.ko.wt.rna.ko.wt <- hmc.ko.wt[match(rna2.1log2.nz$gene[order(rna2.1log2.nz$ko.wt)], 
+    rownames(hmc.ko.wt)), ]
+hmc.ko.wt.rna.ko.wt <- na.omit(hmc.ko.wt.rna.ko.wt)
+```
 
 
 
+```r
+MP.heat(hmc.wt.rna.ko.wt, range = c(0, 1.5), average = 50)
+```
+
+![plot of chunk unnamed-chunk-30](figure/unnamed-chunk-30.png) 
 
 
 
+```r
+MP.heat(hmc.ko.wt.rna.ko.wt, range = c(-0.2, 0.1), average = 50)
+```
+
+![plot of chunk unnamed-chunk-31](figure/unnamed-chunk-31.png) 
+
+#### Order by counts
+
+
+```r
+hmc.ko.wt.rna.count.ko.wt <- hmc.ko.wt[match(rna.counts.1log2$name2[order(rna.counts.1log2$ko.wt)], 
+    rownames(hmc.ko.wt)), ]
+hmc.ko.wt.rna.count.ko.wt <- na.omit(hmc.ko.wt.rna.count.ko.wt)
+```
 
 
 
+```r
+hmc.ko.wt.rna.count.ko.wt.down.c100 <- foreach(c = isplitRows(hmc.ko.wt.rna.count.ko.wt[, 
+    241:280], chunks = 100), .combine = "c") %do% mean(c, na.rm = TRUE)
+hmc.ko.wt.rna.count.ko.wt.down.c100 <- as.data.frame(hmc.ko.wt.rna.count.ko.wt.down.c100)
+hmc.ko.wt.rna.count.ko.wt.down.c100$index <- 100:1
+hmc.ko.wt.rna.count.ko.wt.down.c100.boot <- foreach(c = isplitRows(hmc.ko.wt.rna.count.ko.wt[, 
+    241:280], chunks = 100), .combine = "rbind") %do% bootCI(apply(c, 1, mean, 
+    na.rm = T))
+hmc.ko.wt.rna.count.ko.wt.down.c100 <- cbind(hmc.ko.wt.rna.count.ko.wt.down.c100, 
+    hmc.ko.wt.rna.count.ko.wt.down.c100.boot)
+colnames(hmc.ko.wt.rna.count.ko.wt.down.c100)[3:4] <- c("lower", "upper")
+```
 
 
 
+```r
+hmc.ko.wt.rna.count.ko.wt.down.c100$wilcox.FDR <- p.adjust(foreach(c = isplitRows(hmc.ko.wt.rna.count.ko.wt[, 
+    241:280], chunks = 100), .combine = "c") %do% wilcox.test(c)$p.value, method = "fdr")
+hmc.ko.wt.rna.count.ko.wt.down.c100$wilcox.FDR.05 <- cut(hmc.ko.wt.rna.count.ko.wt.down.c100$wilcox.FDR, 
+    breaks = c(0, 0.05, 1))
+```
 
 
 
+```r
+theme_set(theme_gray())
+gg <- ggplot(hmc.ko.wt.rna.count.ko.wt.down.c100, aes(hmc.ko.wt.rna.count.ko.wt.down.c100, 
+    index))
+gg <- gg + geom_vline(xintercept = 0, color = "red")
+gg <- gg + geom_errorbarh(aes(xmin = lower, xmax = upper), height = 0, size = 0.1) + 
+    geom_point(aes(color = wilcox.FDR.05), size = 2) + xlab("RPM") + ylab("") + 
+    theme(legend.position = "none", axis.text.y = element_blank()) + labs(title = c("KO - WT 5hmC")) + 
+    scale_color_manual(values = c("red", "black"))
+gg
+```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+![plot of chunk refGene_noRandom_order_outsides2_tss_W25F200_moe_d3a_ko_sub_wt_hmc_dowstream_ordered_by_d3xog_rmrna_ko_wt_counts](figure/refGene_noRandom_order_outsides2_tss_W25F200_moe_d3a_ko_sub_wt_hmc_dowstream_ordered_by_d3xog_rmrna_ko_wt_counts.png) 
 

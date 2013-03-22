@@ -314,7 +314,26 @@ def removeWeirdChr(sam):
     samfile.close()
     outfile.close()
 
-
+def computeChrMean(bam):
+    bamfile = pysam.Samfile(bam, 'rb')
+    refs = bamfile.references
+    ref_lengths = bamfile.lengths
+    outfile = open(bam + ".chr_means_0", 'w')
+    total = 0
+    
+    for index in range(len(refs)):
+        ref_length = ref_lengths[index]
+        ref = refs[index]
+        print ref
+        #pdb.set_trace()
+        for i in range(int(3E6), int(3.1E6)):
+            print i
+            total += bamfile.count(ref, i, i+1)
+            if (i % 1E7) == 0 : print "="
+        pdb.set_trace()
+        total /= (ref_length - 3E6)  
+        outfile.write("\t".join([ref, str(total)]) + "\n")
+                      
 def extract_worker(sam_file, h5_file, ref, ref_length, track_name):
     pass
 # Take paired end BAM file

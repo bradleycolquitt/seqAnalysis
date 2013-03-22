@@ -1,0 +1,45 @@
+D3a TSSs
+========================================================
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+```
+
+#### 5hmC
+```{r}
+plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr", "d3a_hmc", data_type="rpkm/mean", group2="exclude-chrX_trim0.01", cols=col2)
+```
+
+#### 5mC
+```{r}
+plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr", "d3a_mc", data_type="rpkm/mean", group2="exclude-chrX_trim0.01", cols=col2)
+```
+
+#### Nucleosomes
+```{r}
+plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr","d3a_nuc_extend", data_type="bam_extend/mean_chrom_mean", group2="exclude-chrX_trim0.01", cols=col2)
+```
+
+```{r}
+makeProfile2.allSamp("refGene_noRandom_order_outsides2_tss_W25F200_chr", data_type="bam_extend/mean_chrom_mean", group2="d3xog_wt_rmrna_fpkm_range4", rm.outlier=0.01)
+makeProfile2.allSamp("refGene_noRandom_order_outsides2_tss_W25F200_chr", data_type="bam_extend/mean_chrom_mean", group2="d3xog_ko_rmrna_fpkm_range4", rm.outlier=0.01)
+```
+
+```{r}
+plot2("refGene_noRandom_order_outsides2_tss_W25F200_chr", "d3xog_wt_nuc_478_rmdup_q30_extend", group2="d3xog_wt_rmrna_fpkm_range4_trim0.01", data_type="bam_extend/mean_chrom_mean", cols=col4, y.vals=c(0.2, 1.2))
+```
+
+```{r}
+plot2("refGene_noRandom_order_outsides2_tss_W25F200_chr", "d3xog_ko_nuc_256_rmdup_q30_extend", group2="d3xog_ko_rmrna_fpkm_range4_trim0.01", data_type="bam_extend/mean_chrom_mean", cols=col4, y.vals=c(0.2, 1.2))
+```
+
+```{r}
+par(mfrow=c(2,2), mar=c(2,2,2,2))
+for (i in 1:4) {
+plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr","d3a_nuc_extend", data_type="bam_extend/mean_chrom_mean", group2="d3xog_wt_rmrna_fpkm_range4_trim0.01", cols=col2, group2_col=i, y.vals=c(0.4, 1.2),lab=c("TSS"))
+}
+```
+
+#### DNase
+```{r}
+plot2("refGene_noRandom_order_outsides2_tss_W25F200_chr","d3a_het_dnase_sort_q30", data_type="bam_ends/mean", group2="exclude-chrX_trim0.01")
+```

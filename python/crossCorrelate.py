@@ -44,7 +44,10 @@ class cross_track:
         #pdb.set_trace()
         self.out_path = "/".join([out_path, data_type, corr_type, feature])
         if not os.path.exists(self.out_path): os.makedirs(self.out_path)
-        self.outfile = "/".join([self.out_path, "_".join([self.track_a, self.track_b, str(flank)])])
+        self.outfile = "/".join([self.out_path,
+                                 "_".join([os.path.basename(self.track_a),
+                                           os.path.basename(self.track_b),
+                                           str(flank)])])
         if os.path.exists(self.outfile):
             dec = raw_input("File exists. Overwrite? [y/n]")
             if dec == "n": sys.exit()
@@ -179,7 +182,7 @@ def corr_wrapper(func, *args):
     
 def main(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument(dest="feature")
+    parser.add_argument(dest="feature", help=" ".join(["Feature in ", feature_path]))
     parser.add_argument("--file_a", dest="file_a", required=False)
     parser.add_argument("--track_a", dest="track_a", required=False)
     parser.add_argument("--file_b", required=False)

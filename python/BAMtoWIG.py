@@ -44,7 +44,7 @@ tdf_dir = "/media/storage2/data/tdf"
 
 class windower:
     def __init__(self, bamname, wigname, window_size, extend, pe, bed, pseudo,
-                 full, ends, smooth, norm_by_mean):
+                 full, ends, smooth, norm_by_mean, no_norm, no_output):
         
         self.bamname = bamname
         self.bamfile = pysam.Samfile(bamname, 'rb')
@@ -65,8 +65,9 @@ class windower:
         self.ends = ends
         self.smooth = smooth
         self.norm_by_mean = norm_by_mean
+        self.no_output = no_output
         
-        pdb.set_trace()
+        #pdb.set_trace()
         self.window_correct = {}
         self.norm_path = ".".join([bamname, "chr_means"])
         if os.path.exists(self.norm_path):
@@ -90,15 +91,23 @@ class windower:
             self.chrs_queue.append((self.bamfile.references[index], self.bamfile.lengths[index]))
         
     def window(self):
-        
+        results = 0
         if self.bed_name:
                 window_bed(self)      
         else:
-            for chrom in self.chrs_queue:
-                if not self.full:
-                    window_core(self, chrom)
-                else:
-                    window_full(self, chrom)
+            if not self.full:
+                results = [window_core(self, chrom) for chrom in self.chrs_queue]
+            else:
+                results = [window_full(self, chrom) for chrom in self.chrs_queue]
+            
+            #for chrom in self.chrs_queue:
+            #    if not self.full:
+            #        window_core(self, chrom)
+            #    else:
+            #        window_full(self, chrom)
+        #pdb.set_trace()
+        for result in results:
+            self.window_correct[result[0]] = result[1]
         """    
         args = []
         for chr in self.chrs_queue:
@@ -119,13 +128,14 @@ class windower:
         self.wigfile.close()
         """
     # Write window_correct dictionary if not already present
-    def write_norm_vals():
+    def write_norm_vals(self):
         if not os.path.exists(self.norm_path):
             file = open(self.norm_path, 'w')
             for item in self.window_correct.iteritems():
                 out = "\t".join([item[0], str(item[1])]) + "\n"
                 file.write(out)
-                
+    
+    # Convert WIG to TDF            
     def tdf(self):
         print self.tdffile
         cmd_args = ['igvtools', 'tile', self.wigname, self.tdffile, 'mm9']
@@ -152,8 +162,10 @@ def window_core(obj, chrom):
     """
     
     bamfile = pysam.Samfile(obj.bamname, 'rb')
-    chr_length = obj.chr_lengths[chrom]
-    print chr
+    #pdb.set_trace()
+    chr_length = chrom[1]
+    chrom = chrom[0]
+    print chrom
     
     # Normalize by Reads per million and by reads per kilobase
     window_correct = 1e6 * 1e3 / (float(obj.window_size) * obj.nreads)
@@ -162,15 +174,16 @@ def window_core(obj, chrom):
     
     read_mid = 0
     
-    for read in bamfile.fetch(chr):
+    for read in bamfile.fetch(chrom):
         
         # if just using read ends
-        if ends:
+        if obj.ends:
+           # pdb.set_trace()
             if read.is_reverse:
-                read_mid = read.aend - 1
+                read_mid = read.aend + 1
             else:
-                read_mid = read.pos
-        elif pe:
+                read_mid = read.pos + 2
+        elif obj.pe:
             if read.is_read1:
                 if read.is_reverse:
                     read_mid = read.aend + read.isize / 2
@@ -194,41 +207,33 @@ def window_core(obj, chrom):
     obj.wigfile.write(out)
     
     pos_vect = window_correct * pos_vect
-    if smooth > 0:
-        pos_vect = signal_utils.smooth(pos_vect, smooth, window="flat")
-        
-    for val in pos_vect[first_non_zero:]:
-        if pseudo and val == 0: val = 1
-        obj.wigfile.write(str(val) + "\n")
+    #pdb.set_trace()
+    if obj.smooth > 0:
+        pos_vect = signal_utils.smooth(pos_vect, obj.smooth, window="flat")
+    
+    if not obj.no_norm:    
+        for val in pos_vect[first_non_zero:]:
+            if obj.pseudo and val == 0: val = 1
+            obj.wigfile.write(str(val) + "\n")
         
 def window_full(obj, chrom):
     #pdb.set_trace()
-    
-    bamname = arg[0]
-    wigfile = arg[1]
-    window_size = arg[2]
-    chr_tuple = arg[3]
-    pe = arg[4]
-    extend = arg[5]
-    nreads = arg[6]
-    bed = arg[7]
-    pseudo = arg[8]
-    ends = arg[9]
-    smooth = arg[10]
-    norm_by_mean = arg[11]
-    
+   
     bamfile = pysam.Samfile(obj.bamname, 'rb')
-    chr = chr_tuple[0]
-    chr_length = chr_tuple[1]
-    print chr
+    chr_length = chrom[1]
+    chrom = chrom[0]
+    print chrom
     
-    
-    window_correct = (1e6) / (float(obj.window_size) * obj.nreads)
+    window_correct = 0
+    if not obj.norm_by_mean:
+        window_correct = (1e6) / (float(obj.window_size) * obj.nreads)
     out = "fixedStep chrom={0} start=1 step={1} span={1}\n".format(chrom, obj.window_size)
     obj.wigfile.write(out)
     
     ## Initialize output vector and BAM iterator
-    pos_vect = np.zeros((obj.chr_lengths[chrom] / obj.window_size,))
+    pos_vect_len = chr_length / obj.window_size
+    pos_vect = np.zeros((pos_vect_len,))
+#    pos_vect = np.zeros((obj.chr_lengths[chrom] / obj.window_size,))
     #it = bamfile.pileup(reference=chr)
     start = 0
     end = 0
@@ -237,9 +242,15 @@ def window_full(obj, chrom):
     for read in bamfile.fetch(chrom):
 #        pdb.set_trace()
         if obj.pe:
-            if not read.is_reverse:
+            if not read.is_reverse: 
                 start = read.pos
                 end = read.pnext + read.qlen
+                #print "{0},{1},{2}".format(start, end, (end-start))
+                if (end - start) > 2000:
+                    # pdb.set_trace()
+                    continue
+            else:
+                continue
         if obj.extend:
             if not read.is_reverse:
                 start = read.pos
@@ -247,21 +258,29 @@ def window_full(obj, chrom):
             else:
                 end = read.aend
                 start = end - extend
-        start /= window_size
-        end /= window_size
-        if end >= len(pos_vect): end = len(pos_vect) - 1
         
+        start /= obj.window_size
+        end /= obj.window_size
+        
+        if end >= pos_vect_len: end = pos_vect_len - 1        
         try:
             for i in range(start, end): pos_vect[i] += 1
         except IndexError:
             pdb.set_trace()
-    print "Start write"
+    
+    
     if obj.norm_by_mean:
-        window_correct = np.mean(pos_vect)
-    for val in pos_vect:
-        if pseudo and val == 0: val = 1
-        obj.wigfile.write(str(window_correct * float(val)) + "\n")
-        
+        mean = np.mean(pos_vect)
+        if mean > 0:
+            window_correct = 1 / float(mean)
+    if not obj.no_output:
+        print "Start write"
+        for val in pos_vect:
+            if obj.pseudo and val == 0: val = 1
+            obj.wigfile.write(str(window_correct * float(val)) + "\n")
+    
+    return((chrom, window_correct))
+    
 def window_bed(obj):
     
     bamfile = pysam.Samfile(obj.bamname, 'rb')
@@ -351,16 +370,20 @@ def main(argv):
     parser.add_argument('--full', action='store_true', default=False, help="Record extent of each read")
     parser.add_argument('--ends', action='store_true', default=False, help="Record position of the end of each read")
     parser.add_argument('--smooth', type=int, help="Size of smoothing window")
-    parser.add_argument('--norm_by_mean', action='store_true', default=False, help="Normalize values by mean across chromosome, not total read number")
+    parser.add_argument('--norm_by_mean', action='store_true', default=False, help="Normalize values by mean across chromosome (excluding zero windows), not total read number")
+    parser.add_argument('--no_norm', action='store_true', default=False, help="Don't normalize. Just count number of reads.")
+    parser.add_argument('--no_output', action='store_true', default=False, help="Don't output WIG. Useful if just computing norm values")
     args = parser.parse_args()
       
     bam_path = "/".join([bam_dir, args.bam])
     bam_prefix = os.path.basename(args.bam).split(".bam")[0]
     
-    if not args.norm_by_mean:
-        wig_path = "/".join([wig_dir, "rpkm"])
+    if args.norm_by_mean:
+       wig_path = "/".join([wig_dir, "mean"])
+    elif args.no_norm:
+        wig_path = "/".join([wig_dir, "no_norm"])
     else:
-        wig_path = "/".join([wig_dir, "mean"])
+        wig_path = "/".join([wig_dir, "rpkm"])
         
     wig_path = "/".join([wig_path, bam_prefix])
     wig_file = "/".join([wig_path, "_".join([bam_prefix, args.window])])
@@ -384,7 +407,8 @@ def main(argv):
         if dec == "n": return
 
     wi = windower(bam_path, wig_file, args.window, args.extend, args.paired_end,
-                  args.bed, args.pseudo, args.full, args.ends, args.smooth, args.norm_by_mean)
+                  args.bed, args.pseudo, args.full, args.ends, args.smooth,
+                  args.norm_by_mean, args.no_norm, args.no_output)
     wi.window()
     wi.write_norm_vals()
     wi.wigfile.close()

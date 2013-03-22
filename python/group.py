@@ -36,8 +36,10 @@ class tab:
         self.split_anno = split_anno
         self.strand = strand
         self.norm_by_mean = norm_by_mean
+        #pdb.set_trace()
         if self.norm_by_mean:
-            self.data_type = "_".join([self.data_type, "chrom_mean"])
+            
+            self.fun = "_".join([self.fun, "chrom_mean"])
         self.window_size = 1
         
         # Check if mean chromosome values have been computed
@@ -52,11 +54,12 @@ class tab:
                 
         self.flank = flank
         self.out_path = ""
+        #pdb.set_trace()
         if type == "anno":
-            self.out_path = "/".join([ANNO_OUT_PATH, data_type, fun, os.path.basename(anno)])
+            self.out_path = "/".join([ANNO_OUT_PATH, self.data_type, self.fun, os.path.basename(anno)])
         elif type == "feature":
             if not split_anno:
-                self.out_path = "/".join([FEATURE_OUT_PATH, data_type, fun, os.path.basename(anno)])
+                self.out_path = "/".join([FEATURE_OUT_PATH, self.data_type, self.fun, os.path.basename(anno)])
             else:
                 self.out_path = "/".join([FEATURE_OUT_PATH, data_type, "split", os.path.basename(anno)])    
         if not os.path.exists(self.out_path): os.makedirs(self.out_path)
@@ -116,18 +119,12 @@ class tab:
       
       
         pool = Pool(processes=4)
-        #for chr_tbp in chrs_tbp:
-        result = [pool.apply_async(tab_bam, (self, chr_tbp, tmp_path)) for chr_tbp in chrs_tbp]
-        
+
+        #result = [pool.apply_async(tab_bam, (self, chr_tbp, tmp_path)) for chr_tbp in chrs_tbp]
+        [tab_bam(self, chr_tbp, tmp_path) for chr_tbp in chrs_tbp]
         pool.close()
         pool.join()
         
-        #pdb.set_trace()
-        #if self.norm_by_mean:
-        #    self.window_correct[chr_tbp] = result
-            
-        #tab_bam(self, chr_tbp, tmp_path)
-        pdb.set_trace()
         # Write window_correct dictionary if not already present
         if self.norm_by_mean:
             if not os.path.exists(self.norm_path):
@@ -237,10 +234,14 @@ def tab_bam(obj, chr_tbp , tmp_path):
     
     
     norm_val = 0
+    #pdb.set_trace()
     if not obj.norm_by_mean:
         # Normalize by Reads per million and by reads per kilobase
         norm_val = 1e6 * 1e3 / (float(obj.window_size) * float(bam.mapped))
-   
+    else:
+        # Normalize by chromosomal means
+        if chr_tbp in obj.window_correct:
+            norm_val = obj.window_correct[chr_tbp]
     
     # Setup output path
     anno_out_path = tmp_path + "/" + chr_tbp
@@ -250,35 +251,32 @@ def tab_bam(obj, chr_tbp , tmp_path):
     flank = obj.flank
     window_size = obj.window_size
     
-    #anno_line = anno_data.readline().strip().split()
-
     # Initialize frequently altered variables
     vals = 0
     start = 0
     end = 0 
     read_end = 0
+    
     # Loop through annotation records
     for line in anno_data:
         line = line.strip()
         sline = line.split()
-        
+        vals = 0
         # Extract start and end values of annotation record
         if obj.flank == 0:
             start = [(atoi(sline[1]) - 1)]
             end = [(atoi(sline[2]) - 1)]
-            vals = np.zeros(end[0] - start[0] + 1)
+            #vals = np.zeros(end[0] - start[0] + 1)
         else:
             start = [int(sline[1]) - 1 - flank, int(sline[2])]
             end = [int(sline[1]) - 2, int(sline[2]) + flank - 1]
-            vals = np.zeros(flank * 2)
+            #vals = np.zeros(flank * 2)
         
         # Loop allows flanking regions
         # Generally, only single iteration
         for i in xrange(len(start)):
             try:
-                if obj.bam_attr == "count":
-                    vals = 0
-                    
+                if obj.bam_attr == "count":                    
                     # If strand option set, only count reads if
                     # if read1 and aligning to same strand as feature.
                     # if read2 and aligning to opposite strand
@@ -292,16 +290,26 @@ def tab_bam(obj, chr_tbp , tmp_path):
                                 vals += 1
                                 
                     # Count the number of reads the overlap annotation record
+                    elif obj.norm_by_mean:
+                        read_count = 0
+                        total = 0
+                        #pdb.set_trace()
+                        for column in bam.pileup(chr_tbp, start[i], end[i] + 1):
+                            if column.pos > start[i] and column.pos < end[i] + 1:
+                                read_count += column.n
+                                total += 1
+                        #pdb.set_trace()
+                        vals = read_count
+            
                     else:
                         vals = bam.count(chr_tbp, start[i], end[i] + 1)
 
                     # Normalize by the length of the record
                     vals /= (float(end[i] + 1 - start[i]))
                 
-                # Only count read is end aligns within record
+                # Only count read if end aligns within record
                 elif obj.bam_attr == "count_ends":
                     reads = bam.fetch(chr_tbp, start[i], end[i] + 1)
-                    # Reset count
                     
                     for read in reads:
                         if read.is_reverse:
@@ -314,7 +322,7 @@ def tab_bam(obj, chr_tbp , tmp_path):
                             vals += 1
                     
                     # Sum
-                    vals = np.sum(vals)
+                    #vals = np.sum(vals)
                     
                     #Normalize by the length of the record
                     vals /= (float(end[i] + 1 - start[i]))        
@@ -323,7 +331,6 @@ def tab_bam(obj, chr_tbp , tmp_path):
                 elif obj.bam_attr == "isize":
 
                     it = bam.fetch(chr_tbp, start[i], end[i] + 1)
-                    vals = 0
                     nreads = 0
                     for read in it:
                         if read.is_read1:
@@ -343,7 +350,7 @@ def tab_bam(obj, chr_tbp , tmp_path):
         else:
             out = ""
             
-            if obj.bam_attr == "count":
+            if obj.bam_attr == "count" or obj.bam_attr == "count_ends":
                 if obj.norm_by_mean:
                     if norm_val == 0:
                         total_n = 0
@@ -355,7 +362,7 @@ def tab_bam(obj, chr_tbp , tmp_path):
                     
                         norm_val = 1/ (total_n / float(count_n))
                         print "Average coverage = {0}".format(norm_val)
-                    
+                pdb.set_trace()    
                 out = "\t".join([line, str(vals * norm_val)]) + "\n"
             else:
                 out = "\t".join([line, str(vals)]) + "\n"
