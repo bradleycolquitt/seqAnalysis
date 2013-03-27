@@ -1,0 +1,91 @@
+D3a Rad21 sites
+========================================================
+
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+```
+
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, results='hide'}
+makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_nosex.bed_W25F200_both_chr", data_type="bam_extend/mean_chrom_mean_0", rm.outliers=0.01)
+makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_nosex.bed_W25F200_both_chr", data_type="bam_ends/mean", rm.outliers=0.01)
+makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_nosex.bed_W25F200_both_chr", data_type="rpkm/mean", rm.outliers=0.01)
+```
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, results='hide'}
+makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr", data_type="bam_extend/mean_chrom_mean_0", rm.outliers=0.01)
+makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr", data_type="bam_extend/mean_chrom_mean", rm.outliers=0.01)
+makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr", data_type="bam_ends/mean", rm.outliers=0.01)
+makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr", data_type="rpkm/mean", rm.outliers=0.01)
+```
+
+```{r}
+makeProfile2.allSamp("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex.bed_W200F250_both_chr", data_type="bam_extend/mean_chrom_mean_0", rm.outliers=0.01)
+```
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, results='hide'}
+makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr", data_type="bam_extend/mean_chrom_mean_0", rm.outliers=0.01)
+makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr", data_type="bam_ends/mean", rm.outliers=0.01)
+makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr", data_type="rpkm/mean", rm.outliers=0.01)
+```
+
+#### 5hmC
+```{r, fig.width=8, fig.height=4}
+par(mfrow=c(1,2), mar=c(2,2,2,2))
+plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W25F200_both_chr", "d3a_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(.2, 1))
+plot2.several("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr", "d3a_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(.2, 1))
+```
+
+```{r, fig.width=8, fig.height=4}
+par(mfrow=c(1,1), mar=c(2,2,2,2))
+plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr", "d3a_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(.2, 1), range=c(251, 750))
+#plot2.several("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr", "d3a_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(.2, 1))
+```
+
+```{r}
+plot2.several("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex.bed_W200F250_both_chr", "d3a_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(.2, 1), range=c(251, 750))
+```
+
+#### 5mC
+```{r, fig.width=8, fig.height=4}
+par(mfrow=c(1,2), mar=c(2,2,2,2))
+plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W25F200_both_chr", "d3a_mc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(0, .6))
+plot2.several("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr", "d3a_mc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(0, .6))
+```
+
+```{r, fig.width=8, fig.height=4}
+par(mfrow=c(1,1), mar=c(2,2,2,2))
+plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr", "d3a_mc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(0, .6), range=c(251, 750), wsize=200)
+#plot2.several("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr", "d3a_mc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(0, .6))
+```
+
+#### Nucleosomes
+```{r, fig.width=8, fig.height=4}
+par(mfrow=c(1,2),  mar=c(2,2,2,2))
+plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W25F200_both_chr","d3a_nuc_extend", data_type="bam_extend/mean_chrom_mean_0", group2="trim0.01", cols=col2, y.vals=c(.8, 1.3), baseline=F)
+plot2.several("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr","d3a_nuc_extend", data_type="bam_extend/mean_chrom_mean_0", group2="trim0.01", cols=col2, y.vals=c(.8, 1.3), baseline=F)
+```
+
+```{r, fig.width=8, fig.height=4}
+par(mfrow=c(1,1),  mar=c(2,2,2,2))
+plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr","d3a_nuc_extend", data_type="bam_extend/mean_chrom_mean_0", group2="trim0.01", cols=col2, y.vals=c(.8, 1.3), baseline=T, wsize=200, range=c(251, 750))
+#plot2.several("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr","d3a_nuc_extend", data_type="bam_extend/mean_chrom_mean_0", group2="trim0.01", cols=col2, y.vals=c(.8, 1.3), baseline=F)
+```
+
+```{r}
+par(mfrow=c(2,2))
+plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W25F200_both_chr","d3a_nuc2", data_type="rpkm/mean", group2="trim0.01", cols=col2, baseline=F, y.vals=c(0, .5))
+plot2.several("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr","d3a_nuc2", data_type="rpkm/mean", group2="trim0.01", cols=col2, baseline=F, y.vals=c(0, .5))
+plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr","d3a_nuc2", data_type="rpkm/mean", group2="trim0.01", cols=col2, baseline=F, wsize=200)
+```
+
+```{r}
+par(mfrow=c(1,1))
+plot2.several("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex.bed_W200F250_both_chr","d3a_nuc_extend", data_type="bam_extend/mean_chrom_mean_0", group2="trim0.01", cols=col2, y.vals=c(1, 1.4), baseline=T, wsize=200, range=c(201, 300))
+```
+
+
+#### DNase
+```{r}
+plot2("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr","d3a_het_dnase_sort_q30", data_type="bam_ends/mean", group2="trim0.01", wsize=200)
+```

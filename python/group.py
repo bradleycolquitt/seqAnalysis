@@ -26,7 +26,7 @@ FEATURE_OUT_PATH = '/media/storage2/analysis/features/norm'
 
 class tab:
     def __init__(self, anno, sample, sample_type, bam_attr, fun, type, flank,
-                 data_type, split_anno, strand, norm_by_mean):
+                 data_type, split_anno, strand, norm):
         self.anno = anno
         self.sample = sample
         self.sample_type = sample_type
@@ -35,18 +35,27 @@ class tab:
         self.data_type = data_type
         self.split_anno = split_anno
         self.strand = strand
-        self.norm_by_mean = norm_by_mean
+        self.norm = norm
+        #self.norm_by_mean = norm_by_mean
+        #self.norm_by_mean_zero = norm_by_mean_zero
         #pdb.set_trace()
-        if self.norm_by_mean:
-            
+        if self.norm == "chrom_mean":
+#        if self.norm_by_mean: 
             self.fun = "_".join([self.fun, "chrom_mean"])
+        elif self.norm == "chrom_mean_zero":
+#        if self.norm_by_mean_zero:
+            self.fun = "_".join([self.fun, "chrom_mean_0"])
         self.window_size = 1
         
         # Check if mean chromosome values have been computed
         # If so, read them into window_correct dictionary
         #pdb.set_trace()
         self.window_correct = {}
+        
         self.norm_path = ".".join([sample, "chr_means"])
+        if self.norm == "chrom_mean_zero":
+        #if self.norm_by_mean_zero:
+            self.norm_path = self.norm_path + "_0"
         if os.path.exists(self.norm_path):
             for line in open(self.norm_path, 'r'):
                 sline = line.split()
@@ -54,7 +63,6 @@ class tab:
                 
         self.flank = flank
         self.out_path = ""
-        #pdb.set_trace()
         if type == "anno":
             self.out_path = "/".join([ANNO_OUT_PATH, self.data_type, self.fun, os.path.basename(anno)])
         elif type == "feature":
@@ -120,13 +128,13 @@ class tab:
       
         pool = Pool(processes=4)
 
-        #result = [pool.apply_async(tab_bam, (self, chr_tbp, tmp_path)) for chr_tbp in chrs_tbp]
-        [tab_bam(self, chr_tbp, tmp_path) for chr_tbp in chrs_tbp]
+        result = [pool.apply_async(tab_bam, (self, chr_tbp, tmp_path)) for chr_tbp in chrs_tbp]
+        #[tab_bam(self, chr_tbp, tmp_path) for chr_tbp in chrs_tbp]
         pool.close()
         pool.join()
         
         # Write window_correct dictionary if not already present
-        if self.norm_by_mean:
+        if self.norm == "chrom_mean" or self.norm == "chrom_mean_zero":
             if not os.path.exists(self.norm_path):
                 file = open(self.norm_path, 'w')
                 for item in result:
@@ -177,7 +185,7 @@ def tab_h5(self, anno, track, chr_tbp, tmp_path, fun, exp):
         line = line.strip()
         sline = line.split()
         
-        #if sline[0] == "chr15": pdb.set_trace()
+        
         if flank == 0:
             start = (atoi(sline[1]) - 1) / self.window_size
             end = (atoi(sline[2]) - 1) / self.window_size
@@ -235,13 +243,16 @@ def tab_bam(obj, chr_tbp , tmp_path):
     
     norm_val = 0
     #pdb.set_trace()
-    if not obj.norm_by_mean:
-        # Normalize by Reads per million and by reads per kilobase
-        norm_val = 1e6 * 1e3 / (float(obj.window_size) * float(bam.mapped))
-    else:
+    #if obj.norm_by_mean or obj.norm_by_mean_zero:
+    if obj.norm == "chrom_mean" or obj.norm == "chrom_mean_zero":
         # Normalize by chromosomal means
         if chr_tbp in obj.window_correct:
             norm_val = obj.window_correct[chr_tbp]
+    else:
+        # Normalize by Reads per million and by reads per kilobase
+        norm_val = 1e6 * 1e3 / (float(obj.window_size) * float(bam.mapped))
+    
+        
     
     # Setup output path
     anno_out_path = tmp_path + "/" + chr_tbp
@@ -266,11 +277,11 @@ def tab_bam(obj, chr_tbp , tmp_path):
         if obj.flank == 0:
             start = [(atoi(sline[1]) - 1)]
             end = [(atoi(sline[2]) - 1)]
-            #vals = np.zeros(end[0] - start[0] + 1)
+            
         else:
             start = [int(sline[1]) - 1 - flank, int(sline[2])]
             end = [int(sline[1]) - 2, int(sline[2]) + flank - 1]
-            #vals = np.zeros(flank * 2)
+            
         
         # Loop allows flanking regions
         # Generally, only single iteration
@@ -290,7 +301,7 @@ def tab_bam(obj, chr_tbp , tmp_path):
                                 vals += 1
                                 
                     # Count the number of reads the overlap annotation record
-                    elif obj.norm_by_mean:
+                    elif obj.norm == "chrom_mean" or obj.norm == "chrom_mean_zero":
                         read_count = 0
                         total = 0
                         #pdb.set_trace()
@@ -351,7 +362,7 @@ def tab_bam(obj, chr_tbp , tmp_path):
             out = ""
             
             if obj.bam_attr == "count" or obj.bam_attr == "count_ends":
-                if obj.norm_by_mean:
+                if obj.norm == "chrom_mean" or obj.norm=="chrom_mean_zero":
                     if norm_val == 0:
                         total_n = 0
                         count_n = 0
@@ -362,7 +373,7 @@ def tab_bam(obj, chr_tbp , tmp_path):
                     
                         norm_val = 1/ (total_n / float(count_n))
                         print "Average coverage = {0}".format(norm_val)
-                pdb.set_trace()    
+                #pdb.set_trace()    
                 out = "\t".join([line, str(vals * norm_val)]) + "\n"
             else:
                 out = "\t".join([line, str(vals)]) + "\n"
@@ -461,18 +472,18 @@ def val_energy(vals):
     return(result)
           
 def tab_worker(anno, sample, sample_type, bam_attr, fun, type, flank, data_type,
-               split_anno, strand, norm_by_mean):
+               split_anno, strand, norm):
     #print anno
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         if sample_type == "h5":
             obj = tab(anno, sample, sample_type, bam_attr, fun, type, flank,
-                      data_type, split_anno, strand, norm_by_mean)
+                      data_type, split_anno, strand, norm)
             obj.run_h5()
         elif sample_type == "bam":
             for bam in sample:
                 obj = tab(anno, bam, sample_type, bam_attr, fun, type, flank,
-                          data_type, split_anno, strand, norm_by_mean)
+                          data_type, split_anno, strand, norm)
                 obj.run_bam()
     
 def main(argv):
@@ -490,10 +501,13 @@ def main(argv):
                         choices=['mean', 'mean_skip_zero', 'mean_abs', 'median', 'mode','sum',
                                  'max', 'var', 'cv', 'kurtosis', 'energy'],
                         help="Summary function to apply to read counts")
+    parser.add_argument('--norm', required=False, default="rpkm",
+                        choices=['chrom_mean', 'chrom_mean_zero', 'rpkm'])
     parser.add_argument('--split', dest="split_anno", action="store_true", default=False)
     parser.add_argument('--flank', type=int, required=False, default=0, help="Size of regions flanking bed to compute values for")
     parser.add_argument('--strand', dest="strand", action="store_true", default=False)
-    parser.add_argument('--norm_by_mean', action="store_true", default=False)
+    #parser.add_argument('--norm_by_mean', action="store_true", default=False)
+    #parser.add_argument('--norm_by_mean_zero', action="store_true", default=False)
     args = parser.parse_args()
     
     fun = args.fun
@@ -519,12 +533,12 @@ def main(argv):
     elif args.annotation:
         tab_worker(ANNO_PATH + "/" + args.annotation, sample, sample_type,
                    args.bam_attr, fun, "anno", args.flank, args.data_type,
-                   args.split_anno, args.strand, args.norm_by_mean)
+                   args.split_anno, args.strand, args.norm)
     
     elif args.feature:
         tab_worker(FEATURE_PATH + "/" + args.feature, sample, sample_type,
                    args.bam_attr, fun, "feature", args.flank, args.data_type,
-                   args.split_anno, args.strand, args.norm_by_mean)
+                   args.split_anno, args.strand, args.norm)
     
     
    

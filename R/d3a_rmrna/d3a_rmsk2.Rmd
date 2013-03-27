@@ -1,0 +1,56 @@
+D3a - repeat analysis - SINEs
+========================================================
+
+```{r}
+library(reshape2)
+library(ggplot2)
+library(plyr)
+```
+
+```{r}
+rmsk <- read.delim("~/s2/analysis/features/norm/rpkm/mean/summaries/d3a_bt2_rmsk2.bed_chr_sqrt", row.names=NULL)
+rmsk.m <- melt(rmsk)
+rmsk.m$genotype <- rep(c("wt", "ko"), each=nrow(rmsk))
+rmsk.m$mod <- rep(c("hmc", "mc"), each=nrow(rmsk)*2)
+rmsk2.class <- read.delim("~/lib/rmsk/rmsk2")
+rmsk.m$repClass <- rmsk2.class[match(rmsk.m$row.names, rmsk2.class$repName), "repClass"]
+rmsk.m$repFamily <- rmsk2.class[match(rmsk.m$row.names, rmsk2.class$repName), "repFamily"]
+
+```
+
+```{r}
+rmsk.m.ratio <- ddply(rmsk.m, .(row.names, mod, repClass, repFamily), summarize, ko.wt = log2((value[genotype=="ko"]+.01)/(value[genotype=="wt"]+.01)))
+```
+
+```{r}
+gg <- ggplot(rmsk.m, aes(variable, value))
+gg + geom_boxplot() + facet_wrap(~repClass) + ylim(0,1)
+gg + geom_boxplot() + facet_wrap(~repFamily)  + ylim(0,1)
+```
+
+```{r}
+rmsk.m.sine <- rmsk.m[rmsk.m$repClass=="SINE",]
+```
+
+```{r}
+gg <- ggplot(rmsk.m.sine, aes(variable, value))
+gg + geom_boxplot() + facet_wrap(~row.names) + ylim(0, 1)
+```
+
+```{r}
+rmsk.m.line <- rmsk.m[rmsk.m$repClass=="LINE",]
+```
+
+```{r}
+gg <- ggplot(rmsk.m.line, aes(variable, value))
+gg + geom_boxplot() + facet_wrap(~row.names) + ylim(0, 1)
+```
+
+```{r}
+rmsk.m.ratio.sine <- rmsk.m.ratio[rmsk.m.ratio$repClass=="SINE",]
+```
+
+```{r}
+gg <- ggplot(rmsk.m.ratio.sine, aes(mod, ko.wt))
+gg + geom_boxplot() + facet_wrap(~row.names) + ylim(-1, 1)
+```

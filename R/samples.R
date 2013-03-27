@@ -82,6 +82,26 @@ if (set=="d3a") {
     #}
     rows <- 2
     orient <- 2
+  } else if (set=="cells_hmc") {
+    samples <- list(list("omp_hmc_120424_rpkm", "ngn_hmc_rpkm", "icam_hmc_rpkm"))
+                    
+    columns <- 1
+    #if (!is.null(group2)) {
+    #  columns <- 3
+    #}
+    rows <- 1
+    orient <- 2
+    
+  } else if (set=="cells_mc") {
+    samples <- list(list("omp_mc_rpkm", "ngn_mc_rpkm", "icam_mc_rpkm"))
+    
+    columns <- 1
+    #if (!is.null(group2)) {
+    #  columns <- 3
+    #}
+    rows <- 1
+    orient <- 2
+    
   } else if (set=="cells_norm_hmc") {
     samples <- list("omp_hmc", "ngn_hmc", "icam_hmc")
     columns <- 1
@@ -157,7 +177,7 @@ if (set=="d3a") {
     orient <- 2
     
   } else if (set=="cells_nuc") {
-    samples <- list(list("omp_nuc_0123", "icam_nuc_01234"))
+    samples <- list(list("omp_nuc_0123","ngn_nuc_456", "icam_nuc_01234"))
     rows <- 1
     columns <- 1
     orient <- 2

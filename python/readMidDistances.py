@@ -175,9 +175,10 @@ def bamToFragmentBed(infile, outfile, size):
     # Extend by insert size
     if size == 0:
         for read in infile:    
-            if read.is_read1:
+            if read.is_read1 and read.is_paired:
                 if read.is_reverse and read.isize < 0:
-                    start = read.pos + read.isize
+                    #pdb.set_trace()
+                    start = read.aend + read.isize
                     if start < 0: continue
                     end = read.pos
                     strand = "-"

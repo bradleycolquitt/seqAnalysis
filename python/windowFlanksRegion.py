@@ -3,6 +3,7 @@
 import os
 import shutil
 import sys
+import pdb
 from string import *
 from math import *
 import argparse
@@ -26,7 +27,7 @@ def main(argv):
   parser.add_argument("-n", action="store", dest="number", metavar="<int>")
 
   args = parser.parse_args()
-	
+  #pdb.set_trace()	
   infile = open(args.input, 'r');
   outfile = open(args.output, 'w');
   window = atoi(args.window)
@@ -54,6 +55,7 @@ def main(argv):
   name = ""
 	
   for line in infile:
+	  pdb.set_trace()
 	  line_number = line_number + 1
 	  line = line.strip();
 	  sline = line.split();

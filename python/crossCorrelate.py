@@ -81,8 +81,8 @@ def compute_by_chrom(obj):
 
 def compute_worker_h5(obj, chr_tbp):
     print chr_tbp
-    h5_a = tb.openFile(obj.h5_a)
-    h5_b = tb.openFile(obj.h5_b)
+    h5_a = tb.openFile(obj.file_a)
+    h5_b = tb.openFile(obj.file_b)
     sample1 = h5_a.getNode("/", obj.track_a)
     sample_chrs = [chr._v_name for chr in sample1._f_iterNodes()]
     if not chr_tbp in sample_chrs: return
@@ -94,6 +94,8 @@ def compute_worker_h5(obj, chr_tbp):
     feature_out_path = obj.tmp_path + "/" + chr_tbp
     feature_out = open(feature_out_path, 'w')
    
+    window_size = int(sample1_data.getAttr('Resolution'))
+   
     start = 0
     end = 0
     vals1 = 0
@@ -102,9 +104,9 @@ def compute_worker_h5(obj, chr_tbp):
     for line in feature_data:
         line = line.strip()
         sline = line.split()
-        #pdb.set_trace()
-        start = int(sline[1]) - 1 - obj.flank
-        end = int(sline[2]) + obj.flank
+        if re.search("chr3-438", line): pdb.set_trace()
+        start = (int(sline[1]) - 1 - obj.flank) / window_size
+        end = (int(sline[2]) + obj.flank) / window_size
         vals1 = sample1_data[start:end]
         vals2 = sample2_data[start:end]
         
@@ -189,7 +191,8 @@ def main(argv):
     parser.add_argument("--track_b", dest="track_b", required=False)
     parser.add_argument("--data_type")
     parser.add_argument("--cor_type", choices=['cross', 'spearmanr', 'pearsonr'])
-    parser.add_argument("--flank", dest="flank", type=int, required=False, default=0)
+    parser.add_argument("--flank", dest="flank", type=int, required=False,
+                        default=0, help="Extend each bed record by this amount")
     
     args = parser.parse_args()
     

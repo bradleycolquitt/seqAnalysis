@@ -30,7 +30,9 @@ import pdb
 import file_util
 import signal_utils
 import numpy as np
+import numpy.ma as ma
 from subprocess import Popen
+from scipy.stats.mstats import tmean
 from multiprocessing import Queue, Process, Pool
 from string import *
 
@@ -49,7 +51,8 @@ class windower:
         self.bamname = bamname
         self.bamfile = pysam.Samfile(bamname, 'rb')
         self.wigname = wigname
-        self.wigfile = open(wigname, 'w')
+        if not no_output:
+            self.wigfile = open(wigname, 'w')
         self.tdffile = "/".join([tdf_dir, "".join([os.path.basename(wigname).split(".wig")[0], ".tdf"])])
         self.window_size = atoi(window_size)
         self.pe = pe
@@ -65,11 +68,12 @@ class windower:
         self.ends = ends
         self.smooth = smooth
         self.norm_by_mean = norm_by_mean
+        self.no_norm = no_norm
         self.no_output = no_output
         
         #pdb.set_trace()
         self.window_correct = {}
-        self.norm_path = ".".join([bamname, "chr_means"])
+        self.norm_path = ".".join([bamname, "chr_means_0"])
         if os.path.exists(self.norm_path):
             for line in open(self.norm_path, 'r'):
                 sline = line.split()
@@ -90,6 +94,7 @@ class windower:
         for index in range(self.bamfile.nreferences):
             self.chrs_queue.append((self.bamfile.references[index], self.bamfile.lengths[index]))
         
+    # Interface for windowing functions
     def window(self):
         results = 0
         if self.bed_name:
@@ -100,33 +105,9 @@ class windower:
             else:
                 results = [window_full(self, chrom) for chrom in self.chrs_queue]
             
-            #for chrom in self.chrs_queue:
-            #    if not self.full:
-            #        window_core(self, chrom)
-            #    else:
-            #        window_full(self, chrom)
-        #pdb.set_trace()
         for result in results:
             self.window_correct[result[0]] = result[1]
-        """    
-        args = []
-        for chr in self.chrs_queue:
-            args.append((self.bamname, self.wigfile, self.window_size, chr,
-                         self.pe, self.extend, self.nreads, self.bed_file,
-                         self.pseudo, self.ends, self.smooth, self.norm_by_mean))
-        for arg in args:
-            
-            if not self.full:
-                #getattr(self, window_core(args))
-                #window_core(arg[0], arg[1], arg[2], arg[3], arg[4], arg[5],
-                #            arg[6], arg[7], arg[8], arg[9], arg[10])
-                window_core(arg)
-            else:
-                #window_full(arg[0], arg[1], arg[2], arg[3], arg[4], arg[5],
-                #            arg[6], arg[7], arg[)
-                window_full(self)
-        self.wigfile.close()
-        """
+     
     # Write window_correct dictionary if not already present
     def write_norm_vals(self):
         if not os.path.exists(self.norm_path):
@@ -227,8 +208,10 @@ def window_full(obj, chrom):
     window_correct = 0
     if not obj.norm_by_mean:
         window_correct = (1e6) / (float(obj.window_size) * obj.nreads)
-    out = "fixedStep chrom={0} start=1 step={1} span={1}\n".format(chrom, obj.window_size)
-    obj.wigfile.write(out)
+    
+    if not obj.no_output:
+        out = "fixedStep chrom={0} start=1 step={1} span={1}\n".format(chrom, obj.window_size)
+        obj.wigfile.write(out)
     
     ## Initialize output vector and BAM iterator
     pos_vect_len = chr_length / obj.window_size
@@ -242,7 +225,8 @@ def window_full(obj, chrom):
     for read in bamfile.fetch(chrom):
 #        pdb.set_trace()
         if obj.pe:
-            if not read.is_reverse: 
+            if not read.is_reverse and read.is_paired:
+                #pdb.set_trace()
                 start = read.pos
                 end = read.pnext + read.qlen
                 #print "{0},{1},{2}".format(start, end, (end-start))
@@ -270,7 +254,10 @@ def window_full(obj, chrom):
     
     
     if obj.norm_by_mean:
-        mean = np.mean(pos_vect)
+        pdb.set_trace()
+        #mean = np.mean(pos_vect)
+        mask = ~(np.abs(pos_vect - np.mean(pos_vect)) < 2*np.std(pos_vect))
+        mean = ma.array(pos_vect,mask=mask).mean()
         if mean > 0:
             window_correct = 1 / float(mean)
     if not obj.no_output:
@@ -400,11 +387,11 @@ def main(argv):
         wig_file = "_".join([wig_file, "smooth" + str(args.smooth)])
     print wig_file
     wig_file = wig_file + ".wig"
-
-    if not os.path.exists(wig_path): os.makedirs(wig_path)
-    if os.path.exists(wig_file):
-        dec = raw_input("WIG exists. Overwrite [y/n]? ")
-        if dec == "n": return
+    if not args.no_output:
+        if not os.path.exists(wig_path): os.makedirs(wig_path)
+        if os.path.exists(wig_file):
+            dec = raw_input("WIG exists. Overwrite [y/n]? ")
+            if dec == "n": return
 
     wi = windower(bam_path, wig_file, args.window, args.extend, args.paired_end,
                   args.bed, args.pseudo, args.full, args.ends, args.smooth,

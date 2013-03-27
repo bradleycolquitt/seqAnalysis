@@ -1,0 +1,24 @@
+Title
+========================================================
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+```
+
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, results='hide'}
+
+makeProfile2.allSamp("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex.bed_W25F200_both_chr", data_type="rpkm/mean", rm.outliers=0.01)
+
+```
+
+```{r d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex.bed_W25F200_both_omp_ngn_icam_hmc, dev=c("png", "pdf")}
+plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex.bed_W25F200_both_chr", "cells_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col3, y.vals=c(.2, 1), range=c(101, 300), lab="DNase HS")
+```
+
+```{r d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex.bed_W25F200_both_omp_ngn_icam_mc, dev=c("png", "pdf")}
+plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex.bed_W25F200_both_chr", "cells_mc", data_type="rpkm/mean", group2="trim0.01", cols=col3, y.vals=c(0, .5), range=c(101, 300), lab="DNase HS")
+```
+
+```{r d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex.bed_W25F200_both_omp_ngn_icam_nuc, dev=c("png", "pdf")}
+plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex.bed_W25F200_both_chr", "cells_nuc", data_type="rpkm/mean", group2="trim0.01", cols=col3, range=c(101, 300), y.vals=c(.25, .5) , lab="DNase HS")
+```
