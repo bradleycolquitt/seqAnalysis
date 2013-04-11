@@ -14,6 +14,9 @@ opts_knit$set(progress = TRUE, verbose = TRUE)
 hmc.wt.ko.feat <- processIntersectSummary("~/s2/data/homer/peaks/intersections/d3a/moe_d3a_wt_hmc_gc_input_moe_d3a_wt_in_gc_size1kb_F2_inter_moe_d3a_wt_hmc_gc_input_moe_d3a_ko_hmc_gc_size1kb_F2.bed/summary")
 mc.wt.ko.feat <- processIntersectSummary("~/s2/data/homer/peaks/intersections/d3a/moe_d3a_wt_mc_gc_input_moe_d3a_wt_in_gc_size1kb_F2_inter_moe_d3a_wt_mc_gc_input_moe_d3a_ko_mc_gc_size1kb_F2.bed/summary")
 #hmc.wt.ko.feat <- omp.ott3.feat[-grep("mOSN enhancer", omp.ott3.feat$feature.pretty),]
+hmc.wt.ko.feat
+
+mc.wt.ko.feat
 ```
 
 ```{r}

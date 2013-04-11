@@ -248,10 +248,11 @@ def tab_bam(obj, chr_tbp , tmp_path):
         # Normalize by chromosomal means
         if chr_tbp in obj.window_correct:
             norm_val = obj.window_correct[chr_tbp]
-    else:
+    elif obj.norm == "rpkm":
         # Normalize by Reads per million and by reads per kilobase
         norm_val = 1e6 * 1e3 / (float(obj.window_size) * float(bam.mapped))
-    
+    else:
+        norm_val = 1
         
     
     # Setup output path
@@ -502,7 +503,7 @@ def main(argv):
                                  'max', 'var', 'cv', 'kurtosis', 'energy'],
                         help="Summary function to apply to read counts")
     parser.add_argument('--norm', required=False, default="rpkm",
-                        choices=['chrom_mean', 'chrom_mean_zero', 'rpkm'])
+                        choices=['chrom_mean', 'chrom_mean_zero', 'rpkm', 'none'])
     parser.add_argument('--split', dest="split_anno", action="store_true", default=False)
     parser.add_argument('--flank', type=int, required=False, default=0, help="Size of regions flanking bed to compute values for")
     parser.add_argument('--strand', dest="strand", action="store_true", default=False)

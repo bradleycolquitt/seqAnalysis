@@ -3,6 +3,7 @@ D3a - DNase peaks 2
 
 
 ```r
+opts_chunk$set(warning = FALSE, message = FALSE, error = FALSE, results = "hide")
 suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
 library(ggplot2)
 ```
@@ -16,6 +17,8 @@ makeProfile2.allSamp("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_ext
     data_type = "bam_ends/mean", rm.outliers = 0.01)
 makeProfile2.allSamp("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex.bed_W25F200_both_chr", 
     data_type = "rpkm/mean", rm.outliers = 0.01)
+makeProfile2.allSamp("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", 
+    data_type = "bam/mean", rm.outliers = 0.01)
 ```
 
 
@@ -39,164 +42,173 @@ makeProfile2.allSamp("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_ext
 ```
 
 
-#### 5hmC
+#### 50 kb view
+
+```r
+makeProfile2.allSamp("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W200F250_both_chr", 
+    data_type = "bam_extend/mean_chrom_mean_0", rm.outliers = 0.01)
+makeProfile2.allSamp("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W200F250_both_chr", 
+    data_type = "bam_ends/mean", rm.outliers = 0.01)
+makeProfile2.allSamp("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W200F250_both_chr", 
+    data_type = "rpkm/mean", rm.outliers = 0.01)
+makeProfile2.allSamp("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W200F250_both_chr", 
+    data_type = "bam/mean", rm.outliers = 0.01)
+```
+
+
+### 5hmC
 
 ```r
 par(mfrow = c(1, 2), mar = c(2, 2, 2, 2))
 plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", 
     "d3a_hmc", data_type = "rpkm/mean", group2 = "trim0.01", cols = col2, y.vals = c(0.2, 
         1))
-```
-
-```
-## [1] "moe_d3a_wt_hmc_rpkm_trim0.01"
-## [1] "moe_d3a_wt_hmc_rpkm_trim0.01_mean"
-## [1] "moe_d3a_ko_hmc_rpkm_trim0.01"
-## [1] "moe_d3a_ko_hmc_rpkm_trim0.01_mean"
-```
-
-```
-## [1] 0.2 1.0
-```
-
-```r
 plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_shuffle.bed_W25F200_both_chr", 
     "d3a_hmc", data_type = "rpkm/mean", group2 = "trim0.01", cols = col2, y.vals = c(0.2, 
         1))
 ```
 
-```
-## [1] "moe_d3a_wt_hmc_rpkm_trim0.01"
-## [1] "moe_d3a_wt_hmc_rpkm_trim0.01_mean"
-## [1] "moe_d3a_ko_hmc_rpkm_trim0.01"
-## [1] "moe_d3a_ko_hmc_rpkm_trim0.01_mean"
-```
-
-![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-5.png) 
-
-```
-## [1] 0.2 1.0
-```
+![plot of chunk d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_moe_d3a_hmc](figure/d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_moe_d3a_hmc.png) 
 
 
-#### 5mC
+#### 50 kb view
+
+```r
+par(mfrow = c(1, 2), mar = c(2, 2, 2, 2))
+plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W200F250_both_chr", 
+    "d3a_hmc", data_type = "rpkm/mean", group2 = "trim0.01", cols = col2, y.vals = c(0.2, 
+        1))
+#
+# plot2.several('d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_shuffle.bed_W25F200_both_chr',
+# 'd3a_hmc', data_type='rpkm/mean', group2='trim0.01', cols=col2,
+# y.vals=c(.2, 1))
+```
+
+
+### 5mC
 
 ```r
 par(mfrow = c(1, 2), mar = c(2, 2, 2, 2))
 plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", 
     "d3a_mc", data_type = "rpkm/mean", group2 = "trim0.01", cols = col2, y.vals = c(0, 
         0.6))
-```
-
-```
-## [1] "moe_d3a_wt_mc_rpkm_trim0.01"
-## [1] "moe_d3a_wt_mc_rpkm_trim0.01_mean"
-## [1] "moe_d3a_ko_mc_rpkm_trim0.01"
-## [1] "moe_d3a_ko_mc_rpkm_trim0.01_mean"
-```
-
-```
-## [1] 0.0 0.6
-```
-
-```r
 plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_shuffle.bed_W25F200_both_chr", 
     "d3a_hmc", data_type = "rpkm/mean", group2 = "trim0.01", cols = col2, y.vals = c(0, 
         1))
 ```
 
-```
-## [1] "moe_d3a_wt_hmc_rpkm_trim0.01"
-## [1] "moe_d3a_wt_hmc_rpkm_trim0.01_mean"
-## [1] "moe_d3a_ko_hmc_rpkm_trim0.01"
-## [1] "moe_d3a_ko_hmc_rpkm_trim0.01_mean"
-```
-
-![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-6.png) 
-
-```
-## [1] 0 1
-```
+![plot of chunk d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr](figure/d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr.png) 
 
 
-#### Nucleosomes
+#### 50 kb view
+
+```r
+par(mfrow = c(1, 2), mar = c(2, 2, 2, 2))
+plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W200F250_both_chr", 
+    "d3a_mc", data_type = "rpkm/mean", group2 = "trim0.01", cols = col2, y.vals = c(0.2, 
+        1))
+#
+# plot2.several('d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_shuffle.bed_W25F200_both_chr',
+# 'd3a_hmc', data_type='rpkm/mean', group2='trim0.01', cols=col2,
+# y.vals=c(.2, 1))
+```
+
+
+### Nucleosomes
 
 ```r
 par(mfrow = c(1, 2), mar = c(2, 2, 2, 2))
 plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex.bed_W25F200_both_chr", 
     "d3a_nuc_extend", data_type = "bam_extend/mean_chrom_mean_0", group2 = "trim0.01", 
-    cols = col2, y.vals = c(0.8, 1.2))
-```
-
-```
-## [1] "d3xog_wt_nuc_478_rmdup_q30_extend_trim0.01"
-## [1] "d3xog_wt_nuc_478_rmdup_q30_extend_trim0.01_mean"
-## [1] "d3xog_ko_nuc_256_rmdup_q30_extend_trim0.01"
-## [1] "d3xog_ko_nuc_256_rmdup_q30_extend_trim0.01_mean"
-```
-
-```
-## [1] 0.8 1.2
-```
-
-```r
+    cols = col2, y.vals = c(0.8, 1.2), baseline = F)
 plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_shuffle_nosex.bed_W25F200_both_chr", 
     "d3a_nuc_extend", data_type = "bam_extend/mean_chrom_mean_0", group2 = "trim0.01", 
     cols = col2, y.vals = c(0.8, 1.2))
 ```
 
-```
-## [1] "d3xog_wt_nuc_478_rmdup_q30_extend_trim0.01"
-## [1] "d3xog_wt_nuc_478_rmdup_q30_extend_trim0.01_mean"
-## [1] "d3xog_ko_nuc_256_rmdup_q30_extend_trim0.01"
-## [1] "d3xog_ko_nuc_256_rmdup_q30_extend_trim0.01_mean"
-```
-
-![plot of chunk unnamed-chunk-7](figure/unnamed-chunk-71.png) 
-
-```
-## [1] 0.8 1.2
-```
+![plot of chunk unnamed-chunk-8](figure/unnamed-chunk-81.png) 
 
 ```r
 plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex.bed_W25F200_both_chr", 
     "d3a_nuc2", data_type = "rpkm/mean", group2 = "trim0.01", cols = col2)
 ```
 
-```
-## [1] "d3xog_wt_nuc_478_rmdup_trim0.01"
-## [1] "d3xog_wt_nuc_478_rmdup_trim0.01_mean"
-## [1] "d3xog_ko_nuc_256_rmdup_trim0.01"
-## [1] "d3xog_ko_nuc_256_rmdup_trim0.01_mean"
+![plot of chunk unnamed-chunk-8](figure/unnamed-chunk-82.png) 
+
+
+
+```r
+plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex.bed_W25F200_both_chr", 
+    "d3a_nuc_extend", data_type = "bam_extend/mean_chrom_mean", group2 = "trim0.01", 
+    cols = col2, y.vals = c(0.8, 1.2), baseline = F)
 ```
 
-```
-## [1] 0.220 0.516
+![plot of chunk unnamed-chunk-9](figure/unnamed-chunk-9.png) 
+
+
+#### 50 kb view
+
+```r
+plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex.bed_W200F250_both_chr", 
+    "d3a_nuc_extend", data_type = "bam_extend/mean_chrom_mean_0", group2 = "trim0.01", 
+    cols = col2, y.vals = c(0.8, 1.2), baseline = F)
+plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex.bed_W200F250_both_chr", 
+    "d3a_nuc2", data_type = "rpkm/mean", group2 = "trim0.01", cols = col2)
 ```
 
-![plot of chunk unnamed-chunk-7](figure/unnamed-chunk-72.png) 
-
+![plot of chunk unnamed-chunk-10](figure/unnamed-chunk-10.png) 
 
 
 
 #### DNase
 
 ```r
+par(mar = c(2, 2, 2, 2))
 plot2("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", 
     "d3a_het_dnase_sort_q30", data_type = "bam_ends/mean", group2 = "trim0.01", 
     y.vals = c(0, 0.7))
 ```
 
-```
-## [1] "d3a_het_dnase_sort_q30_trim0.01"
-## [1] "d3a_het_dnase_sort_q30_trim0.01_mean"
+![plot of chunk d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_d3a_het_dnase_ends](figure/d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_d3a_het_dnase_ends.png) 
+
+
+
+```r
+plot2("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W200F250_both_chr", 
+    "d3a_het_dnase_sort_q30", data_type = "bam_ends/mean", group2 = "trim0.01")
 ```
 
-![plot of chunk unnamed-chunk-8](figure/unnamed-chunk-8.png) 
+![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11.png) 
 
+
+#### RNA
+
+```r
+plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", 
+    "d3xog_rmrna", data_type = "bam/mean", group2 = "trim0.01", cols = col2, 
+    y.vals = c(0, 0.7))
 ```
-## [1] 0.0 0.7
+
+![plot of chunk unnamed-chunk-12](figure/unnamed-chunk-12.png) 
+
+
+
+```r
+plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W200F250_both_chr", 
+    "d3xog_rmrna", data_type = "bam/mean", group2 = "trim0.01", cols = col2, 
+    y.vals = c(0, 0.7), wsize = 200, range = c(201, 300))
 ```
+
+![plot of chunk unnamed-chunk-13](figure/unnamed-chunk-13.png) 
+
+
+
+```r
+plot2.several("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", 
+    "d3a_mrna", data_type = "bam/mean", group2 = "trim0.01", cols = col2, wsize = 25)
+```
+
+![plot of chunk unnamed-chunk-14](figure/unnamed-chunk-14.png) 
 
 
 
@@ -209,7 +221,7 @@ for (i in 1:4) {
 }
 ```
 
-![plot of chunk unnamed-chunk-9](figure/unnamed-chunk-9.png) 
+![plot of chunk unnamed-chunk-15](figure/unnamed-chunk-15.png) 
 
 
 
@@ -222,7 +234,7 @@ for (i in 1:4) {
 }
 ```
 
-![plot of chunk unnamed-chunk-10](figure/unnamed-chunk-10.png) 
+![plot of chunk unnamed-chunk-16](figure/unnamed-chunk-16.png) 
 
 
 
@@ -235,7 +247,7 @@ for (i in c(1, 4, 7, 10)) {
 }
 ```
 
-![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11.png) 
+![plot of chunk unnamed-chunk-17](figure/unnamed-chunk-17.png) 
 
 
 
@@ -248,7 +260,7 @@ for (i in c(1, 4, 7, 10)) {
 }
 ```
 
-![plot of chunk unnamed-chunk-12](figure/unnamed-chunk-12.png) 
+![plot of chunk unnamed-chunk-18](figure/unnamed-chunk-18.png) 
 
 
 
@@ -261,9 +273,7 @@ for (i in 1:4) {
 }
 ```
 
-![plot of chunk unnamed-chunk-13](figure/unnamed-chunk-13.png) 
-
-
+![plot of chunk unnamed-chunk-19](figure/unnamed-chunk-19.png) 
 
 
 
@@ -276,7 +286,7 @@ for (i in c(1, 4, 7, 10)) {
 }
 ```
 
-![plot of chunk unnamed-chunk-14](figure/unnamed-chunk-14.png) 
+![plot of chunk unnamed-chunk-20](figure/unnamed-chunk-20.png) 
 
 
 
@@ -294,21 +304,8 @@ phase_batch.py -t d3xog_nuc_pileup2.trk -b dnase -n 2 -l 1000
 
 ```r
 pd <- loadPhaseData("~/s2/analysis/nuc/phasogram/dnase/")
-```
-
-```
-## [1] "d3xog_ko_nuc_256_p1_d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex_slop500.bed_N2_L1000"
-## [2] "d3xog_wt_nuc_478_p1_d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex_slop500.bed_N2_L1000"
-```
-
-```r
 ind16 <- seq(1, 1000, 16)
 pd.n <- normPhaseData(pd, ind16)
-```
-
-```
-## [1] 0.006679
-## [1] 0.006599
 ```
 
 
@@ -346,5 +343,5 @@ gg <- gg + labs(x = c("KO / WT log2(FPKM + 1)"))
 gg
 ```
 
-![plot of chunk unnamed-chunk-18](figure/unnamed-chunk-18.png) 
+![plot of chunk unnamed-chunk-24](figure/unnamed-chunk-24.png) 
 

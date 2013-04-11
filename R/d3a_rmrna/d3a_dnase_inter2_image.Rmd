@@ -1,0 +1,37 @@
+D3a - DNase peaks 2 - heatmaps
+========================================================
+
+```{r}
+opts_chunk$set(warning=FALSE, message=FALSE, error=FALSE, results='hide')
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+library(ggplot2)
+```
+
+```{r}
+positionMatrix.all("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex.bed_W25F200_both_chr", data_type="rpkm/mean")
+```
+
+```{r}
+wt.hmc <- makeImage("moe_d3a_wt_hmc_rpkm", "d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex.bed_W25F200_both_chr", data_type="rpkm/mean", image=F)
+ko.hmc <- makeImage("moe_d3a_ko_hmc_rpkm", "d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex.bed_W25F200_both_chr", data_type="rpkm/mean", image=F) 
+
+n <- which(is.na(wt.hmc), arr.ind=T)
+wt.hmc[n] <- 0
+n <- which(is.na(ko.hmc), arr.ind=T)
+ko.hmc[n] <- 0
+
+ko.wt.hmc <- ko.hmc - wt.hmc
+```
+
+```{r}
+wt.nuc <- makeImage("d3xog_wt_nuc_478_rmdup", "d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex.bed_W25F200_both_chr", data_type="rpkm/mean", image=F)
+ko.nuc <- makeImage("d3xog_ko_nuc_256_rmdup", "d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb_nosex.bed_W25F200_both_chr", data_type="rpkm/mean", image=F) 
+
+n <- which(is.na(wt.nuc), arr.ind=T)
+wt.nuc[n] <- 0
+n <- which(is.na(ko.nuc), arr.ind=T)
+ko.nuc[n] <- 0
+
+ko.wt.nuc <- ko.nuc - wt.nuc
+```

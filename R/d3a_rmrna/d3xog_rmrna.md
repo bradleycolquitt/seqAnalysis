@@ -185,8 +185,9 @@ grid.arrange(rna.gg, rna2.gg, rna.count.gg, ncol = 3)
 
 ```r
 rna.gg <- ggplot(rna.1log2.nz, aes(wt, ko.wt)) + geom_point(alpha = I(1/10)) + 
-    geom_density2d(breaks = seq(0, 0.5, 0.025)) + labs(title = "FPKM UQ norm") + 
-    geom_hline(yintercept = 0, color = "red")
+    geom_density2d(breaks = seq(0, 0.5, 0.025)) + labs(title = "FPKM UQ norm", 
+    x = "WT log2(FPKM + 1)", y = "KO - WT log2(FPKM + 1)") + geom_hline(yintercept = 0, 
+    color = "red")
 rna2.gg <- ggplot(rna.1log2.nz, aes(wt, ko.wt)) + geom_point(alpha = I(1/10)) + 
     geom_density2d(breaks = seq(0, 0.5, 0.025)) + labs(title = "FPKM Total norm")
 rna.count.gg <- ggplot(rna.counts.1log2.nz, aes(wt, ko.wt)) + geom_point(alpha = I(1/10)) + 
@@ -194,7 +195,7 @@ rna.count.gg <- ggplot(rna.counts.1log2.nz, aes(wt, ko.wt)) + geom_point(alpha =
 grid.arrange(rna.gg, rna2.gg, rna.count.gg, ncol = 3)
 ```
 
-![plot of chunk unnamed-chunk-12](figure/unnamed-chunk-12.png) 
+![plot of chunk d3xog_wt_ko_rmrna_protein_masked_uq_comp_1log2_counts_ko_wt_ratio_versus_wt](figure/d3xog_wt_ko_rmrna_protein_masked_uq_comp_1log2_counts_ko_wt_ratio_versus_wt.png) 
 
 
 **Appears to be greater fold difference as WT expression increases.**
@@ -210,7 +211,7 @@ rna.count.gg <- ggplot(rna.counts.1log2.nz, aes(ko, ko.wt)) + geom_point(alpha =
 grid.arrange(rna.gg, rna2.gg, rna.count.gg, ncol = 3)
 ```
 
-![plot of chunk unnamed-chunk-13](figure/unnamed-chunk-13.png) 
+![plot of chunk unnamed-chunk-12](figure/unnamed-chunk-12.png) 
 
 
 #### Order by wildtype levels
@@ -383,7 +384,7 @@ hmc.ko.wt.rna.ko.wt <- na.omit(hmc.ko.wt.rna.ko.wt)
 MP.heat(hmc.wt.rna.ko.wt, range = c(0, 1.5), average = 50)
 ```
 
-![plot of chunk unnamed-chunk-20](figure/unnamed-chunk-20.png) 
+![plot of chunk unnamed-chunk-19](figure/unnamed-chunk-19.png) 
 
 
 
@@ -391,7 +392,7 @@ MP.heat(hmc.wt.rna.ko.wt, range = c(0, 1.5), average = 50)
 MP.heat(hmc.ko.wt.rna.ko.wt, range = c(-0.2, 0.1), average = 50)
 ```
 
-![plot of chunk unnamed-chunk-21](figure/unnamed-chunk-21.png) 
+![plot of chunk unnamed-chunk-20](figure/unnamed-chunk-20.png) 
 
 
 #### Group RNA ordered 5hmC KO-WT TSS maps into 100 chunks
@@ -544,7 +545,7 @@ hmc.ko.wt.rna.ko.wt <- na.omit(hmc.ko.wt.rna.ko.wt)
 MP.heat(hmc.wt.rna.ko.wt, range = c(0, 1.5), average = 50)
 ```
 
-![plot of chunk unnamed-chunk-30](figure/unnamed-chunk-30.png) 
+![plot of chunk unnamed-chunk-29](figure/unnamed-chunk-29.png) 
 
 
 
@@ -552,7 +553,7 @@ MP.heat(hmc.wt.rna.ko.wt, range = c(0, 1.5), average = 50)
 MP.heat(hmc.ko.wt.rna.ko.wt, range = c(-0.2, 0.1), average = 50)
 ```
 
-![plot of chunk unnamed-chunk-31](figure/unnamed-chunk-31.png) 
+![plot of chunk unnamed-chunk-30](figure/unnamed-chunk-30.png) 
 
 #### Order by counts
 

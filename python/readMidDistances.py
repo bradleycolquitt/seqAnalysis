@@ -180,7 +180,7 @@ def bamToFragmentBed(infile, outfile, size):
                     #pdb.set_trace()
                     start = read.aend + read.isize
                     if start < 0: continue
-                    end = read.pos
+                    end = read.aend
                     strand = "-"
                 elif not read.is_reverse and read.isize > 0:
                     end = read.pos + read.isize

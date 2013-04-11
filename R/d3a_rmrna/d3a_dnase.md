@@ -158,6 +158,8 @@ makeProfile2.allSamp("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr",
 ## [1] "/media/storage2/analysis/profiles/norm/bam/mean/d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr"
 ## Note: next may be used in wrong context: no loop is visible 
 ## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
 ```
 
 ```
@@ -171,7 +173,21 @@ makeProfile2.allSamp("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr",
 
 ```
 ## [1] "/media/storage2/analysis/profiles/norm/rpkm/mean/d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr"
-## Note: next may be used in wrong context: no loop is visible
+## Note: next may be used in wrong context: no loop is visible 
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "images_trim0.01"
+## [1] "images"
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
 ```
 
 ```
@@ -185,7 +201,11 @@ makeProfile2.allSamp("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr",
 
 ```
 ## [1] "/media/storage2/analysis/profiles/norm/bam_extend/mean/d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr"
-## Note: next may be used in wrong context: no loop is visible
+## Note: next may be used in wrong context: no loop is visible 
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
 ```
 
 ```
@@ -199,7 +219,14 @@ makeProfile2.allSamp("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr",
 
 ```
 ## [1] "/media/storage2/analysis/profiles/norm/bam_dyad/mean/d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr"
-## Note: next may be used in wrong context: no loop is visible
+## Note: next may be used in wrong context: no loop is visible 
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
+```
+
+```
+## Error: task 1 failed - "no loop for break/next, jumping to top level"
 ```
 
 
@@ -293,7 +320,16 @@ plot2.several("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr", "d3a_nuc
 ```
 
 ```
-## Error: Annotation file not found
+## [1] "d3xog_wt_nuc_478_rmdup_q30_dyad_trim0.01"
+## [1] "d3xog_wt_nuc_478_rmdup_q30_dyad_trim0.01_mean"
+## [1] "d3xog_ko_nuc_256_rmdup_q30_dyad_trim0.01"
+## [1] "d3xog_ko_nuc_256_rmdup_q30_dyad_trim0.01_mean"
+```
+
+![plot of chunk unnamed-chunk-14](figure/unnamed-chunk-14.png) 
+
+```
+## [1] 0.419 1.296
 ```
 
 
@@ -316,5 +352,126 @@ plot2.several("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr", "d3a_nuc
 
 ```
 ## [1] 0.170 0.461
+```
+
+
+DNase, smaller region
+----------------------
+
+
+5hmC blocks
+----------------
+
+
+```r
+makeProfile2.allSamp("moe_d3a_wt_hmc_moe_d3a_ko_hmc-domains_gt50_starts.bed_W25F200_both_chr", 
+    data_type = "bam/mean", rm.outliers = 0.01)
+```
+
+```
+## [1] "/media/storage2/analysis/profiles/norm/bam/mean/moe_d3a_wt_hmc_moe_d3a_ko_hmc-domains_gt50_starts.bed_W25F200_both_chr"
+## Note: next may be used in wrong context: no loop is visible 
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
+```
+
+```
+## Error: task 1 failed - "no loop for break/next, jumping to top level"
+```
+
+```r
+makeProfile2.allSamp("moe_d3a_wt_hmc_moe_d3a_ko_hmc-domains_gt50_ends.bed_W25F200_both_chr", 
+    data_type = "bam/mean", rm.outliers = 0.01)
+```
+
+```
+## [1] "/media/storage2/analysis/profiles/norm/bam/mean/moe_d3a_wt_hmc_moe_d3a_ko_hmc-domains_gt50_ends.bed_W25F200_both_chr"
+## Note: next may be used in wrong context: no loop is visible 
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
+## [1] "Skipping"
+```
+
+```
+## Error: task 1 failed - "no loop for break/next, jumping to top level"
+```
+
+
+
+```r
+par(mfrow = c(4, 2), mar = c(2, 2, 2, 2))
+samples <- c("d3a_het_dnase_sort_q30", "wgEncodeUwDnaseCerebrumC57bl6MAdult8wksAlnRep1", 
+    "wgEncodeUwDnaseHeartC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseLiverC57bl6MAdult8wksAlnRep1")
+colors <- brewer.pal(4, "Spectral")
+for (i in 1:4) {
+    plot2("moe_d3a_wt_hmc_moe_d3a_ko_hmc-domains_gt50_starts.bed_W25F200_both_chr", 
+        samples[i], data_type = "bam/mean", group2 = "trim0.01", cols = colors[i])
+    plot2("moe_d3a_wt_hmc_moe_d3a_ko_hmc-domains_gt50_ends.bed_W25F200_both_chr", 
+        samples[i], data_type = "bam/mean", group2 = "trim0.01", cols = colors[i])
+}
+```
+
+```
+## [1] "d3a_het_dnase_sort_q30_trim0.01"
+## [1] "d3a_het_dnase_sort_q30_trim0.01_mean"
+```
+
+```
+## [1] 1.473 2.220
+## [1] "d3a_het_dnase_sort_q30_trim0.01"
+## [1] "d3a_het_dnase_sort_q30_trim0.01_mean"
+```
+
+```
+## [1] 1.507 2.216
+## [1] "wgEncodeUwDnaseCerebrumC57bl6MAdult8wksAlnRep1_trim0.01"
+## [1] "wgEncodeUwDnaseCerebrumC57bl6MAdult8wksAlnRep1_trim0.01_mean"
+```
+
+```
+## [1] 0.953 2.615
+## [1] "wgEncodeUwDnaseCerebrumC57bl6MAdult8wksAlnRep1_trim0.01"
+## [1] "wgEncodeUwDnaseCerebrumC57bl6MAdult8wksAlnRep1_trim0.01_mean"
+```
+
+```
+## [1] 1.021 2.737
+## [1] "wgEncodeUwDnaseHeartC57bl6MAdult8wksAlnRep1_trim0.01"
+## [1] "wgEncodeUwDnaseHeartC57bl6MAdult8wksAlnRep1_trim0.01_mean"
+```
+
+```
+## [1] 1.126 3.221
+## [1] "wgEncodeUwDnaseHeartC57bl6MAdult8wksAlnRep1_trim0.01"
+## [1] "wgEncodeUwDnaseHeartC57bl6MAdult8wksAlnRep1_trim0.01_mean"
+```
+
+```
+## [1] 1.122 3.252
+## [1] "wgEncodeUwDnaseLiverC57bl6MAdult8wksAlnRep1_trim0.01"
+## [1] "wgEncodeUwDnaseLiverC57bl6MAdult8wksAlnRep1_trim0.01_mean"
+```
+
+```
+## [1] 0.784 2.082
+## [1] "wgEncodeUwDnaseLiverC57bl6MAdult8wksAlnRep1_trim0.01"
+## [1] "wgEncodeUwDnaseLiverC57bl6MAdult8wksAlnRep1_trim0.01_mean"
+```
+
+![plot of chunk moe_d3a_wt_hmc_moe_d3a_ko_hmc-domains_gt50_starts_ends.bed_W25F200_moe_encode_dnase](figure/moe_d3a_wt_hmc_moe_d3a_ko_hmc-domains_gt50_starts_ends.bed_W25F200_moe_encode_dnase.png) 
+
+```
+## [1] 0.758 2.119
+```
+
+```r
+
 ```
 

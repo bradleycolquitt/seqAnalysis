@@ -36,7 +36,7 @@ from scipy.stats.mstats import tmean
 from multiprocessing import Queue, Process, Pool
 from string import *
 
-#bam_dir = "/home/user/data/rna/tophat"
+#bam_dir = "/media/storage2/data/rna/tophat"
 bam_dir = "/media/storage2/data/bam"
 #wig_dir = "/media/storage2/data/wig/unnorm"
 
@@ -123,24 +123,7 @@ class windower:
         p = Popen(cmd_args)
         p.wait()
         
-#def window_core(bamname, wigfile, window_size, chr_tuple, pe, extend, nreads,
-#                bed, pseudo, ends, smooth):
 def window_core(obj, chrom):    
-    
-    """
-    bamname = arg[0]
-    wigfile = arg[1]
-    window_size = arg[2]
-    chr_tuple = arg[3]
-    pe = arg[4]
-    extend = arg[5]
-    nreads = arg[6]
-    bed = arg[7]
-    pseudo = arg[8]
-    ends = arg[9]
-    smooth = arg[10]
-    norm_by_mean = arg[11]
-    """
     
     bamfile = pysam.Samfile(obj.bamname, 'rb')
     #pdb.set_trace()
@@ -165,7 +148,7 @@ def window_core(obj, chrom):
             else:
                 read_mid = read.pos + 2
         elif obj.pe:
-            if read.is_read1:
+            if read.is_read1 and read.is_paired:
                 if read.is_reverse:
                     read_mid = read.aend + read.isize / 2
                 else:
@@ -173,18 +156,19 @@ def window_core(obj, chrom):
             else: continue
         else:
             if read.is_reverse:
-                read_mid = read.aend - extend / 2
+                read_mid = read.aend - (obj.extend / 2)
             else:
-                read_mid = read.pos + extend / 2
+                read_mid = read.pos + (obj.extend / 2)
         read_mid_index = read_mid / obj.window_size
         if read_mid_index <= len(pos_vect) - 1:
             pos_vect[read_mid_index] = pos_vect[read_mid_index] + 1
     
     #pdb.set_trace()
-    first_non_zero = np.nonzero(pos_vect)[0][0]
-    first_non_zero_scaled = first_non_zero * obj.window_size
+    #first_non_zero = np.nonzero(pos_vect)[0][0]
+    #first_non_zero_scaled = first_non_zero * obj.window_size
     
-    out = "fixedStep chrom={0} start={1} step={2} span={2}\n".format(chrom, first_non_zero_scaled, obj.window_size)
+    #out = "fixedStep chrom={0} start={1} step={2} span={2}\n".format(chrom, first_non_zero_scaled, obj.window_size)
+    out = "fixedStep chrom={0} start={1} step={2} span={2}\n".format(chrom, "1", obj.window_size)
     obj.wigfile.write(out)
     
     pos_vect = window_correct * pos_vect
@@ -193,7 +177,8 @@ def window_core(obj, chrom):
         pos_vect = signal_utils.smooth(pos_vect, obj.smooth, window="flat")
     
     if not obj.no_norm:    
-        for val in pos_vect[first_non_zero:]:
+        #for val in pos_vect[first_non_zero:]:
+        for val in pos_vect:
             if obj.pseudo and val == 0: val = 1
             obj.wigfile.write(str(val) + "\n")
         

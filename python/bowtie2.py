@@ -37,9 +37,9 @@ class bowtie_class:
             self.input1 = "/".join([fastq_dir, date, "".join([sample, '.fastq'])])                      
         else:
             self.input1 = "/".join([fastq_dir, date, sample, 
-                                    "_".join([subsample, 'r1.fastq.gz'])])
+                                    "_".join([subsample, 'R1.fastq.gz'])])
             self.input2 = "/".join([fastq_dir, date, sample,
-                                    "_".join([subsample, 'r2.fastq.gz'])])
+                                    "_".join([subsample, 'R2.fastq.gz'])])
             print self.input1
             #self.input1 = "/".join([fastq_dir, date, sample, index[0], '1.fastq'])
             #self.input2 = "/".join([fastq_dir, date, sample, index[0], '2.fastq'])

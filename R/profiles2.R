@@ -9,6 +9,7 @@ suppressPackageStartupMessages(library(colorspace))
 suppressPackageStartupMessages(library(cluster))
 suppressPackageStartupMessages(library(gplots))
 library(stringr)
+library(plyr)
 
 source("~/src/seqAnalysis/R/paths.R")
 source("~/src/seqAnalysis/R/boot.R")
@@ -42,7 +43,7 @@ writeModule <- function(out.path, sample, group2=NULL, fun, rm.outliers=0, profi
   } else {
     out.name <- paste(out.name, paste("trim", rm.outliers, sep=""), sep="_")
   }
-  print(out.name)
+  
   # Test if data list has multiple elements, indicating that profile has been split
   if (length(profile) > 1) {
     lapply(names(profile), function(name) {
@@ -64,8 +65,7 @@ writeModule <- function(out.path, sample, group2=NULL, fun, rm.outliers=0, profi
     })
   } else {
     write.table(profile,
-              #file=paste(out.path, paste(out.name, "mean", sep="_"), sep="/"),
-                file=paste(out.path, paste(out.name, fun, sep="_"), sep="/"),
+              file=paste(out.path, paste(out.name, fun, sep="_"), sep="/"),
               quote=FALSE, sep="\t", row.names=FALSE, col.names=FALSE)     
     
     lapply(c(1:2), function(x) {
@@ -73,7 +73,6 @@ writeModule <- function(out.path, sample, group2=NULL, fun, rm.outliers=0, profi
       if (is.null(group2)) {unwrapped <- .unwrap(CI[[1]], x)
       } else {unwrapped <- apply(CI[[1]], 2, function(y) .unwrap(y, x))}
       write.table(unwrapped,
-                    #file=paste(out.path, paste(out.name, "mean_bootCI", x, sep="_"),
                     file=paste(out.path, paste(out.name, fun, "bootCI", x, sep="_"),
                     sep="/"),
                     quote=FALSE, sep="\t", row.names=FALSE, col.names=FALSE)
@@ -101,21 +100,39 @@ profileCompute <- function(data, param) {
 ##                          e.g. 0.05 removes top and bottom 5% of values
 ##            sample_num - number of annotation observations to sample. 0 indicates to use whole set
 ##            write - write data to file
-makeProfile2 <- function(anno, samples, group2=NULL, data_type="unnorm/mean", fun="mean", rm.outliers=0, 
-                         sample_num=0, exclude_chr=NULL, write=TRUE) {
+makeProfile2 <- function(anno, samples, group2=NULL,
+                         data_type="unnorm/mean", fun="mean", rm.outliers=0, 
+                         sample_num=0, write=TRUE) {
+  
   sample_path <- paste(profile2.path, "norm", data_type, anno, sep="/")
   a <- sapply(samples, function(sample) {
       print(sample)
-      data <- read.delim(paste(sample_path, sample, sep="/"))
-      colnames(data) <- c("chr", "start", "end", "name", "group", "strand", "norm")
+      # Check if more than one sample, which indicates replicates
+      if (length(sample)==1) {
+        data <- read.delim(paste(sample_path, sample, sep="/"))
+        colnames(data) <- c("chr", "start", "end", "name", "group", "strand", "norm")
+      } else {
+        data <- lapply(sample, function(x) read.delim(paste(sample_path, x, sep="/")))  
+        sample <- unique(unlist(lapply(str_split(sample, "_"), function(x) paste(x[1:(length(x)-1)], collapse="_"))))
+        print(sample)
+      }  
+      
+      print("here")
       ind <- "norm"
       profile <- NULL
       CI <- NULL
+      #return(data)
       
-      if (!is.null(exclude_chr)) {
-        data <- data[!(data$chr %in% exclude_chr),]
+      # Extract value columns and average across
+      if (length(data) > 1) {
+        data_merge <- do.call("cbind", lapply(data, function(x) x[,7]))
+        data_mean <- apply(data_merge, 1, mean, na.rm=TRUE)
+        data <- data[[1]][,1:6]
+        data <- cbind(data, data_mean)
+        colnames(data) <- c("chr", "start", "end", "name", "group", "strand", "norm")
       }
       
+      #print("here")
       if (sample_num > 0) {
         print(sample_num)
         sample_names <- sample(unique(data$name), sample_num)
@@ -132,17 +149,13 @@ makeProfile2 <- function(anno, samples, group2=NULL, data_type="unnorm/mean", fu
         group2_vals <- read.delim(paste(group2.path, group2, sep="/"), header=FALSE)
         data$group2 <- group2_vals[match(data$name, group2_vals[,1]),2]
         group2_name <- "group2"
-        #profile <- lapply(ind, function(x) profileCompute(data, list(x, list("group", group2_name), mean)))
         profile <- lapply(ind, function(x) profileCompute(data, list(x, list("group", group2_name), fun)))
         names(profile) <- ind
-        #CI <- lapply(ind, function(x) profileCompute(data, list(x, list("group", group2_name), bootCI)))
         CI <- lapply(ind, function(x) profileCompute(data, list(x, list("group", group2_name), bootCI, fun)))
         names(CI) <- ind
       } else {
-        #profile <- lapply(ind, function(x) profileCompute(data, list(x, list("group"), mean)))
         profile <- lapply(ind, function(x) profileCompute(data, list(x, list("group"), fun)))
         names(profile) <- ind
-        #CI <- lapply(ind, function(x) profileCompute(data, list(x, list("group"), bootCI)))
         CI <- lapply(ind, function(x) profileCompute(data, list(x, list("group"), bootCI, fun)))
         names(CI) <- ind
       }
@@ -150,41 +163,47 @@ makeProfile2 <- function(anno, samples, group2=NULL, data_type="unnorm/mean", fu
       if(!write) {
         return(profile)
       } else {
-        #out.path <- paste(anno, "profiles", sep="/")
         out.path <- paste(sample_path, "profiles", sep="/")
         group2_out <- NULL
         if (!is.null(group2)) {
           group2_out <- str_split(group2, "/")
           group2_out <- group2_out[length(group2_out)]
         }
-        if (!is.null(exclude_chr)) {
-          sample <- paste(sample, paste("exclude", exclude_chr, sep="-"), sep="_")
-          
-        }
-        
+      
         writeModule(out.path=out.path, sample=sample, group2=group2_out, fun=fun,
                     rm.outliers=rm.outliers, profile=profile, CI=CI)   
+      
       }
       rm(profile)
       gc()
   })
  
+  return(a)
 }
 
 ## Wrapper to run makeProfile2 on all samples within a given profile direction
 ## Arguments as makeProfile2
-makeProfile2.allSamp <- function(anno, group2=NULL, data_type="unnorm/mean", fun="mean", rm.outliers=0, sample_num=0, exclude_chr=NULL, write=T) {  
+## rep - group samples by replicates
+makeProfile2.allSamp <- function(anno, group2=NULL, data_type="unnorm/mean", fun="mean", rm.outliers=0, sample_num=0, rep=FALSE, write=T) {  
   sample_path <- paste(profile2.path, "norm", data_type, anno, sep="/")
   print(sample_path)
   samples <- list.files(sample_path)
   ind <- grep("profiles", samples)
   if (length(ind) > 0) samples <- samples[-ind]
   out_path = paste(sample_path, "profiles", sep="/")
-  data <- foreach(sample=samples) %do% {
+  
+  # Group samples according to replicates
+  if (rep) {
+    samples_split <- str_split(samples, "_")
+    samples_prefix <- unlist(lapply(samples_split, function(x) paste(x[1:(length(x)-1)], collapse="_")))
+    groups <- data.frame(prefix=samples_prefix, full=samples)
+    samples <- dlply(groups, .(prefix), function(d) d$full)
+    #print(samples)
+    samples <- lapply(samples, as.character)
+  }
+  print(samples)
+  data <- foreach(sample=samples) %dopar% {
     out_name <- sample
-    if (!is.null(exclude_chr)) {
-      out_name <- paste(out_name, paste("exclude", exclude_chr, sep="-"), sep="_")
-    }
     if (!is.null(group2)) {
       out_name <- paste(out_name, group2, sep="_")
     }
@@ -195,9 +214,9 @@ makeProfile2.allSamp <- function(anno, group2=NULL, data_type="unnorm/mean", fun
       print("Skipping")
       next 
     }
-    print(out_name)
+    print(sample)
     return(makeProfile2(anno, sample, data_type=data_type, fun=fun, group2=group2,
-                           rm.outliers=rm.outliers, sample_num=sample_num, exclude_chr=exclude_chr, write=write))
+                           rm.outliers=rm.outliers, sample_num=sample_num, write=write))
   }
 }
 
@@ -307,7 +326,7 @@ plotAnno <- function(data, annotation, wsize, cols=NULL, lab=NULL,
 
 ## Primary interface for drawing profile of a single sample 
 plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="mean", group2=NULL, group2_col=NULL,
-                     cols=1, lab=c("",""), y.vals=NULL, wsize=25, range=NULL, type="range", fname="manual", ...) {
+                     cols=1, lab=c("",""), y.vals=NULL, wsize=25, range=NULL, type="range", fname=NULL, ...) {
 
   ## Orient 1 data structure is no longer used (2/14/12)
   if (orient==1) {
@@ -366,7 +385,7 @@ plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="me
 ## Plot several profiles in one graphic device
 plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2=NULL, cols=NULL, lab=c("",""), 
                           y.vals=NULL, wsize=25, standard=FALSE, range=NULL, baseline=FALSE, group2_col=NULL,
-                          fun="mean", legend=FALSE, fname="manual") {
+                          fun="mean", legend=FALSE, fname=NULL) {
   samples <- NULL
   orient <- 1
   rows <- 1
@@ -381,7 +400,6 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
   # setup graphic device
   if (is.null(fname))  {
     x11("", 5, 6)
-    par(mfrow=c(rows, columns))
   } else if (fname=="manual") {
     # do nothing, device has already been set
     
@@ -393,13 +411,13 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
       } else {
         fname <- paste(annotation, set, dt, fun, paste("y", paste(y.vals, collapse="_"), sep=""), sep="_")        
       }
-    }
-    par(mfrow=c(rows, columns))
+    }  
     fname <- paste(fname, ".pdf", sep="")
     print(paste("Saving to ", fname, sep=""))
     pdf(file=paste(profile2.path, "norm", "plots", fname, sep="/"), 6, 9)
   }
-        #mar=c(2,4,1,1) + 0.1, oma=c(1, 1, 1, 1))
+  par(mfrow=c(rows, columns))
+      #mar=c(2,4,1,1) + 0.1, oma=c(1, 1, 1, 1))
   
   # Read in data
   if (orient==1) {

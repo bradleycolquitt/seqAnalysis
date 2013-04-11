@@ -3,15 +3,17 @@ D3a Rad21 sites
 
 ```{r}
 suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+opts_chunk$set(warning=FALSE, message=FALSE, error=FALSE, results='hide')
 ```
 
-
+#### Random sample of Rad21 sites
 ```{r, warning=FALSE, message=FALSE, error=FALSE, results='hide'}
 makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_nosex.bed_W25F200_both_chr", data_type="bam_extend/mean_chrom_mean_0", rm.outliers=0.01)
 makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_nosex.bed_W25F200_both_chr", data_type="bam_ends/mean", rm.outliers=0.01)
 makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_nosex.bed_W25F200_both_chr", data_type="rpkm/mean", rm.outliers=0.01)
 ```
 
+#### Random sample of Rad21 sites, 100kb view
 ```{r, warning=FALSE, message=FALSE, error=FALSE, results='hide'}
 makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr", data_type="bam_extend/mean_chrom_mean_0", rm.outliers=0.01)
 makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr", data_type="bam_extend/mean_chrom_mean", rm.outliers=0.01)
@@ -19,73 +21,164 @@ makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr", d
 makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr", data_type="rpkm/mean", rm.outliers=0.01)
 ```
 
+#### Rad21 sites, no CTCF, 50 kb view
 ```{r}
 makeProfile2.allSamp("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex.bed_W200F250_both_chr", data_type="bam_extend/mean_chrom_mean_0", rm.outliers=0.01)
+makeProfile2.allSamp("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex.bed_W200F250_both_chr", data_type="bam_ends/mean", rm.outliers=0.01)
+makeProfile2.allSamp("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex.bed_W200F250_both_chr", data_type="rpkm/mean", rm.outliers=0.01)
 ```
 
+```{r}
+makeProfile2.allSamp("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex_sub_d3a_het_dnase_sort_q30_dnase.bed_W200F250_both_chr", data_type="bam_extend/mean_chrom_mean_0", rm.outliers=0.01)
+makeProfile2.allSamp("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex_sub_d3a_het_dnase_sort_q30_dnase.bed_W200F250_both_chr", data_type="bam_extend/mean", rm.outliers=0.01)
+makeProfile2.allSamp("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex_sub_d3a_het_dnase_sort_q30_dnase.bed_W200F250_both_chr", data_type="bam_ends/mean", rm.outliers=0.01)
+makeProfile2.allSamp("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex_sub_d3a_het_dnase_sort_q30_dnase.bed_W200F250_both_chr", data_type="rpkm/mean", rm.outliers=0.01)
+
+```
+
+#### CTCF sites, no Rad21
+```{r}
+makeProfile2.allSamp("cad_n2a_ctcf_r12_sub_cad_n2a_rad21_r12_nosex.bed_W200F250_both_chr", data_type="bam_extend/mean_chrom_mean_0", rm.outliers=0.01)
+#makeProfile2.allSamp("cad_n2a_ctcf_r12_sub_cad_n2a_rad21_r12_nosex.bed_W200F250_both_chr", data_type="bam_extend/mean", rm.outliers=0.01)
+makeProfile2.allSamp("cad_n2a_ctcf_r12_sub_cad_n2a_rad21_r12_nosex.bed_W200F250_both_chr", data_type="bam_ends/mean", rm.outliers=0.01)
+makeProfile2.allSamp("cad_n2a_ctcf_r12_sub_cad_n2a_rad21_r12_nosex.bed_W200F250_both_chr", data_type="rpkm/mean", rm.outliers=0.01)
+```
+
+#### Random sample of Rad21 sites, position randomized
 ```{r, warning=FALSE, message=FALSE, error=FALSE, results='hide'}
 makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr", data_type="bam_extend/mean_chrom_mean_0", rm.outliers=0.01)
 makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr", data_type="bam_ends/mean", rm.outliers=0.01)
 makeProfile2.allSamp("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr", data_type="rpkm/mean", rm.outliers=0.01)
 ```
 
-#### 5hmC
+### 5hmC
+#### Rad21, random sample and randomized positions
 ```{r, fig.width=8, fig.height=4}
 par(mfrow=c(1,2), mar=c(2,2,2,2))
 plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W25F200_both_chr", "d3a_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(.2, 1))
 plot2.several("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr", "d3a_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(.2, 1))
 ```
 
+#### Rad21, random sample 100 kb view
 ```{r, fig.width=8, fig.height=4}
 par(mfrow=c(1,1), mar=c(2,2,2,2))
 plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr", "d3a_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(.2, 1), range=c(251, 750))
 #plot2.several("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr", "d3a_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(.2, 1))
 ```
 
+#### Rad21 sites, no CTCF, 50 kb view
 ```{r}
-plot2.several("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex.bed_W200F250_both_chr", "d3a_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(.2, 1), range=c(251, 750))
+plot2.several("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex.bed_W200F250_both_chr", "d3a_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(.2, 1), baseline=T, wsize=200)
 ```
 
-#### 5mC
+#### Rad21 sites, no CTCF/DNase, 50 kb view
+```{r}
+plot2.several("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex_sub_d3a_het_dnase_sort_q30_dnase.bed_W200F250_both_chr", "d3a_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(.2, 1), baseline=T, wsize=200)
+```
+
+#### CTCF sites, no Rad21
+```{r}
+plot2.several("cad_n2a_ctcf_r12_sub_cad_n2a_rad21_r12_nosex.bed_W200F250_both_chr", "d3a_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(.2, 1), baseline=F, wsize=200)
+```
+
+### 5mC
+#### Rad21, random sample and randomized positions
 ```{r, fig.width=8, fig.height=4}
 par(mfrow=c(1,2), mar=c(2,2,2,2))
 plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W25F200_both_chr", "d3a_mc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(0, .6))
 plot2.several("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr", "d3a_mc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(0, .6))
 ```
 
+#### Rad21, random sample 100 kb view
 ```{r, fig.width=8, fig.height=4}
 par(mfrow=c(1,1), mar=c(2,2,2,2))
 plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr", "d3a_mc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(0, .6), range=c(251, 750), wsize=200)
 #plot2.several("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr", "d3a_mc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(0, .6))
 ```
 
-#### Nucleosomes
+#### Rad21 sites, no CTCF, 50 kb view
+```{r}
+plot2.several("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex.bed_W200F250_both_chr", "d3a_mc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(0, .6), wsize=200)
+```
+
+#### Rad21 sites, no CTCF/DNase, 50 kb view
+```{r}
+plot2.several("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex_sub_d3a_het_dnase_sort_q30_dnase.bed_W200F250_both_chr", "d3a_mc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(0, .6), wsize=200)
+```
+
+#### CTCF sites, no Rad21
+```{r}
+plot2.several("cad_n2a_ctcf_r12_sub_cad_n2a_rad21_r12_nosex.bed_W200F250_both_chr", "d3a_mc", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(.2, 1), baseline=F, wsize=200)
+```
+
+### Nucleosomes
+#### Rad21, random sample and randomized positions, mean chrom mean 0
 ```{r, fig.width=8, fig.height=4}
 par(mfrow=c(1,2),  mar=c(2,2,2,2))
 plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W25F200_both_chr","d3a_nuc_extend", data_type="bam_extend/mean_chrom_mean_0", group2="trim0.01", cols=col2, y.vals=c(.8, 1.3), baseline=F)
 plot2.several("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr","d3a_nuc_extend", data_type="bam_extend/mean_chrom_mean_0", group2="trim0.01", cols=col2, y.vals=c(.8, 1.3), baseline=F)
 ```
 
+#### Rad21, random sample 100 kb view, mean chrom mean 0
 ```{r, fig.width=8, fig.height=4}
 par(mfrow=c(1,1),  mar=c(2,2,2,2))
-plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr","d3a_nuc_extend", data_type="bam_extend/mean_chrom_mean_0", group2="trim0.01", cols=col2, y.vals=c(.8, 1.3), baseline=T, wsize=200, range=c(251, 750))
+plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr","d3a_nuc_extend", data_type="bam_extend/mean_chrom_mean_0", group2="trim0.01", cols=col2, y.vals=c(.8, 1.3), baseline=F, wsize=200, range=c(251, 750))
 #plot2.several("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr","d3a_nuc_extend", data_type="bam_extend/mean_chrom_mean_0", group2="trim0.01", cols=col2, y.vals=c(.8, 1.3), baseline=F)
 ```
 
+#### Rad21, random sample 100 kb view, mean chrom mean 
 ```{r}
-par(mfrow=c(2,2))
-plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W25F200_both_chr","d3a_nuc2", data_type="rpkm/mean", group2="trim0.01", cols=col2, baseline=F, y.vals=c(0, .5))
-plot2.several("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr","d3a_nuc2", data_type="rpkm/mean", group2="trim0.01", cols=col2, baseline=F, y.vals=c(0, .5))
-plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr","d3a_nuc2", data_type="rpkm/mean", group2="trim0.01", cols=col2, baseline=F, wsize=200)
+plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr","d3a_nuc_extend", data_type="bam_extend/mean_chrom_mean", group2="trim0.01", cols=col2, y.vals=c(.8, 1.3), baseline=F, wsize=200, range=c(401, 600))
+abline(h=1, lty=2)
 ```
 
+#### Rad21, RPKM - midpoints
+```{r, fig.width=8, fig.height=4}
+par(mfrow=c(1,2))
+#plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W25F200_both_chr","d3a_nuc2", data_type="rpkm/mean", group2="trim0.01", cols=col2, baseline=F, y.vals=c(0, .5))
+plot2.several("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr","d3a_nuc2", data_type="rpkm/mean", group2="trim0.01", cols=col2, baseline=T, wsize=200)
+plot2.several("cad_n2a_rad21_r12_rand10E4_shuffle_nosex.bed_W25F200_both_chr","d3a_nuc2", data_type="rpkm/mean", group2="trim0.01", cols=col2, baseline=T, y.vals=c(0, .5))
+
+```
+
+#### Rad21 sites, no CTCF, 50 kb view, mean chrom mean 0
 ```{r}
 par(mfrow=c(1,1))
 plot2.several("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex.bed_W200F250_both_chr","d3a_nuc_extend", data_type="bam_extend/mean_chrom_mean_0", group2="trim0.01", cols=col2, y.vals=c(1, 1.4), baseline=T, wsize=200, range=c(201, 300))
+par(mfrow=c(1,1))
+plot2.several("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex.bed_W200F250_both_chr","d3a_nuc2", data_type="rpkm/mean", group2="trim0.01", cols=col2, baseline=F, wsize=200)
 ```
 
+#### Rad21 sites, no CTCF/DNase, 50 kb view, mean chrom mean 0
+```{r}
+par(mfrow=c(1,1))
+plot2.several("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex_sub_d3a_het_dnase_sort_q30_dnase.bed_W200F250_both_chr","d3a_nuc_extend", data_type="bam_extend/mean_chrom_mean_0", group2="trim0.01", cols=col2, y.vals=c(1, 1.4), baseline=T, wsize=200, range=c(201, 300))
+plot2.several("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex_sub_d3a_het_dnase_sort_q30_dnase.bed_W200F250_both_chr","d3a_nuc_extend_sub", data_type="bam_extend/mean", group2="trim0.01", cols=col2, baseline=F, wsize=200, range=c(201, 300))
+plot2.several("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex_sub_d3a_het_dnase_sort_q30_dnase.bed_W200F250_both_chr","d3a_nuc2", data_type="rpkm/mean", group2="trim0.01", cols=col2, baseline=F, wsize=200)
+```
 
-#### DNase
+#### CTCF sites, no Rad21
+```{r}
+plot2.several("cad_n2a_ctcf_r12_sub_cad_n2a_rad21_r12_nosex.bed_W200F250_both_chr","d3a_nuc_extend", data_type="bam_extend/mean_chrom_mean_0", group2="trim0.01", cols=col2, y.vals=c(1, 1.4), baseline=T, wsize=200, range=c(201, 300))
+```
+
+### DNase
+
+#### Rad21, random sample 100 kb view
 ```{r}
 plot2("cad_n2a_rad21_r12_rand10E4_nosex.bed_W200F500_both_chr","d3a_het_dnase_sort_q30", data_type="bam_ends/mean", group2="trim0.01", wsize=200)
+```
+
+#### Rad21 sites, no CTCF, 50 kb view
+```{r}
+plot2("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex.bed_W200F250_both_chr","d3a_het_dnase_sort_q30", data_type="bam_ends/mean", group2="trim0.01", wsize=200)
+```
+
+```{r}
+plot2("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex.bed_W200F250_both_chr","d3a_het_dnase_sort_q30", data_type="bam_ends/mean", group2="trim0.01", wsize=200)
+```
+
+#### CTCF sites, no Rad21
+```{r}
+plot2("cad_n2a_rad21_r12_sub_cad_n2a_ctcf_r12_nosex_sub_d3a_het_dnase_sort_q30_dnase.bed_W200F250_both_chr","d3a_het_dnase_sort_q30", data_type="bam_ends/mean", group2="trim0.01", wsize=200)
 ```

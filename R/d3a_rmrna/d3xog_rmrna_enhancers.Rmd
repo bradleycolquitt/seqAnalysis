@@ -43,3 +43,33 @@ comb <- data.frame(d3a.rmrna.en, d3a.hmc.en)
 cor(comb)
 ```
 
+Closest gene analysis
+-------------------
+```{r}
+mk4.inter <- read.delim("~/s2/data/homer/peaks/omp_h3k4me1_gc/omp_h3k4me1_gc_F3_sub_refgene_extend5kb_closest_refgene.bed", header=F)
+mk4.mod <- makeFeatureMatrix2("omp_h3k4me1_gc_F3_sub_refgene_extend5kb.bed_chr", "d3a_rpkm", data_type="rpkm/mean")
+mk4.mod <- transform(mk4.mod, hmc.ko.wt = log2((moe_d3a_ko_hmc_rpkm + .01) / (moe_d3a_wt_hmc_rpkm + .01)), mc.ko.wt = log2((moe_d3a_ko_mc_rpkm + 0.01) / (moe_d3a_wt_mc_rpkm + .01)))
+rna.1log2 <- readRDS("~/s2/analysis/rna/rdata/d3xog_wt_ko_rmrna_masked_uq_comp_1log2.rds")
+```
+
+```{r}
+m <- match(rownames(mk4.mod), mk4.inter[,4])
+mk4.mod$gene <- mk4.inter[m,10]
+mk4.mod$en <- rownames(mk4.mod)
+comb <- na.omit(data.frame(rna.1log2, mk4.mod[match(rna.1log2$gene, mk4.mod$gene),] ))
+```
+
+```{r}
+cor(comb$ko.wt, comb$hmc.ko.wt)
+cor(comb$ko.wt, comb$hmc.ko.wt)
+```
+
+```{r}
+gg <- ggplot(comb, aes(hmc.ko.wt, ko.wt))
+gg + geom_point()
+```
+
+```{r}
+gg <- ggplot(comb, aes(mc.ko.wt, ko.wt))
+gg + geom_point()
+```

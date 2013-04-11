@@ -176,6 +176,18 @@ if (set=="d3a") {
     columns <- 1
     orient <- 2
     
+  } else if (set=="d3xog_rmrna") {
+    samples <- list(list("d3xog_wt_rmrna", "d3xog_ko_rmrna"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
+    
+  } else if (set=="d3a_mrna") {
+    samples <- list(list("moe_d3a_wt_mrna", "moe_d3a_ko_mrna"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
+    
   } else if (set=="cells_nuc") {
     samples <- list(list("omp_nuc_0123","ngn_nuc_456", "icam_nuc_01234"))
     rows <- 1
@@ -207,6 +219,11 @@ if (set=="d3a") {
     rows <- 1
     columns <- 1
     orient <- 2 
+  } else if (set=="d3a_nuc_extend_sub") {
+    samples <- list(list("d3xog_wt_nuc_478_rmdup_q30_extend_insert", "d3xog_ko_nuc_256_rmdup_q30_506M_extend_insert"))
+    rows <- 1
+    columns <- 1
+    orient <- 2 
   } else if (set=="d3a_nuc_dyad") {
     samples <- list(list("d3xog_wt_nuc_478_rmdup_q30_dyad", "d3xog_ko_nuc_256_rmdup_q30_dyad"))
     rows <- 1
@@ -218,7 +235,7 @@ if (set=="d3a") {
     columns <- 1
     orient <- 2 
   } else if (set=="encode_dnase") {
-    samples <- list(list("wgEncodeUwDnaseCerebrumC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseCerebellumC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseRetinaC57bl6MAdult1wksAlnRep1",
+    samples <- list(list("d3a_het_dnase_sort_q30", "wgEncodeUwDnaseCerebrumC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseCerebellumC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseRetinaC57bl6MAdult1wksAlnRep1",
                     "wgEncodeUwDnaseHeartC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseLiverC57bl6MAdult8wksAlnRep1"))
     rows <- 1
     columns <- 1

@@ -79,3 +79,36 @@ plot2.several("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr", "d3a_nuc
 ```{r}
 plot2.several("d3a_het_dnase_sort_q30_F3_size500.bed_W25F200_both_chr", "d3a_nuc2", data_type="rpkm/mean", cols=col2 , group2="trim0.01", fname="manual", baseline=T)
 ```
+
+DNase, smaller region
+----------------------
+
+```{r}
+makeProfile2.allSamp("d3a_het_dnase_sort_q30_dnase.bed_W25F250_both_chr", data_type="rpkm/mean", rm.outliers=0.01)
+```
+
+```{r}
+plot2.several("d3a_het_dnase_sort_q30_dnase.bed_W25F250_both_chr", "d3a_hmc", data_type="rpkm/mean", cols=col2, group2="trim0.01", fname="manual")
+plot2.several("d3a_het_dnase_sort_q30_dnase.bed_W25F250_both_chr", "d3a_mc", data_type="rpkm/mean", cols=col2, group2="trim0.01", fname="manual")
+
+```
+
+5hmC blocks
+----------------
+
+```{r}
+makeProfile2.allSamp("moe_d3a_wt_hmc_moe_d3a_ko_hmc-domains_gt50_starts.bed_W25F200_both_chr", data_type="bam/mean", rm.outliers=0.01)
+makeProfile2.allSamp("moe_d3a_wt_hmc_moe_d3a_ko_hmc-domains_gt50_ends.bed_W25F200_both_chr", data_type="bam/mean", rm.outliers=0.01)
+```
+
+```{r moe_d3a_wt_hmc_moe_d3a_ko_hmc-domains_gt50_starts_ends.bed_W25F200_moe_encode_dnase, fig.width=3, fig.height=6, dev=c("png", "pdf")}
+par(mfrow=c(4,2), mar=c(2,2,2,2))
+samples <- c("d3a_het_dnase_sort_q30", "wgEncodeUwDnaseCerebrumC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseHeartC57bl6MAdult8wksAlnRep1", "wgEncodeUwDnaseLiverC57bl6MAdult8wksAlnRep1")
+colors <- brewer.pal(4, "Spectral")
+for (i in 1:4) {
+plot2("moe_d3a_wt_hmc_moe_d3a_ko_hmc-domains_gt50_starts.bed_W25F200_both_chr", samples[i], data_type="bam/mean", group2="trim0.01", cols=colors[i])
+plot2("moe_d3a_wt_hmc_moe_d3a_ko_hmc-domains_gt50_ends.bed_W25F200_both_chr", samples[i], data_type="bam/mean", group2="trim0.01", cols=colors[i])      
+}
+
+
+```

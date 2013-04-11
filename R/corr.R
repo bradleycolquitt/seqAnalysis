@@ -80,13 +80,13 @@ meanWindows <- function(data, step) {
   return(tapply(data, ind, mean))
 }
   
-corrWig <- function(wig1, wig2, method="spearman", step=1, test=FALSE) {
+corrWig <- function(wig1, wig2, method="spearman", step=1, test=FALSE, remove_zeros=TRUE) {
   
   wig1_chr <- list.files(wig1)
   wig2_chr <- list.files(wig2)
   #print(wig1_chr)
   common_chr <- wig1_chr[wig1_chr %in% wig2_chr]
-  filter <- c(grep("random", common_chr), grep("NT", common_chr), grep("chrY", common_chr), grep("chrM", common_chr))
+  filter <- grep("random|NT|chrY|chrX|chrM", common_chr)
   if (length(filter) > 0) common_chr <- common_chr[-filter]
   corrs <- foreach(chr=common_chr, .combine="c", .verbose=FALSE) %do% {
     #print(chr)
@@ -101,7 +101,7 @@ corrWig <- function(wig1, wig2, method="spearman", step=1, test=FALSE) {
       stop(paste("Non-matching wig lengths: ", chr, sep=""))
     }
     datac <- cbind(data1, data2)
-    datac <- removeZeros(datac)
+    if (remove_zeros) datac <- removeZeros(datac)
     #if (test) { 
     #  tryCatch(cor.test(data1, data2, method=method)$p.value, error=function(e) return(NA))   
     #} else {

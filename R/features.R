@@ -185,6 +185,14 @@ makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type, tra
   vals <- as.matrix(vals)
   colnames(vals) <- samples
   out_path <- paste(feature_norm_path, data_type, "summaries", sep="/")
+  
+  if (rep) {
+    vals_long <- melt(data.frame(vals))
+    vals_long$id <- rownames(vals)
+    vals_long$prefix <- unlist(lapply(str_split(vals_long$variable, "_"), function(x) paste(x[1:length(x)], collapse="_")))
+    vals_long <- ddply(vals_long, .(id, prefix), summarize, mean(value, na.rm=TRUE))
+    vals <- acast(data=vals_long, id~prefix)
+  }
   if (!file.exists(out_path)) dir.create(out_path)
   fname <- paste(feature_norm_path, data_type, "summaries", paste(set, feature, sep="_"), sep="/")
   if (!is.null(transf)) fname <- paste(fname, transf, sep="_")

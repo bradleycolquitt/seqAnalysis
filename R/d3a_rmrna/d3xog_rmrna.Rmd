@@ -96,8 +96,8 @@ grid.arrange(rna.gg, rna2.gg, rna.count.gg, ncol=3)
 ```
 
 ### MAplots
-```{r, fig.width=12, fig.height=4}
-rna.gg <- ggplot(rna.1log2.nz, aes(wt, ko.wt)) + geom_point(alpha=I(1/10)) + geom_density2d(breaks=seq(0, .5,.025)) + labs(title="FPKM UQ norm") + geom_hline(yintercept=0, color="red")
+```{r d3xog_wt_ko_rmrna_protein_masked_uq_comp_1log2_counts_ko_wt_ratio_versus_wt, fig.width=12, fig.height=4, dev=c("png", "pdf")}
+rna.gg <- ggplot(rna.1log2.nz, aes(wt, ko.wt)) + geom_point(alpha=I(1/10)) + geom_density2d(breaks=seq(0, .5,.025)) + labs(title="FPKM UQ norm", x="WT log2(FPKM + 1)", y="KO - WT log2(FPKM + 1)") + geom_hline(yintercept=0, color="red")
 rna2.gg <- ggplot(rna.1log2.nz, aes(wt, ko.wt)) + geom_point(alpha=I(1/10)) + geom_density2d(breaks=seq(0, .5,.025)) + labs(title="FPKM Total norm")
 rna.count.gg <- ggplot(rna.counts.1log2.nz, aes(wt, ko.wt)) + geom_point(alpha=I(1/10)) + geom_density2d(breaks=seq(0, .5,.025)) + labs(title="Counts DESeq norm")
 grid.arrange(rna.gg, rna2.gg, rna.count.gg, ncol=3)

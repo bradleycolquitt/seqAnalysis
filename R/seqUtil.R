@@ -47,6 +47,13 @@ shiftBedPositions <- function(bed, shift, pos="start", direction="up") {
   return(out)
 }
 
+tileBed <- function(bed, extend, window) {
+  start <- bed[,2] - extend
+  end <- bed[,3] + extend
+  
+  out <- c(bed[,1], start, start+window, bed[,4], 1, )
+  
+}
 #To adjust coordinates of all beds within a directory
 shiftBedPositions.dir <- function(dir, shift, pos="start", direction="up") {
   files <- list.files(dir)
