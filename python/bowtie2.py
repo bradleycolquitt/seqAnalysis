@@ -82,7 +82,7 @@ class bowtie_class:
                             #'--local', '--very-sensitive-local', '--mm',
                             '--end-to-end', '--mm',
                             '-x', 'mm9',
-                            '-met-file', self.bam_date_dir,
+                            '--met-file', self.bam_date_dir,
                             '-1', self.input1,
                             '-2', self.input2, 
                             '-S', self.samfile]
