@@ -4,13 +4,11 @@ Developmental peaks
 
 ```r
 suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
-library(gridExtra)
 ```
 
 
 
 ```r
-
 omp.icam <- processIntersectSummary("~/s2/data/homer/peaks/intersections/cells/omp_hmc_rep1_q30_rmdup_gc_input_icam_hmc_rep1_q30_rmdup_gc_size1kb_F3_inter50_omp_hmc_rep2_q30_rmdup_r1_gc_input_icam_hmc_rep2_q30_rmdup_r1_gc_size1kb_F3.bed/summary")
 
 ngn.icam <- processIntersectSummary("~/s2/data/homer/peaks/intersections/cells/ngn_hmc_rep1_q30_rmdup_gc_input_icam_hmc_rep1_q30_rmdup_gc_size1kb_F3_inter50_ngn_hmc_rep2_q30_rmdup_r1_gc_input_icam_hmc_rep2_q30_rmdup_r1_gc_size1kb_F3.bed/summary")
