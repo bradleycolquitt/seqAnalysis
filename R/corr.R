@@ -81,7 +81,9 @@ meanWindows <- function(data, step) {
 }
   
 corrWig <- function(wig1, wig2, method="spearman", step=1, test=FALSE, remove_zeros=TRUE) {
-  
+  wig_path <- "/media/storage2/data/wig/rpkm"
+  wig1 <- paste(wig_path, wig1, sep="/")
+  wig2 <- paste(wig_path, wig2, sep="/")
   wig1_chr <- list.files(wig1)
   wig2_chr <- list.files(wig2)
   #print(wig1_chr)

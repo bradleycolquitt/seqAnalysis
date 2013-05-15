@@ -40,6 +40,28 @@ if (set=="d3a") {
     columns <- 1
     orient <- 2
     
+  } else if (set=="d3xog_hmc") {
+    samples <- list(list("omp_hmc_rep1_mean_omp_hmc_rep2", "d3xog_het_hmc_paired_q30", "d3xog_ko_hmc_paired_q30"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
+  } else if (set=="d3xog_mc") {
+    samples <- list(list("omp_mc_rmdup",  "d3xog_het_mc_paired_q30", "d3xog_ko_mc_paired_q30"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
+    
+  } else if (set=="d3xog_rmrna") {
+    samples <- list(list("omp_rmrna_rep1_protein",
+                         "omp_rmrna_rep2_protein",
+                         "d3xog_wt_rmrna_blank_protein",  
+                         "d3xog_het_rmrna_blank_protein", 
+                         "d3xog_ko_rmrna_blank_protein",
+                         "d3xog_ko_rmrna_rep2_blank_protein"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
+    
   } else if (set=="d3a_rlm") {
     samples <- list(list("moe_wt_hmc_rlm", "moe_d3a_hmc_rlm"), list("moe_wt_mc_rlm", "moe_d3a_mc_rlm"))
     rows <- 2
@@ -85,6 +107,18 @@ if (set=="d3a") {
   } else if (set=="cells_hmc") {
     samples <- list(list("omp_hmc_120424_rpkm", "ngn_hmc_rpkm", "icam_hmc_rpkm"))
                     
+    columns <- 1
+    #if (!is.null(group2)) {
+    #  columns <- 3
+    #}
+    rows <- 1
+    orient <- 2
+    
+  } else if (set=="cells_hmc_rep") {
+    samples <- list(list("omp_hmc_rep1_q30_rmdup_extend300_mean_omp_hmc_rep2_q30_rmdup", 
+                         "ngn_hmc_rep1_q30_rmdup_extend300_mean_ngn_hmc_rep2_q30_rmdup",
+                         "icam_hmc_rep1_q30_rmdup_extend300_mean_icam_hmc_rep2_q30_rmdup"))
+    
     columns <- 1
     #if (!is.null(group2)) {
     #  columns <- 3
@@ -170,18 +204,31 @@ if (set=="d3a") {
     columns <- 1
     orient <- 2
     
+  } else if (set=="tt3_rep") {
+    samples <- list(list("omp_hmc_rep1_mean_omp_hmc_rep2", "ott3_hmc_rep1_mean_ott3_hmc_rep2"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
   } else if (set=="tt3_rmrna") {
-    samples <- list(list("omp_rmrna", "ott3_rmrna"))
+    samples <- list(list("omp_rmrna_rep1", "omp_rmrna_rep2", 
+                         "ott3_rmrna_rep1", "ott3_rmrna_rep2"))
     rows <- 1
     columns <- 1
     orient <- 2
     
   } else if (set=="d3xog_rmrna") {
-    samples <- list(list("d3xog_wt_rmrna", "d3xog_ko_rmrna"))
+    samples <- list(list("d3xog_wt_rmrna_blank_paired_q30", "d3xog_het_rmrna_blank_paired_q30", 
+                         "d3xog_ko_rmrna_blank_paired_q30", "d3xog_ko_rmrna_rep2_blank_paired_q30"))
     rows <- 1
     columns <- 1
     orient <- 2
     
+  } else if (set=="d3xog_rmrna_v_rmsk") {
+    samples <- list(list("d3xog_wt_rmrna_blank_v_rmsk", "d3xog_het_rmrna_blank_v_rmsk", 
+                         "d3xog_ko_rmrna_blank_v_rmsk", "d3xog_ko_rmrna_rep2_blank_v_rmsk"))
+    rows <- 1
+    columns <- 1
+    orient <- 2 
   } else if (set=="d3a_mrna") {
     samples <- list(list("moe_d3a_wt_mrna", "moe_d3a_ko_mrna"))
     rows <- 1

@@ -24,6 +24,7 @@ WIGs are outputted to a common directory
 import sys
 import os
 import re
+import sam
 import argparse
 import pysam
 import pdb
@@ -56,6 +57,7 @@ class windower:
         self.tdffile = "/".join([tdf_dir, "".join([os.path.basename(wigname).split(".wig")[0], ".tdf"])])
         self.window_size = atoi(window_size)
         self.pe = pe
+#        self.first_read_only = first_read_only
         self.extend = int(extend)
 
         self.nreads = self.bamfile.mapped
@@ -139,26 +141,37 @@ def window_core(obj, chrom):
     read_mid = 0
     
     for read in bamfile.fetch(chrom):
-        
+        read_mid = sam.read_mid_compute(obj, read)
+        if read_mid < 0: continue
+        """
         # if just using read ends
-        if obj.ends:
+        #if obj.ends:
            # pdb.set_trace()
             if read.is_reverse:
                 read_mid = read.aend + 1
             else:
                 read_mid = read.pos + 2
         elif obj.pe:
-            if read.is_read1 and read.is_paired:
-                if read.is_reverse:
-                    read_mid = read.aend + read.isize / 2
-                else:
-                    read_mid = read.pos + read.isize / 2
-            else: continue
+            if obj.extend > 0:
+                #pdb.set_trace()
+                if read.is_read1:
+                    if read.is_reverse:
+                        read_mid = read.aend - (obj.extend / 2)
+                    else:
+                        read_mid = read.pos + (obj.extend / 2)
+            else:
+                if read.is_paired and read.is_read1:
+                    if read.is_reverse:
+                        read_mid = read.aend + read.isize / 2
+                    else:
+                        read_mid = read.pos + read.isize / 2
+                else: continue
         else:
             if read.is_reverse:
                 read_mid = read.aend - (obj.extend / 2)
             else:
                 read_mid = read.pos + (obj.extend / 2)
+        """
         read_mid_index = read_mid / obj.window_size
         if read_mid_index <= len(pos_vect) - 1:
             pos_vect[read_mid_index] = pos_vect[read_mid_index] + 1
@@ -337,7 +350,8 @@ def main(argv):
     parser.add_argument('-w', dest='window')
     parser.add_argument('-e', dest='extend', type=int, required=False, default=0)
     parser.add_argument('--bed')
-    parser.add_argument('--paired_end', action='store_true', default=False)
+    parser.add_argument('--paired_end', action='store_true', default=False, help="Is sample PE? If set with 'extend', will extend by given amount from read1 only.")
+    parser.add_argument('--first_read_only', action='store_true', default=False)
     parser.add_argument('--pseudocount', dest='pseudo', action='store_true', default=False)
     parser.add_argument('--full', action='store_true', default=False, help="Record extent of each read")
     parser.add_argument('--ends', action='store_true', default=False, help="Record position of the end of each read")
@@ -362,6 +376,8 @@ def main(argv):
 
     if args.bed:
         wig_file = "_".join([wig_file, os.path.basename(args.bed)])
+    if args.extend > 0:
+        wig_file = "_".join([wig_file, "extend" + str(args.extend)])
     if args.pseudo:
         wig_file = "_".join([wig_file, "pseudo"])
     if args.full:

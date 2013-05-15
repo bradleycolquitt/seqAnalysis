@@ -81,7 +81,9 @@ featureClasses5 <- factor(1:5, labels=c("Upstream", "Exons", "Transcript", "Inte
 enhancerClasses <- data.frame(cluster=1:14, class=factor(1:4, labels=c("5hmC variable", "5hmC/5mC variable", "5mC variable", "Invariant"))[c(1,1,1,1,2,2,2,2,3,4,3,3,3,3)])
 
 ## Make summaries --------------------------
-makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type, transf=NULL, write=TRUE) {
+makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type, 
+                               transf=NULL, rep=FALSE, write=TRUE, 
+                               include_score=FALSE) {
   if (set=="cells_norm" | set=="cells") {
     samples <- samples.cells_norm
   } else if (set=="unnorm") {
@@ -102,6 +104,8 @@ makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type, tra
                  "omp_mc_full", "ngn_mc_full", "icam_mc_full")
   } else if (set=="cells_bam") {
     samples <- c("omp_hmc_120424_rmdup", "ngn_hmc_120424_rmdup", "icam_hmc_120424_rmdup")
+  } else if (set=="cells_rep_hmc")  {
+    samples <- c("omp_hmc_rep1_mean_omp_hmc_rep2", "ngn_hmc_rep1_mean_ngn_hmc_rep2", "icam_hmc_rep1_mean_icam_hmc_rep2")
   } else if (set=="medips_rf_1" | set=="medips_rf_2") {
     samples <- samples.medips_rf
   } else if (set=="rpm_avg_2") {
@@ -145,6 +149,13 @@ makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type, tra
     samples <- c("d3xog_wt_nuc_478_rmdup_q30_exclude1", "d3xog_ko_nuc_256_rmdup_q30_exclude1")
   } else if (set=="d3a_kde") {
     samples <- c("d3xog_wt_nuc_478_p1", "d3xog_ko_nuc_256_p1")
+  } else if (set=="d3xog_tt3_hmc") {
+    samples <- c("omp_hmc_rep1_mean_omp_hmc_rep2", "d3xog_het_hmc_paired_q30", 
+                 "d3xog_ko_hmc_paired_q30", "ott3_hmc_rep1_mean_ott3_hmc_rep2")
+    
+  } else if (set=="d3xog_rmrna") {
+    samples <- c("d3xog_wt_rmrna_blank_paired_q30", "d3xog_het_rmrna_blank_paired_q30", 
+                 "d3xog_ko_rmrna_blank_paired_q30", "d3xog_ko_rmrna_rep2_blank_paired_q30")
   } else if (set=="tt3_min") {
     #samples <- c("omp_hmc_120424_rpkm", "ott3_1_hmc_rpkm", "ott3_2_hmc_rpkm", "ott3_2_hmc_21M_rpkm", "ngn_hmc_rpkm", "icam_hmc_rpkm",
     #             "omp_mc_rpkm", "ott3_1_mc_rpkm", "ott3_2_mc_rpkm", "ott3_2_mc_rmdup_17M_rpkm", "ngn_mc_rpkm", "icam_mc_rpkm")
@@ -152,10 +163,19 @@ makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type, tra
                  "omp_mc_rpkm", "ott3_1_mc_rpkm", "ott3_2_mc_rpkm")
   } else if (set=="tt3_sub") {
     samples <- c("ott3_2_hmc_21M_rpkm_sub_omp_hmc_120424_rpkm")
+  } else if (set=="tt3_rep") {
+    samples <- c("omp_hmc_rep1", "omp_hmc_rep2", "ott3_hmc_rep1", "ott3_hmc_rep2")
+    
   } else if (set=="tt3_rmrna") {
     samples <- c("omp_rmrna", "ott3_rmrna")
-  } else if (set=="d3a_rmrna") {
+  } else if (set=="d3xog_rmrna") {
     samples <- c("d3xog_wt_rmrna", "d3xog_ko_rmrna")
+  } else if (set=="d3xog_rmrna_protein") {
+    samples <- c("omp_rmrna_rep1_protein", "omp_rmrna_rep2_protein", "d3xog_wt_rmrna_blank_protein", 
+                 "d3xog_het_rmrna_blank_protein", "d3xog_ko_rmrna_blank_protein", "d3xog_ko_rmrna_rep2_blank_protein")
+  } else if (set=="d3xog_rmrna_protein2") {
+    samples <- c("omp_rmrna_rep1_blank_protein", "omp_rmrna_rep2_blank_protein", "d3xog_wt_rmrna_blank_protein", 
+                 "d3xog_het_rmrna_blank_protein", "d3xog_ko_rmrna_blank_protein", "d3xog_ko_rmrna_rep2_blank_protein")
   } else if (set=="d3a_dnase") {
     samples <- c("d3a_het_dnase_sort_q30", "d3a_ko_dnase_sort_q30")
     
@@ -182,16 +202,19 @@ makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type, tra
     names(val) <- data[,4]
     return(val)
   }
-  vals <- as.matrix(vals)
-  colnames(vals) <- samples
+  if (include_score) {
+    data1 <- read.delim(paste(feature_norm_path, data_type, feature, samples[1], sep="/"), header=FALSE)
+    vals <- cbind(vals, data1[,5])
+    colnames(vals) <- c(samples, "score")
+  } else {
+    colnames(vals) <- samples  
+  }
+
   out_path <- paste(feature_norm_path, data_type, "summaries", sep="/")
   
   if (rep) {
-    vals_long <- melt(data.frame(vals))
-    vals_long$id <- rownames(vals)
-    vals_long$prefix <- unlist(lapply(str_split(vals_long$variable, "_"), function(x) paste(x[1:length(x)], collapse="_")))
-    vals_long <- ddply(vals_long, .(id, prefix), summarize, mean(value, na.rm=TRUE))
-    vals <- acast(data=vals_long, id~prefix)
+    prefix <- unlist(lapply(str_split(samples, "_"), function(x) paste(x[1:(length(x)-1)], collapse="_")))
+    vals <- t(apply(vals, 1, function(x) tapply(x, prefix, mean)))
   }
   if (!file.exists(out_path)) dir.create(out_path)
   fname <- paste(feature_norm_path, data_type, "summaries", paste(set, feature, sep="_"), sep="/")
@@ -244,7 +267,6 @@ statSummary <- function(set, data_type, feature, transf_name=NULL, transf=NULL, 
                            paste(set, feature, sep="_"), sep="/")
   if (!is.null(transf_name)) data_path <- paste(data_path, transf_name, sep="_")
   data <- read.delim(data_path, header=TRUE, row.names=NULL)
-  #return(data)
   if (!is.null(transf)) {
     if (ncol(data) == 2) {
       data[,2] <- do.call(transf, list(data[,2]))
@@ -266,14 +288,9 @@ statSummary.all <- function(set, data_type, toplot="general", action="summary", 
     } else if (toplot=="rmsk") {
       features <- as.character(features_rmsk)
     } else {
-
-  
-      features <- list.files(paste(feature_norm_path, data_type, "summaries", sep="/"))
-                                        #print(features)
-      features <- lapply(features, str_split, paste(set, "_", sep=""))
-                                        #print(features)
-      features <- na.omit(unlist(lapply(features, function(x) x[[1]][2])))
-                                        #print(features)
+      features <- list.files(paste(feature_norm_path, data_type, "summaries", sep="/"))                             
+      features <- lapply(features, str_split, paste(set, "_", sep=""))                          
+      features <- na.omit(unlist(lapply(features, function(x) x[[1]][2])))                      
     }
   
   out <- foreach (feature=features, .combine="rbind") %dopar% {
@@ -381,7 +398,6 @@ statSummary.allIQR <- function(set, data_type, toplot="general", transf_name="sq
 ## Normalize values of feature matrix by median value of specified feature
 statSummary.allNorm <- function(set, data_type, toplot=TRUE, transf_name=NULL, transf=NULL, norm_col="feature", norm="intergenic_sub_rmsk_chr") {
   data <- statSummary.all(set=set, data_type=data_type, toplot=toplot, action="collect", transf_name=transf_name, transf=transf)
-#  data.norm <- data[data$feature == norm,]
     data.norm <- data[data[,norm_col] == norm,]
   data.norm.median <- ddply(data.norm, c("variable", "ip", norm_col), summarize, value.median=median(value))
   norm_feature_name <- paste(norm, "median", sep="_")
@@ -413,8 +429,6 @@ processIntersectSummary <- function(summary, features=features_merge_toplot) {
   expected_frac <- data$feature_span / sum(data$feature_span)
   data$expected <- round(data$reference_num * expected_frac)
   data$log2.obs.exp <- with(data, log2(count/expected))
-  #p <- sapply(1:nrow(data), function(x) fisher.test(matrix(c(data$count[x], data$reference_num[x], data$expected[x], data$reference_num[x]), ncol=2), alternative="greater")$p.value)
-  #print(p)
   data$fisher.p <- sapply(1:nrow(data), function(x) fisher.test(matrix(c(data$count[x], data$reference_num[x], data$expected[x], data$reference_num[x]), ncol=2), alternative="greater")$p.value)
   data$fisher.fdr <- p.adjust(data$fisher.p, method="fdr")
   data$feature.factor <- features[match(data$feature, as.character(features))]
@@ -483,22 +497,20 @@ feature_ks_batch <- function(collect_df, key_col, reference_key) {
   return(sub)
 }
 
+pairwise <- function(data, FUN) {
+  name_array <- combn(colnames(data), 2)
+  out_names <- apply(name_array, 2, paste, collapse="_")
+  out_data <- foreach(i=1:ncol(name_array), .combine="cbind") %do% {
+    print(name_array[,i])
+    do.call(FUN, list(data[,name_array[1,i]], data[, name_array[2,i]]))
+  }
+  colnames(out_data) <- out_names     
+  return(out_data)
+    
+}
 
-#! not functional
-cell_compare <- function(values, ind, key_col, reference_key) {
-  print(dim(values))
-  #print(names(values))
-  #sub_values <- values[,ind]
-  #print(dim(sub_values))
-  keys <- unique(values[,key_col])
-  sub <- unlist(lapply(keys, function(key) ks_pvalue(values[values[,key_col]==key,"value"],
-                                                     values[values[,key_col]==reference_key, "value"])))
-  #sub <- unlist(lapply(keys, function(key) permutationTest(values[values[,key_col]==key,"value"],
-  #                                                   values[values[,key_col]==reference_key, "value"], FUN="median")))
-  names(sub) <- keys
-  #sub <- ddply(values, c("celltype"), summarize,
-  #             ks_pvalue=ks_pvalue(value, values[values$key_col==reference_key,value]))
-  return(sub)
+subtract <- function(a, b) {
+  return(a - b) 
 }
 
 ks_pvalue <- function(data1, data2) {
@@ -588,17 +600,13 @@ makeFeatureDF <- function(set="cells", data_type="raw", FUN=mean) {
   files <- files[grep(data_type, files)]
   files_names <- lapply(files, str_split, "_")
   print(files)
-  #return(files_names)
   files_names <- lapply(files_names, function(x) {
-    #print(x)
     sel <- x[[1]][-grep(set, x[[1]])]
-    #return(sel)
     sel <- sel[-grep(data_type, sel)]
     sel <- sel[-grep("chr", sel)]
     return(sel)
   })
-  #print(files_names)
-  #return(files_names)
+
   files_names <- unlist(lapply(files_names, paste, collapse="_"))
   stat <- list()
   ci <- list()
@@ -609,15 +617,10 @@ makeFeatureDF <- function(set="cells", data_type="raw", FUN=mean) {
     rownames(ci_tmp) <- c("lower", "upper")
     ci <- c(ci, list(ci_tmp))
   }
-  #return(stat)
-  #return(ci)
-  #return(data)
-  #names(stat) <- files_names
-  #names(ci) <- files_names
+ 
   stat.df <- ldply(stat)
   ci.df <- ldply(ci)
-  #return(ci.df)
-  #return(stat.df)
+
   stat.df$data_type <- "stat"
   stat.df$feature <- files_names
   fl <- length(unique(stat.df$feature))
@@ -630,15 +633,7 @@ makeFeatureDF <- function(set="cells", data_type="raw", FUN=mean) {
   ci.melt <- melt(ci.df)
   ci.melt$celltype <- rep(c("mOSN", "GBC", "HBC"), each=fl * 2)
   ci.melt$modification <- rep(c("5hmC", "5mC"), each=fl * 6)
-  #return(ci.df)
-  #return(data)
-  #data.df <- ldply(data)
-  #return(data.df)
-  #stat.melt <- melt(stat.df)
-  #return(stat.melt)
-  #ci.melt <- melt(ci.df)
   data.melt <- rbind(stat.melt, ci.melt)
-  #data.df <- melt(data.df)
   return(data.melt)
   
 }
@@ -653,6 +648,17 @@ compareFeatures <- function(feature, sample_list, value_type="raw") {
   })
   
 }
+
+chunkMatrix <- function(data, chunks=100, FUN=mean) {
+  out <- data.frame(foreach(c=isplitRows(data, chunks=chunks), .combine="rbind") %do% apply(c, 2, FUN))
+  out$index <- 1:100
+  return(out)
+  
+}
+
+onelog2 <- function(x) {log2(x+1)}
+
+hundrethlog2 <- function(x) {log2(x+.01)}
 
 ecdf <- function(d) {
   h <- hist(d, breaks=50, plot=FALSE)

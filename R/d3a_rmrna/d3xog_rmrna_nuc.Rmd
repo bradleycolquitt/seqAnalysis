@@ -2,8 +2,13 @@ D3xOG rmRNA and nucleosomes
 ========================================================
 
 ```{r}
+library(ggplot2)
 suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
 suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+```
+
+```{r}
+
 nuc.wt <- makeImage("d3xog_wt_nuc_478", "refGene_noRandom_order_outsides2_tss_W25F200_chr", data_type="rpkm/mean", image=F)
 nuc.ko <- makeImage("d3xog_ko_nuc_256", "refGene_noRandom_order_outsides2_tss_W25F200_chr", data_type="rpkm/mean", image=F)
 
@@ -50,7 +55,7 @@ gg <- gg + geom_errorbarh(aes(xmin=lower, xmax=upper), height=0, size=.1) + geom
 gg
 ```
 
-**General reduction of nucleosome occupancy from TSS to 1kb downstream, irrspective of transcriptional change**
+**General reduction of nucleosome occupancy from TSS to 1kb downstream, irrespective of transcriptional change**
 
 ### Profiles
 ```{r}

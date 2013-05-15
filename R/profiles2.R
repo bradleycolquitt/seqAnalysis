@@ -117,14 +117,15 @@ makeProfile2 <- function(anno, samples, group2=NULL,
         print(sample)
       }  
       
-      print("here")
+      #print("here")
       ind <- "norm"
       profile <- NULL
       CI <- NULL
-      #return(data)
+      #print(class(data))
       
       # Extract value columns and average across
-      if (length(data) > 1) {
+      if (is.null(ncol(data))) {
+        print("here2")
         data_merge <- do.call("cbind", lapply(data, function(x) x[,7]))
         data_mean <- apply(data_merge, 1, mean, na.rm=TRUE)
         data <- data[[1]][,1:6]
@@ -194,14 +195,9 @@ makeProfile2.allSamp <- function(anno, group2=NULL, data_type="unnorm/mean", fun
   
   # Group samples according to replicates
   if (rep) {
-    samples_split <- str_split(samples, "_")
-    samples_prefix <- unlist(lapply(samples_split, function(x) paste(x[1:(length(x)-1)], collapse="_")))
-    groups <- data.frame(prefix=samples_prefix, full=samples)
-    samples <- dlply(groups, .(prefix), function(d) d$full)
-    #print(samples)
-    samples <- lapply(samples, as.character)
+    samples <- group_by_rep(samples)
   }
-  print(samples)
+  
   data <- foreach(sample=samples) %dopar% {
     out_name <- sample
     if (!is.null(group2)) {
@@ -214,7 +210,7 @@ makeProfile2.allSamp <- function(anno, group2=NULL, data_type="unnorm/mean", fun
       print("Skipping")
       next 
     }
-    print(sample)
+    #print(sample)
     return(makeProfile2(anno, sample, data_type=data_type, fun=fun, group2=group2,
                            rm.outliers=rm.outliers, sample_num=sample_num, write=write))
   }
@@ -326,7 +322,7 @@ plotAnno <- function(data, annotation, wsize, cols=NULL, lab=NULL,
 
 ## Primary interface for drawing profile of a single sample 
 plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="mean", group2=NULL, group2_col=NULL,
-                     cols=1, lab=c("",""), y.vals=NULL, wsize=25, range=NULL, type="range", fname=NULL, ...) {
+                     cols=1, lab=c("",""), y.vals=NULL, wsize=25, range=NULL, type="range", fname="manual", ...) {
 
   ## Orient 1 data structure is no longer used (2/14/12)
   if (orient==1) {
@@ -385,7 +381,7 @@ plot2 <- function(annotation, sample, orient=2, data_type="unnorm/mean", fun="me
 ## Plot several profiles in one graphic device
 plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2=NULL, cols=NULL, lab=c("",""), 
                           y.vals=NULL, wsize=25, standard=FALSE, range=NULL, baseline=FALSE, group2_col=NULL,
-                          fun="mean", legend=FALSE, fname=NULL) {
+                          fun="mean", legend=FALSE, fname="manual") {
   samples <- NULL
   orient <- 1
   rows <- 1
@@ -400,10 +396,12 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
   # setup graphic device
   if (is.null(fname))  {
     x11("", 5, 6)
+    par(mfrow=c(rows, columns))
   } else if (fname=="manual") {
     # do nothing, device has already been set
     
   } else {
+    par(mfrow=c(rows, columns))
     if (fname=="auto") {
       dt <- paste(unlist(str_split(data_type, "/")), collapse="_")
       if (!is.null(group2)) {
@@ -416,8 +414,7 @@ plot2.several <- function(annotation, set="d3a", data_type="unnorm/mean", group2
     print(paste("Saving to ", fname, sep=""))
     pdf(file=paste(profile2.path, "norm", "plots", fname, sep="/"), 6, 9)
   }
-  par(mfrow=c(rows, columns))
-      #mar=c(2,4,1,1) + 0.1, oma=c(1, 1, 1, 1))
+  #mar=c(2,4,1,1) + 0.1, oma=c(1, 1, 1, 1))
   
   # Read in data
   if (orient==1) {

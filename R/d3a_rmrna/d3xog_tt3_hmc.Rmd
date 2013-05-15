@@ -1,0 +1,144 @@
+D3xOG , O/Tet3 5hmC comparison
+========================================================
+
+Compare 5hmC levels in Dnmt3a WT/Het/KO and O/Tet3 over
+* DNase HS peaks
+* 2-7 kb downstream
+* 1-3 kb upstream
+* TSS
+
+```{r}
+opts_chunk$set(warning=FALSE, message=FALSE, error=FALSE)
+source("~/src/seqAnalysis/R/features.R")
+library(reshape2)
+library(ggplot2)
+library(GGaly)
+```
+
+DHS
+--------
+```{r}
+hmc <- makeFeatureMatrix2("d3a_het_dnase_sort_q30_dnase_sub_igenome_ensembl_genes_extend5kb.bed_chr", "d3xog_tt3_hmc", data_type="rpkm/mean", select="flank500")
+colnames(hmc) <- c("wt", "het", "ko", "tt3")
+hmc.m <- melt(hmc)
+hmc.m$id <- rownames(hmc)
+
+```
+
+```{r}
+hmc.m <- ddply(hmc.m, .(id), mutate, value.norm.wt=(value+.01) / (value[variable=="wt"]+.01))
+```
+
+```{r}
+gg <- ggplot(hmc.m, aes(value, color=variable))
+gg + geom_density() + scale_color_brewer(palette="Set1") + coord_cartesian(xlim=c(0, 4))
+```
+
+```{r}
+gg <- ggplot(hmc.m, aes(variable, value.norm.wt, group=id))
+gg + geom_line(alpha=I(1/10))
+```
+
+
+
+```{r}
+gg <- ggplot(hmc.m, aes(value.norm.wt, color=variable))
+gg + geom_density() + facet_grid(variable~.) + coord_cartesian(xlim=c(0, 5))
+```
+
+```{r}
+gg <- ggplot(hmc.m, aes(variable, value.norm.wt))
+gg + geom_boxplot() + coord_cartesian(ylim=c(0,2))
+```
+
+2 to 7 kb downstream 
+-----------------------
+```{r}
+hmc.down <- makeFeatureMatrix2("refgene_nodup_TSS2to7kb.bed_chr", "d3xog_tt3_hmc", data_type="rpkm/mean")
+colnames(hmc.down) <- c("wt", "het", "ko", "tt3")
+hmc.down.m <- melt(hmc.down)
+hmc.down.m$id <- rownames(hmc.down)
+```
+
+```{r}
+gg <- ggplot(hmc.down.m, aes(value, color=variable))
+gg + geom_density() + scale_color_brewer(palette="Set1") + coord_cartesian(xlim=c(0, 4))
+```
+
+1 to 3 kb upstream
+-----------------------
+```{r}
+hmc.gene <- makeFeatureMatrix2("refgene_1to3kb_up_chr", "d3xog_tt3_hmc", data_type="rpkm/mean")
+colnames(hmc.gene) <- c("wt", "het", "ko", "tt3")
+hmc.gene.m <- melt(hmc.gene)
+hmc.gene.m$id <- rownames(hmc.gene)
+```
+
+```{r}
+gg <- ggplot(hmc.gene.m, aes(value, color=variable))
+gg + geom_density() + scale_color_brewer(palette="Set1") + coord_cartesian(xlim=c(0, 4))
+```
+
+TSS
+-------------
+```{r}
+hmc.tss <- makeFeatureMatrix2("refgene_-500bpTSS+500bp_chr", "d3xog_tt3_hmc", data_type="rpkm/mean")
+colnames(hmc.tss) <- c("wt", "het", "ko", "tt3")
+hmc.tss.m <- melt(hmc.tss)
+hmc.tss.m$id <- rownames(hmc.tss)
+```
+
+```{r}
+gg <- ggplot(hmc.tss.m, aes(value, color=variable))
+gg + geom_density() + scale_color_brewer(palette="Set1") + coord_cartesian(xlim=c(0, 4))
+```
+
+RNA
+--------------
+```{r}
+rna <- readRDS("~/s2/analysis/rna/rdata/d3xog_wt_het_ko_rmrna_run9_fpkm_1log2.rds")
+
+```
+
+```{r}
+rna.ratio <- as.data.frame(pairwise(rna[,3:1], subtract))
+rna.ratio$id <- rna[,4]
+```
+
+### 2 to 7 kb
+
+```{r}
+comb <- na.omit(cbind(hmc.down, rna[match(rownames(hmc.down), rna[,4]),1:3]))
+```
+
+```{r}
+ggpairs(comb)
+```
+
+```{r}
+hmc.ratio.hlog2 <- colwise(hundrethlog2)(hmc.down)
+hmc.ratio <- as.data.frame(pairwise(hmc.down[,4:1], subtract))
+hmc.ratio$id <- rownames(hmc.down)
+```
+
+```{r}
+comb.ratio <- na.omit(cbind(hmc.ratio, rna.ratio[match(hmc.ratio.cast$id, rna.ratio$id), 1:3]))
+cor(comb.ratio[,-7])
+```
+
+### TSS
+
+```{r}
+comb <- na.omit(cbind(hmc.tss, rna[match(rownames(hmc.tss), rna[,4]),1:3]))
+```
+
+```{r}
+hmc.ratio.hlog2 <- colwise(hundrethlog2)(hmc.tss)
+hmc.ratio <- as.data.frame(pairwise(hmc.tss[,4:1], subtract))
+hmc.ratio$id <- rownames(hmc.tss)
+```
+
+```{r}
+comb.ratio <- na.omit(cbind(hmc.ratio, rna.ratio[match(hmc.ratio.cast$id, rna.ratio$id), 1:3]))
+cor(comb.ratio[,-7])
+```

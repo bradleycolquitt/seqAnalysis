@@ -1,0 +1,90 @@
+Developmental cells -- replicates, TSS heatmap
+========================================================
+
+
+
+```r
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+```
+
+
+
+```r
+positionMatrix.all("refGene_noRandom_order_outsides2_tss_W25F200_chr", data_type = "rpkm/mean")
+```
+
+
+
+```r
+icam <- makeImage("icam_hmc_rep1_q30_rmdup_extend300_mean_icam_hmc_rep2_q30_rmdup", 
+    "refGene_noRandom_order_outsides2_tss_W25F200_chr", data_type = "rpkm/mean", 
+    image = F)
+```
+
+```
+## [1] "/media/storage2/analysis/profiles/norm/rpkm/mean/refGene_noRandom_order_outsides2_tss_W25F200_chr/images/icam_hmc_rep1_q30_rmdup_extend300_mean_icam_hmc_rep2_q30_rmdup"
+```
+
+```r
+ngn <- makeImage("ngn_hmc_rep1_q30_rmdup_extend300_mean_ngn_hmc_rep2_q30_rmdup", 
+    "refGene_noRandom_order_outsides2_tss_W25F200_chr", data_type = "rpkm/mean", 
+    image = F)
+```
+
+```
+## [1] "/media/storage2/analysis/profiles/norm/rpkm/mean/refGene_noRandom_order_outsides2_tss_W25F200_chr/images/ngn_hmc_rep1_q30_rmdup_extend300_mean_ngn_hmc_rep2_q30_rmdup"
+```
+
+```r
+omp <- makeImage("omp_hmc_rep1_q30_rmdup_extend300_mean_omp_hmc_rep2_q30_rmdup", 
+    "refGene_noRandom_order_outsides2_tss_W25F200_chr", data_type = "rpkm/mean", 
+    image = F)
+```
+
+```
+## [1] "/media/storage2/analysis/profiles/norm/rpkm/mean/refGene_noRandom_order_outsides2_tss_W25F200_chr/images/omp_hmc_rep1_q30_rmdup_extend300_mean_omp_hmc_rep2_q30_rmdup"
+```
+
+
+
+```r
+rna <- readRDS("~/s2/analysis/rna/rdata/omp_ngn_icam_mrna_ucsc_fpkm.rds")
+rna.nz <- rna[apply(rna[, 2:4], 1, prod) > 0, ]
+```
+
+
+
+```r
+icam <- icam[match(rna.nz$id[order(-rna.nz[, 4])], rownames(icam)), ]
+ngn <- ngn[match(rna.nz$id[order(-rna.nz[, 3])], rownames(ngn)), ]
+omp <- omp[match(rna.nz$id[order(-rna.nz[, 2])], rownames(omp)), ]
+```
+
+
+
+```r
+MP.heat(icam, average = 50, range = c(0.2, 1))
+```
+
+```
+## Warning: executing %dopar% sequentially: no parallel backend registered
+```
+
+![plot of chunk refGene_noRandom_order_outsides2_tss_W25F200_icam_hmc_rep1_q30_rmdup_extend300_mean_icam_hmc_rep2_q30_rmdup](figure/refGene_noRandom_order_outsides2_tss_W25F200_icam_hmc_rep1_q30_rmdup_extend300_mean_icam_hmc_rep2_q30_rmdup.png) 
+
+
+
+```r
+MP.heat(ngn, average = 50, range = c(0.2, 1))
+```
+
+![plot of chunk refGene_noRandom_order_outsides2_tss_W25F200_ngn_hmc_rep1_q30_rmdup_extend300_mean_ngn_hmc_rep2_q30_rmdup](figure/refGene_noRandom_order_outsides2_tss_W25F200_ngn_hmc_rep1_q30_rmdup_extend300_mean_ngn_hmc_rep2_q30_rmdup.png) 
+
+
+
+```r
+MP.heat(omp, average = 50, range = c(0.2, 1))
+```
+
+![plot of chunk refGene_noRandom_order_outsides2_tss_W25F200_omp_hmc_rep1_q30_rmdup_extend300_mean_omp_hmc_rep2_q30_rmdup](figure/refGene_noRandom_order_outsides2_tss_W25F200_omp_hmc_rep1_q30_rmdup_extend300_mean_omp_hmc_rep2_q30_rmdup.png) 
+

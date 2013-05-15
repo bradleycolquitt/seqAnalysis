@@ -3,8 +3,15 @@ D3xOG rmRNA and nucleosomes
 
 
 ```r
+library(ggplot2)
 suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
 suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+```
+
+
+
+```r
+
 nuc.wt <- makeImage("d3xog_wt_nuc_478", "refGene_noRandom_order_outsides2_tss_W25F200_chr", 
     data_type = "rpkm/mean", image = F)
 ```
@@ -49,7 +56,7 @@ nuc.ko.wt.ord.rna <- na.omit(nuc.ko.wt.ord.rna)
 MP.heat(nuc.ko.wt, range = c(-1, 1), average = 50)
 ```
 
-![plot of chunk unnamed-chunk-3](figure/unnamed-chunk-3.png) 
+![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-4.png) 
 
 
 
@@ -78,49 +85,19 @@ nuc.ko.wt.ord.rna.down.c100$wilcox.FDR.05 <- cut(nuc.ko.wt.ord.rna.down.c100$wil
 
 ```r
 theme_set(theme_gray())
-```
-
-```
-## Error: could not find function "theme_set"
-```
-
-```r
 gg <- ggplot(nuc.ko.wt.ord.rna.down.c100, aes(nuc.ko.wt.ord.rna.down.c100, index))
-```
-
-```
-## Error: could not find function "ggplot"
-```
-
-```r
 gg <- gg + geom_vline(xintercept = 0, color = "red")
-```
-
-```
-## Error: object 'gg' not found
-```
-
-```r
 gg <- gg + geom_errorbarh(aes(xmin = lower, xmax = upper), height = 0, size = 0.1) + 
     geom_point(aes(color = wilcox.FDR.05), size = 2) + xlab("RPM") + ylab("") + 
     theme(legend.position = "none", axis.text.y = element_blank()) + labs(title = c("KO - WT 5hmC")) + 
     scale_color_manual(values = c("red", "black"))
-```
-
-```
-## Error: object 'gg' not found
-```
-
-```r
 gg
 ```
 
-```
-## Error: object 'gg' not found
-```
+![plot of chunk refGene_noRandom_order_outsides2_tss_W25F200_d3xog_nuc_ko_sub_wt_down1kb_ordered_by_d3xog_rmrna_ko_wt_fpkm](figure/refGene_noRandom_order_outsides2_tss_W25F200_d3xog_nuc_ko_sub_wt_down1kb_ordered_by_d3xog_rmrna_ko_wt_fpkm.png) 
 
 
-**General reduction of nucleosome occupancy from TSS to 1kb downstream, irrspective of transcriptional change**
+**General reduction of nucleosome occupancy from TSS to 1kb downstream, irrespective of transcriptional change**
 
 ### Profiles
 
@@ -145,7 +122,7 @@ plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr", "d3a_nuc2",
 ## [1] "d3xog_ko_nuc_256_rmdup_d3xog_ko_rmrna_fpkm_range4_mean"
 ```
 
-![plot of chunk unnamed-chunk-7](figure/unnamed-chunk-7.png) 
+![plot of chunk unnamed-chunk-8](figure/unnamed-chunk-8.png) 
 
 ```
 ## [1] 0.053 0.538
@@ -167,7 +144,7 @@ a <- plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr", "d3a_hmc"
 ## [1] "moe_d3a_ko_hmc_rpkm_moe_d3a_wt_mrna_range4_mean"
 ```
 
-![plot of chunk unnamed-chunk-8](figure/unnamed-chunk-8.png) 
+![plot of chunk unnamed-chunk-9](figure/unnamed-chunk-9.png) 
 
 ```
 ## [1] -0.202  1.398
@@ -189,7 +166,7 @@ a <- plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr", "d3a_mc",
 ## [1] "moe_d3a_ko_mc_rpkm_moe_d3a_wt_mrna_range4_mean"
 ```
 
-![plot of chunk unnamed-chunk-9](figure/unnamed-chunk-9.png) 
+![plot of chunk unnamed-chunk-10](figure/unnamed-chunk-10.png) 
 
 ```
 ## [1] -0.073  0.659
@@ -212,7 +189,7 @@ plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr", "d3a_nuc2",
 ## [1] "d3xog_ko_nuc_256_rmdup_d3xog_ko_rmrna_fpkm_range4_mean"
 ```
 
-![plot of chunk unnamed-chunk-10](figure/unnamed-chunk-10.png) 
+![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11.png) 
 
 ```
 ## [1] 0.297 0.611
@@ -234,7 +211,7 @@ a <- plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr", "d3a_hmc"
 ## [1] "moe_d3a_ko_hmc_rpkm_moe_d3a_wt_mrna_range4_mean"
 ```
 
-![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11.png) 
+![plot of chunk unnamed-chunk-12](figure/unnamed-chunk-12.png) 
 
 ```
 ## [1] 0.191 0.495
@@ -256,7 +233,7 @@ a <- plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr", "d3a_mc",
 ## [1] "moe_d3a_ko_mc_rpkm_moe_d3a_wt_mrna_range4_mean"
 ```
 
-![plot of chunk unnamed-chunk-12](figure/unnamed-chunk-12.png) 
+![plot of chunk unnamed-chunk-13](figure/unnamed-chunk-13.png) 
 
 ```
 ## [1] 0.181 0.682

@@ -20,24 +20,6 @@ def checkIfNodeExists(out, name):
             out.removeNode("/" + name, recursive=True)
     out.createGroup("/", name)
     return False
-
-# Combine subtraction and greater than zero check
-#     to access arrays/lists only once  
-def subtract_w_floor(one, two, floor_val):
-    out_array = np.empty(len(one))
-    out_array[:] = floor_val
-    # Convert array to list. Substantial speedup.
-    one = list(one)
-    two = list(two)
-    to_floor = True
-    if floor_val < 0: to_floor = False
-    for ind in range(len(one)):
-        result = one[ind] - two[ind]
-        if to_floor:
-            if result > floor_val: out_array[ind] = result
-        else:
-            out_array[ind] = result
-    return out_array
     
 def run(one_track, two_track, out, to_floor):
     out_track_name = "_".join([one_track._v_name, "mean", two_track._v_name])
@@ -79,12 +61,10 @@ def main(argv):
     atrack = args.atrack
     btrack = args.btrack
     two_track = two.getNode("/" + btrack)
-    if atrack == "all":
-        for one_track in one.iterNodes("/"):
-            run(one_track, two_track, out, args.floor)
-    else:
-        one_track = one.getNode("/" + atrack)
-        run(one_track, two_track, out, args.floor)
+
+
+    one_track = one.getNode("/" + atrack)
+    run(one_track, two_track, out, args.floor)
 
     out.flush()    
     out.close()

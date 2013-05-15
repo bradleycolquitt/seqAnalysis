@@ -12,7 +12,7 @@ def checkIfNodeExists(out, name, create, accept_existence):
     except tb.NoSuchNodeError:
         if create:
             out.createGroup("/", name)
-            return True
+            return False
         else: pass
     else:
         if not accept_existence:
@@ -20,9 +20,9 @@ def checkIfNodeExists(out, name, create, accept_existence):
             if dec == "n": return True
             elif dec == "y":
                 out.removeNode("/" + name, recursive=True)
+                out.createGroup("/", name)
         else:
             return True
-    #out.createGroup("/", name)
     return False
 
 def nodeExists(out, name, remove):
@@ -39,9 +39,9 @@ def setTrackAttributes(file, node, start, stop, name, resolution):
     file.setNodeAttr("/" + node, "AStart", np.array([round(start * resolution),], dtype="int32"))
     file.setNodeAttr("/" + node, "AStop", np.array([round(stop * resolution)], dtype="int32"))
     file.setNodeAttr("/" + node, "Name", name)
-    file.setNodeAttr("/" + node, "Resolution", np.array(resolution, dtype="int32"))
-    file.setNodeAttr("/" + node, "Start", np.array(start, dtype="int32"))
-    file.setNodeAttr("/" + node, "Stop", np.array(stop, dtype="int32"))
+    file.setNodeAttr("/" + node, "Resolution", np.array([resolution], dtype="int32"))
+    file.setNodeAttr("/" + node, "Start", np.array([start], dtype="int32"))
+    file.setNodeAttr("/" + node, "Stop", np.array([stop], dtype="int32"))
     
 def writeTrack(file, node, name, values, resolution):
     ## Check this

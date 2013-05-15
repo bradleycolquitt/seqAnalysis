@@ -18,7 +18,7 @@ bed_dir = "/media/storage2/data/bed"
 
 class bowtie_class:
     def __init__(self, date, sample, single_end, subsample):
-        #pdb.set_trace()
+#        pdb.set_trace()
         self.date = date
         self.sample = ""
         #if style == "old":
@@ -33,8 +33,12 @@ class bowtie_class:
         self.input2 = ""
         fastq_date_dir = "/".join([fastq_dir, date])
         
+        now = datetime.datetime.now()
+
+        self.run_date = "{0}{1}{2}".format(now.year, now.month, now.day)
+
         if single_end:
-            self.input1 = "/".join([fastq_dir, date, "".join([sample, '.fastq'])])                      
+            self.input1 = "/".join([fastq_dir, date, "".join([sample, '.fastq.gz'])])                      
         else:
             self.input1 = "/".join([fastq_dir, date, sample, 
                                     "_".join([subsample, 'R1.fastq.gz'])])
@@ -49,15 +53,15 @@ class bowtie_class:
         if not os.path.exists(sam_date_dir): os.mkdir(sam_date_dir)
         self.samfile = "/".join([sam_date_dir, "".join([subsample, ".sam"])])
         
-        self.bamfile = "/".join([bam_dir, self.date, "".join([subsample, ".bam"])])
-        bam_date_dir = "/".join([bam_dir, self.date])
-        if not os.path.exists(bam_date_dir): os.mkdir(bam_date_dir)
+        self.bam_date_dir = "/".join([bam_dir, self.date, self.run_date])
+        self.bamfile = "/".join([self.bam_date_dir, "".join([subsample, ".bam"])])
+        if not os.path.exists(self.bam_date_dir): os.makedirs(self.bam_date_dir)
         
         ## Setup log directory and log file for current run
-        fastq_date_log_dir = "/".join([fastq_date_dir, "logs"])
-        if not os.path.exists(fastq_date_log_dir): os.mkdir(fastq_date_log_dir)
-        self.errorlog = open("/".join([fastq_date_log_dir, "".join([subsample, "_log"])]), 'a', 0)
-        now = datetime.datetime.now()
+        bam_date_log_dir = "/".join([self.bam_date_dir, "logs"])
+        if not os.path.exists(bam_date_log_dir): os.mkdir(bam_date_log_dir)
+        self.errorlog = open("/".join([bam_date_log_dir, "".join([subsample, "_log"])]), 'a', 0)
+        
         header = "[{0}/{1}/{2} {3}:{4}:{5}]\n".format(now.month, now.day,
                                                       now.year, now.hour,
                                                       now.minute, now.second)
@@ -78,12 +82,16 @@ class bowtie_class:
                             #'--local', '--very-sensitive-local', '--mm',
                             '--end-to-end', '--mm',
                             '-x', 'mm9',
+                            '-met-file', self.bam_date_dir,
                             '-1', self.input1,
                             '-2', self.input2, 
                             '-S', self.samfile]
             else:
-                cmd_args = ['bowtie', '-S', '-p', '6',
-                            '--chunkmbs', '256', 'mm9', self.input1, self.samfile]
+                cmd_args = ['bowtie2',
+                            '-p', '6',
+                            '-x', 'mm9', 
+                            '-U', self.input1, 
+                            '-S', self.samfile]
             self.errorlog.write(" ".join(cmd_args) + "\n")
             try:
                 p1 = Popen(cmd_args, stderr=self.errorlog)

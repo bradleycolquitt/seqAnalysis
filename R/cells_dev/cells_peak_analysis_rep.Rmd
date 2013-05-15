@@ -1,0 +1,38 @@
+Developmental peaks
+========================================================
+
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
+library(gridExtra)
+```
+
+```{r}
+
+omp.icam <- processIntersectSummary("~/s2/data/homer/peaks/intersections/cells/omp_hmc_rep1_q30_rmdup_gc_input_icam_hmc_rep1_q30_rmdup_gc_size1kb_F3_inter50_omp_hmc_rep2_q30_rmdup_r1_gc_input_icam_hmc_rep2_q30_rmdup_r1_gc_size1kb_F3.bed/summary")
+
+ngn.icam <- processIntersectSummary("~/s2/data/homer/peaks/intersections/cells/ngn_hmc_rep1_q30_rmdup_gc_input_icam_hmc_rep1_q30_rmdup_gc_size1kb_F3_inter50_ngn_hmc_rep2_q30_rmdup_r1_gc_input_icam_hmc_rep2_q30_rmdup_r1_gc_size1kb_F3.bed/summary")
+
+```
+
+```{r}
+omp.icam$feature.pretty <- factor(omp.icam$feature.pretty, levels=levels(omp.icam$feature.pretty)[length(levels(omp.icam$feature.pretty)):1])
+omp.icam <- omp.icam[-grep("mOSN enhancer", omp.icam$feature.pretty),]
+omp.icam
+```
+
+```{r}
+ngn.icam$feature.pretty <- factor(ngn.icam$feature.pretty, levels=levels(ngn.icam$feature.pretty)[length(levels(ngn.icam$feature.pretty)):1])
+ngn.icam <- ngn.icam[-grep("mOSN enhancer", ngn.icam$feature.pretty),]
+ngn.icam
+```
+
+```{r omp_hmc_rep_gc_input_icam_hmc_rep_gc_size1kb_F3_log2_obs_exp_noMk4, dev=c("png", "pdf"), fig.width=5, fig.height=3}
+theme_set(theme_bw())
+  gg <- ggplot(omp.icam, aes(feature.pretty, log2.obs.exp, fill=class))
+  gg + geom_bar(width=.8, stat="identity", position="dodge") + scale_fill_brewer(palette="Set1") + theme(legend.position="none") + xlab("") + coord_flip(ylim=c(-3, 2)) + ylab("log2 observed / expected") + geom_hline(yintercept=0)
+```
+
+```{r ngn_hmc_rep_gc_input_icam_hmc_rep_gc_size1kb_F3_log2_obs_exp_noMk4, dev=c("png", "pdf"), fig.width=5, fig.height=3}
+  gg <- ggplot(ngn.icam, aes(feature.pretty, log2.obs.exp, fill=class))
+  gg + geom_bar(width=.8, stat="identity", position="dodge") + scale_fill_brewer(palette="Set1") + theme(legend.position="none") + xlab("") + coord_flip(ylim=c(-2, 2)) + ylab("log2 observed / expected") + geom_hline(yintercept=0)
+```

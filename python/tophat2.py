@@ -26,9 +26,9 @@ class tophat_class:
                                     "_".join([self.sample, '1.fastq'])])
         else:
             self.input1 = "/".join([fastq_dir, date, sample, 
-                                  "_".join([self.sample, 'r1.fastq.gz'])])
+                                  "_".join([self.sample, 'R1.fastq.gz'])])
             self.input2 = "/".join([fastq_dir, date, sample, 
-                                    "_".join([self.sample, 'r2.fastq.gz'])])
+                                    "_".join([self.sample, 'R2.fastq.gz'])])
         self.mean = mean
         self.sd = sd
         self.gtf = gtf
@@ -60,12 +60,12 @@ class tophat_class:
                 if self.gtf != 'blank':
                     if self.gtf == "rmsk":
                         cmd_args = ['tophat2',
-                                '-p', '6',
+                                '-p', '4',
                                 '-o', self.output, 
                                 '-r', self.mean,
                                 '--mate-std-dev', self.sd,
-                                '-G', '/home/user/lib/gtf/rmsk.gtf',
-                                '--transcriptome-index=/home/user/lib/gtf/rmsk',
+                                '-G', '/home/user/lib/rmsk/rmsk.gtf',
+                                '--transcriptome-index=/home/user/lib/rmsk/',
                                 '-T',
                                 '--no-coverage-search',
                                 '--library-type', self.library_type, 
@@ -89,6 +89,7 @@ class tophat_class:
                                 '-r', self.mean,
                                 '--mate-std-dev', self.sd,
                                 '--no-coverage-search',
+                                '--b2-sensitive',
                                 '--library-type', self.library_type,
                                 self.species, self.input1, self.input2]
             

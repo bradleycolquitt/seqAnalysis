@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys
+import os
 import argparse
 import tables as tb
 from subprocess import Popen
@@ -14,6 +15,9 @@ def main(argv):
     parser.add_argument('-t', dest='track_file')
     args = parser.parse_args()
     track_file = TRACK_DIR + "/" + args.track_file
+    track_prefix = os.path.dirname(args.track_file)
+    wig_dir = "/".join([WIG_DIR, track_prefix])
+    print wig_dir
     h5 = tb.openFile(track_file, 'r')
     nodes = h5.iterNodes("/")
     nodes_tbp = []
@@ -22,7 +26,7 @@ def main(argv):
         res = h5.getNodeAttr("/" + "/".join([node_name, "chr1"]), "Resolution")
         cmd_args = ['TrackToWig', '-t', track_file,
                     '-n', node_name,
-                    '-w', WIG_DIR + "/" + \
+                    '-w', wig_dir + "/" + \
                     node_name + "_" + str(res[0])]
         print cmd_args
         p = Popen(cmd_args)

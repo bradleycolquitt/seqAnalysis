@@ -1,0 +1,156 @@
+O/Tet3 5hmC/5mC analysis - replicates 
+========================================================
+
+TSS
+-------------
+Load refgene 5hm5/5mC summary file
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
+tt3.tss <- read.delim("~/s2/analysis/features/norm/rpkm_rep/mean/summaries/tt3_rep_refgene_-500bpTSS+500bp_chr_sqrt")
+tt3.tss$hmc.ott3.omp <- with(tt3.tss, computeScoreRatios(ott3_hmc, omp_hmc))
+hist(tt3.tss$hmc.ott3.omp, breaks=500, xlim=c(-.5, .5))
+```
+
+```{r}
+rna.1log2 <- readRDS(file="~/s2/analysis/rna/rdata/omp_ott3_rmrna_rep12_masked_comp_js_1log2.rds")
+tt3.tss$rna.ott3.omp <- rna.1log2[match(rownames(tt3.tss), rownames(rna.1log2)),3]
+tt3.tss <- na.omit(tt3.tss)
+cor(tt3.tss[,"hmc.ott3.omp"], tt3.tss[,"rna.ott3.omp"], method="pe")
+cor.test(tt3.tss[,"hmc.ott3.omp"], tt3.tss[,"rna.ott3.omp"], method="pe")$p.value
+```
+
+### Profiles
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+makeProfile2.allSamp("refGene_noRandom_order_outsides2_tss_W25F200_ott3_omp_rmrna_bf_ge20_chr", data_type="rpkm_rep_rep/mean")
+makeProfile2.allSamp("refGene_noRandom_order_outsides2_tss_W25F200_ott3_omp_rmrna_bf_le20_chr", data_type="rpkm_rep_rep/mean")
+```
+
+```{r}
+plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_ott3_omp_rmrna_bf_ge20_chr", "tt3_3", data_type="rpkm_rep_rep/mean", cols=col2, fname="manual")
+plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_ott3_omp_rmrna_bf_le20_chr", "tt3_3", data_type="rpkm_rep/mean", cols=col2, fname="manual")
+```
+
+### Scatter
+```{r tt3_rep_refgene_m500bpTSSp500bp_chr_sqrt_omp_ott3_hmc_scatter, fig.width=8, fig.height=8, dev=c("png", "pdf")}
+gg <- ggplot(tt3.tss, aes(omp_hmc, ott3_hmc))
+gg <- gg + geom_point(alpha=I(1/5)) + coord_cartesian(xlim=c(0,2), ylim=c(0,2))
+gg <- gg + geom_abline(slope=1, intercept=0, linetype=2, color="red")
+gg <- gg + xlab(bquote(.("OMP 5hmC" ~ sqrt(bar(RPM))))) + ylab(bquote(.("O/Tet3 5hmC" ~ sqrt(bar(RPM)))))
+gg <- gg + theme(axis.text.x=element_text(size=20, color="black"), axis.text.y=element_text(size=20, color="black"), axis.title.x=element_text(size=24), axis.title.y=element_text(size=24))
+gg
+```
+
+Gene body 
+-------------
+```{r}
+tt3.body <- read.delim("~/s2/analysis/features/norm/rpkm_rep/mean/summaries/tt3_rep_refgene_chr_sqrt")
+tt3.body$hmc.ott3.omp <- with(tt3.body, computeScoreRatios(ott3_hmc, omp_hmc))
+cor(tt3.body)
+hist(tt3.body$hmc.ott3.omp, breaks=1000, xlim=c(-.5, .5))
+```
+
+Combine with RNA data
+```{r}
+m <- match(rownames(tt3.body), rownames(rna.1log2))
+tt3.body$rna.ott3.omp <- rna.1log2[m,3]
+tt3.body$rna.omp <- rna.1log2[m,1]
+tt3.body$rna.ott3 <- rna.1log2[m,2]
+tt3.body <- na.omit(tt3.body)
+cor(tt3.body)
+cor(tt3.body[,"hmc.ott3.omp"], tt3.body[,"rna.ott3.omp"], method="pe")
+cor.test(tt3.body[,"hmc.ott3.omp"], tt3.body[,"rna.ott3.omp"], method="pe")$p.value
+
+```
+
+```{r, fig.width=6, fig.height=4}
+gg <- ggplot(tt3.body, aes(hmc.ott3.omp, rna.ott3.omp))
+gg <- gg + geom_point(alpha=I(1/10)) + coord_cartesian(xlim=c(-.5, .5), ylim=c(-5, 5)) + xlab("OTT3 / OMP 5hmC ratio") + ylab("OTT3 / OMP RNA ratio")
+gg + stat_smooth(method="lm", fullrange=F) + annotate("text", x=1.5, y=4, label="Pearson R = 0.13")
+```
+
+### Scatter
+```{r tt3_rep_refgene_chr_sqrt_omp_ott3_hmc_scatter, fig.width=8, fig.height=8, dev=c("png", "pdf")}
+gg <- ggplot(tt3.body, aes(omp_hmc, ott3_hmc))
+gg <- gg + geom_point(alpha=I(1/5)) + coord_cartesian(xlim=c(0,2), ylim=c(0,2))
+gg <- gg + geom_abline(slope=1, intercept=0, linetype=2, color="red")
+gg <- gg + xlab(bquote(.("Control 5hmC" ~ sqrt(bar(RPM))))) + ylab(bquote(.("Tet3-tg 5hmC" ~ sqrt(bar(RPM)))))
+gg <- gg + theme(axis.text.x=element_text(size=20, color="black"), axis.text.y=element_text(size=20, color="black"), axis.title.x=element_text(size=24), axis.title.y=element_text(size=24))
+gg
+
+```
+
+```{r tt3_rep_refgene_chr_sqrt_omp_ott3_mc_scatter, fig.width=8, fig.height=8, dev=c("png", "pdf")}
+gg <- ggplot(tt3.body, aes(omp_hmc, mc.ott3.omp))
+gg <- gg + geom_point(alpha=I(1/5)) + coord_cartesian(xlim=c(0,2), ylim=c(-.5, .5))
+gg <- gg + geom_abline(slope=1, intercept=0, linetype=2, color="red")
+gg <- gg + xlab(bquote(.("OMP 5hmC" ~ sqrt(bar(RPM))))) + ylab(bquote(.("O/Tet3 5mC" ~ sqrt(bar(RPM)))))
+gg <- gg + theme(axis.text.x=element_text(size=20, color="black"), axis.text.y=element_text(size=20, color="black"), axis.title.x=element_text(size=24), axis.title.y=element_text(size=24))
+gg
+```
+### Features
+
+```{r}
+bf.ge20 <- read.delim("~/s2/analysis/rna/summaries/omp_ott3_rmrna_bf_ge20.txt", header=F)
+tt3.body.ge20 <- tt3.body[rownames(tt3.body) %in% bf.ge20[,1],]
+apply(tt3.body.ge20[,1:2], 2, mean)
+apply(tt3.body.ge20[,1:2], 2, sd)
+with(tt3.body.ge20, wilcox.test(omp_hmc, ott3_1_hmc_rpkm_rep))$p.value
+
+bf.le20 <- read.delim("~/s2/analysis/rna/summaries/omp_ott3_rmrna_bf_le20.txt", header=F)
+tt3.body.le20 <- tt3.body[rownames(tt3.body) %in% bf.le20[,1],]
+apply(tt3.body.le20[,1:2], 2, mean)
+apply(tt3.body.le20[,1:2], 2, sd)
+with(tt3.body.le20, wilcox.test(omp_hmc, ott3_1_hmc_rpkm_rep))$p.value
+
+```
+
+### Profiles
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+makeProfile2.allSamp("gene_whole_W200N50F50_ott3_omp_rmrna_bf_ge20_chr", data_type="rpkm_rep/mean")
+makeProfile2.allSamp("gene_whole_W200N50F50_ott3_omp_rmrna_bf_le20_chr", data_type="rpkm_rep/mean")
+```
+
+```{r gene_whole_W200N50F50_ott3_omp_rmrna_bf_ge20_chr, dev=c('png', 'pdf'), fig.width=6, fig.height=4.5}
+plot2.several("gene_whole_W200N50F50_ott3_omp_rmrna_bf_ge20_chr", "tt3_3_hmc", data_type="rpkm_rep/mean", cols=col2, fname="manual", wsize=200, lab=c("TSS", "TES"), y.vals=c(0, 1.6))
+```
+
+```{r gene_whole_W200N50F50_ott3_omp_rmrna_bf_le20_chr, dev=c('png', 'pdf'), fig.width=6, fig.height=4.5}
+plot2.several("gene_whole_W200N50F50_ott3_omp_rmrna_bf_le20_chr", "tt3_3_hmc", data_type="rpkm_rep/mean", cols=col2, fname="manual", wsize=200, lab=c("TSS", "TES"), y.vals=c(0, 1.6))
+```
+
+
+
+### Quantiles
+```{r}
+tt3.body.omp.q90 <- tt3.body[tt3.body[,1] >= quantile(tt3.body[,1], .9 ),]
+summary(tt3.body.omp.q90)
+apply(tt3.body.omp.q90, 2, mean)
+apply(tt3.body.omp.q90, 2, sd)
+with(tt3.body.omp.q90, wilcox.test(omp_hmc, ott3_1_hmc_rpkm_rep))$p.value
+```
+
+```{r}
+tt3.body.omp.q50 <- tt3.body[tt3.body[,1] >= quantile(tt3.body[,1], .45 ) & tt3.body[,1] <= quantile(tt3.body[,1], .55 ),]
+summary(tt3.body.omp.q50)
+apply(tt3.body.omp.q50, 2, mean)
+apply(tt3.body.omp.q50, 2, sd)
+with(tt3.body.omp.q50, wilcox.test(omp_hmc, ott3_1_hmc_rpkm_rep))$p.value
+```
+
+Enhancers
+-------------------
+```{r phastCons30way_intergenic_sorted_merge500_thresh500_inter_omp_h3k4me1_gc_sub_refgene_extend5kb.bed_W25F200_both_omp_hmc_120424_ott3_1_hmc_rpkm_rep, dev=c("png", "pdf")}
+plot2.several("phastCons30way_intergenic_sorted_merge500_thresh500_inter_omp_h3k4me1_gc_sub_refgene_extend5kb.bed_W25F200_both_chr", "tt3_3_hmc", data_type="rpkm_rep/mean", fname="manual", cols=col2, y.vals=c(.2, 1))
+```
+
+```{r phastCons30way_intergenic_sorted_merge500_thresh500_inter_omp_h3k4me1_gc_sub_refgene_extend5kb.bed_W25F200_both_omp_mc_ott3_1_mc_rpkm_rep_baseline, dev=c("png", "pdf")}
+plot2.several("phastCons30way_intergenic_sorted_merge500_thresh500_inter_omp_h3k4me1_gc_sub_refgene_extend5kb.bed_W25F200_both_chr", "tt3_3_mc", data_type="rpkm_rep/mean", fname="manual", cols=col2, baseline=T, y.vals=c(0, .6))
+```
+
+Greek islands
+--------------------
+```{r greek_islands_mod.bed_W25F200_both_omp_hmc_120424_ott3_1_hmc_rpkm_rep, dev=c("png", "pdf")}
+plot2.several("greek_islands_mod.bed_W25F200_both_chr", "tt3_3_hmc", data_type="rpkm_rep/mean", cols=col2, fname="manual", y.vals=c(0, 1.5))
+```

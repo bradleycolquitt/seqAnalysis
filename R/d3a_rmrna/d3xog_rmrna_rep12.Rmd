@@ -1,0 +1,113 @@
+
+D3xOG rmRNA -- run3
+========================================================
+
+Cuffdiff parameters:
+*version 2.0.0
+*-b /seq/lib/indexes/mm9.fa 
+*-M /home/user/lib/rmsk/rmsk.gtf 
+*--compatible-hits-norm
+*-u
+*genes_chr_protein.gtf
+
+```{r}
+library(plyr)
+library(reshape2)
+library(ggplot2)
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+```
+
+  
+```{r}
+wt.hmc <- makeImage("omp_hmc_rep1_mean_omp_hmc_rep2", "refGene_noRandom_order_outsides2_tss_W25F200_chr", data_type="rpkm/mean", image=F)
+wt.hmc <- makeImage("omp_hmc_120424_rpkm", "refGene_noRandom_order_outsides2_tss_W25F200_chr", data_type="rpkm/mean", image=F)
+het.hmc <- makeImage("d3xog_het_hmc", "refGene_noRandom_order_outsides2_tss_W25F200_chr", data_type="rpkm/mean", image=F)
+ko.hmc <- makeImage("d3xog_ko_hmc", "refGene_noRandom_order_outsides2_tss_W25F200_chr", data_type="rpkm/mean", image=F)
+```
+
+#### Compute means of region +1kb to +2kb of TSS
+```{r}
+wt.hmc.up <- apply(wt.hmc[,241:280], 1, mean)
+het.hmc.up <- apply(het.hmc[,241:280], 1, mean)
+ko.hmc.up <- apply(ko.hmc[,241:280], 1, mean)
+
+wt.hmc.up <- wt.hmc.up[order(wt.hmc.up)]
+het.hmc.up <- het.hmc.up[match(names(wt.hmc.up), names(het.hmc.up))]
+ko.hmc.up <- ko.hmc.up[match(names(wt.hmc.up), names(ko.hmc.up))]
+
+hmc.up <- cbind(wt.hmc.up, het.hmc.up, ko.hmc.up)
+hmc.up.c100 <- chunkMatrix(hmc.up, 100)
+hmc.up.c100.m <- melt(hmc.up.c100, id.vars="index")
+```
+
+```{r}
+gene4 <- read.delim("~/s2/data/rna/cuffdiff/d3xog_wt_het_ko_rmrna_run5/gene_exp.diff")
+gene4.read <- read.delim("~/s2/data/rna/cuffdiff/d3xog_wt_het_ko_rmrna_run5/genes.read_group_tracking")
+gene4.read.fpkm <- dcast(gene4.read, tracking_id~condition+replicate, value.var="FPKM")
+gene4.read.fpkm$gene <- gene4$gene[match(gene4.read.fpkm$tracking_id, gene4$test_id)]
+gene4.read.fpkm <- na.omit(gene4.read.fpkm[match(names(wt.hmc.up), gene4.read.fpkm$gene),])
+gene4.read.fpkm <- numcolwise(onelog2)(gene4.read.fpkm)
+```
+
+```{r}
+gene4.read.fpkm.c100 <- chunkMatrix(gene4.read.fpkm, 100)
+gene4.read.fpkm.c100.m <- melt(gene4.read.fpkm.c100, id.vars="index")
+```
+
+#### Replicates separate
+```{r}
+gg.rep <- ggplot(gene4.read.fpkm.c100.m, aes(index, value, color=variable))
+gg.rep + geom_point() + scale_color_manual(values=c("red1", "red2", "red3", "green1", "green2"))
+
+```
+
+```{r}
+gene4.fpkm <- read.delim("~/s2/data/rna/cuffdiff/d3xog_wt_het_ko_rmrna_run4/genes.fpkm_tracking")
+gene4.fpkm.mat <- gene4.fpkm[,c("gene_short_name", "q1_FPKM", "q2_FPKM")]
+gene4.fpkm.mat <- na.omit(gene4.fpkm.mat[match(names(wt.hmc.up), gene4.fpkm.mat[,1]),])
+gene4.fpkm.mat <- numcolwise(onelog2)(gene4.fpkm.mat)
+gene4.fpkm.mat.c100 <- chunkMatrix(gene4.fpkm.mat, 100)
+gene4.fpkm.mat.c100.m <- melt(gene4.fpkm.mat.c100, id.vars="index")
+```
+
+
+```{r}
+gg <- ggplot(gene4.fpkm.mat.c100.m, aes(index, value, color=variable))
+gg + geom_point()
+```
+
+```{r}
+gene4 <- read.delim("~/s2/data/rna/cuffdiff/d3xog_wt_het_ko_rmrna_run3/gene_exp.diff")
+gene4.read <- read.delim("~/s2/data/rna/cuffdiff/d3xog_wt_het_ko_rmrna_run3/genes.read_group_tracking")
+gene4.read.fpkm <- dcast(gene4.read, tracking_id~condition+replicate, value.var="FPKM")
+gene4.read.fpkm$gene <- gene4$gene[match(gene4.read.fpkm$tracking_id, gene4$test_id)]
+gene4.read.fpkm <- na.omit(gene4.read.fpkm[match(names(wt.hmc.up), gene4.read.fpkm$gene),])
+gene4.read.fpkm <- numcolwise(onelog2)(gene4.read.fpkm)
+```
+
+```{r}
+gene4.read.fpkm.c100 <- chunkMatrix(gene4.read.fpkm, 100)
+gene4.read.fpkm.c100.m <- melt(gene4.read.fpkm.c100, id.vars="index")
+```
+
+#### Replicates separate
+```{r}
+gg.rep <- ggplot(gene4.read.fpkm.c100.m, aes(index, value, color=variable))
+gg.rep + geom_point() + scale_color_manual(values=c("red1", "red2", "red3", "blue", "green1", "green2"))
+
+```
+
+```{r}
+gene4.fpkm <- read.delim("~/s2/data/rna/cuffdiff/d3xog_wt_het_ko_rmrna_run4/genes.fpkm_tracking")
+gene4.fpkm.mat <- gene4.fpkm[,c("gene_short_name", "q1_FPKM", "q2_FPKM")]
+gene4.fpkm.mat <- na.omit(gene4.fpkm.mat[match(names(wt.hmc.up), gene4.fpkm.mat[,1]),])
+gene4.fpkm.mat <- numcolwise(onelog2)(gene4.fpkm.mat)
+gene4.fpkm.mat.c100 <- chunkMatrix(gene4.fpkm.mat, 100)
+gene4.fpkm.mat.c100.m <- melt(gene4.fpkm.mat.c100, id.vars="index")
+```
+
+
+```{r}
+gg <- ggplot(gene4.fpkm.mat.c100.m, aes(index, value, color=variable))
+gg + geom_point()
+```

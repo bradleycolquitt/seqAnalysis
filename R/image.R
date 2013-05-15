@@ -6,6 +6,35 @@ library(doMC)
 library(RColorBrewer)
 
 source("~/src/seqAnalysis/R/paths.R")
+source("~/src/seqAnalysis/R/plotUtil.R")
+
+## Generates matrix of samples values with annotation observations as rows and
+##    positions as columns
+##    Arguments:  data - profile data with [chr start stop name position strand value]
+##                data_type - directory and normalization type
+positionMatrixRep <- function(data, group2, data_type="raw") {
+  matrices <- lapply(data, function(d) {  
+    groups <- unique(d[,5])
+    names <- unique(d[,4])
+    print("Splitting...")
+    data_groups = split(d, d[,5])
+    print("Combining...")
+    out <- foreach(ind=icount(length(data_groups)), .combine="cbind") %dopar% {
+      data_group <- data_groups[[ind]]
+      m <- match(names, data_group[,4])
+      return(data_group[m, 7])
+    }
+    rownames(out) <- names
+    return(out[!is.na(rownames(out)),])
+  })
+  #return(matrices)
+  if (length(matrices) > 1) {
+    return(matrix_el_sum(matrices) / length(matrices))
+  } else {
+    return(matrices[[1]])
+    
+  }
+}
 
 ## Generates matrix of samples values with annotation observations as rows and
 ##    positions as columns
@@ -24,6 +53,14 @@ positionMatrix <- function(data, group2, data_type="raw") {
   }
   rownames(out) <- names
   return(out[!is.na(rownames(out)),])
+}
+
+matrix_el_sum <- function(x) {
+  out <- x[[1]]
+  for (i in 1:length(x)) {
+    out <- out + x[[i]]
+  }
+  return(out)
 }
 
 positionMatrix.group <- function(anno, sample, data_type="rpkm/mean", group2=NULL, rm.outliers=0) {
@@ -64,24 +101,65 @@ positionMatrix.group <- function(anno, sample, data_type="rpkm/mean", group2=NUL
 ## Run positionMatrix for specified sample set and given annotation
 ##     Arguments:  anno - annotation file
 ##                 data_type - directory and normalization type
+positionMatrixRep.all <- function(anno, data_type="unnorm/mean", rep=FALSE) {
+  
+  data_path <- paste(profile2.path, "norm", data_type, anno, sep="/")
+  samples <- list.files(data_path)
+  
+  if (rep) {
+    samples <- group_by_rep(samples)
+    #print(samples)
+  }
+  #return(samples)
+  for (i in 1:length(samples)) {
+    
+    sample_name <- names(samples)[i]
+    sample <- samples[[i]][[1]]
+    print(sample_name)
+    print(sample)
+    if (!(sample_name == "images" | sample_name == "profiles")) {
+      out_path <- paste(profile2.path, "norm", data_type, anno, "images", sep="/")
+      if (!file.exists(paste(out_path, sample_name, sep="/"))) {
+        if (length(sample) == 1) {
+          data <- read.delim(paste(profile2.path, "norm", data_type, anno, sample, sep="/"),
+                       header=FALSE, colClasses=image.classes)
+        } else {
+          data <- lapply(sample, function(s) read.delim(paste(profile2.path, "norm", data_type, anno, s, sep="/"),
+                                                        header=FALSE, colClasses=image.classes))  
+        }  
+        pos_matrix <- positionMatrix(data, data_type=data_type)
+ 
+        if (!file.exists(out_path)) dir.create(out_path)
+        write.table(pos_matrix, file=paste(out_path, sample_name, sep="/"),
+                quote=FALSE, sep="\t", col.names=FALSE)
+        a <- gc()
+      }
+    }
+  }  
+}
+
+## Run positionMatrix for specified sample set and given annotation
+##     Arguments:  anno - annotation file
+##                 data_type - directory and normalization type
 positionMatrix.all <- function(anno, data_type="unnorm/mean") {
   
   data_path <- paste(profile2.path, "norm", data_type, anno, sep="/")
   samples <- list.files(data_path)
+  
   for (sample in samples) {
     if (sample != "images" & sample != "profiles") {
       out_path <- paste(profile2.path, "norm", data_type, anno, "images", sep="/")
       if (!file.exists(paste(out_path, sample, sep="/"))) {
         print(sample)
         data <- read.delim(paste(profile2.path, "norm", data_type, anno, sample, sep="/"),
-                       header=FALSE, colClasses=image.classes)
-        #
-        #}
+                         header=FALSE, colClasses=image.classes)
         pos_matrix <- positionMatrix(data, data_type=data_type)
- 
+          
         if (!file.exists(out_path)) dir.create(out_path)
+        
         write.table(pos_matrix, file=paste(out_path, sample, sep="/"),
-                quote=FALSE, sep="\t", col.names=FALSE)
+                  quote=FALSE, sep="\t", col.names=FALSE)
+        
         a <- gc()
       }
     }
@@ -103,6 +181,8 @@ makeImage <- function(sample, anno, data_type="unnorm", image=TRUE, heat=TRUE, r
       MP.image(data)
     }  
   }
+  n <- which(is.na(data), arr.ind=T)
+  data[n] <- 0
   return(data)
 }
 
@@ -121,6 +201,8 @@ makeImage.all <- function(set="d3a", anno, data_type="unnorm/mean") {
     makeImage(sample, anno, data_type=data_type, image=FALSE)
   }) 
   names(out) <- samples
+  n <- which(is.na(out), arr.ind)
+  out[n] <- 0
   return(out)
   
 }

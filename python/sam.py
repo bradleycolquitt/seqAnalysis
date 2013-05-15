@@ -11,49 +11,6 @@ from subprocess import Popen
 bed_dir = "/media/storage2/data/bed/"
 
 def sam2bam(sam, bam, errorlog):
-    #pdb.set_trace()
-    ## Remove poorly formatted records
-    #errorlog.write("Removing poorly formatted reads...\n")
-    #sam_in = open(sam, 'r')
-    #log_path = "/".join([os.path.dirname(sam), "log", "sam2bam"])
-    #if not os.path.exists(log_path): os.makedirs(log_path)
-    #sam_error = open("/".join([log_path, os.path.basename(sam)]), 'a')
-    #sam_out_name = sam + "_tmp"
-    #sam_out = open(sam_out_name, 'w')
-    #header_flag = re.compile("@")
-    #sline = []
-    #cigar_len = 0
-    #seq_len = 0
-    #line_number = 0
-    #try:
-    #    for line in sam_in:
-    #        line_number = line_number + 1
-    #        if not header_flag.search(line):
-    #            sline = line.split()
-    #            #if len(sline) < 14:
-    #            #    sam_error.write(line)
-    #            #    continue
-    #            if sline[5] != '*':
-    #                cigar_len = int(sline[5].split("M")[0])
-    #                seq_len = len(sline[9])
-    #                if cigar_len != seq_len: 
-    #                    #pdb.set_trace()
-    #                    sam_error.write(line)
-    #                    continue
-    #           
-    #                
-    #        sam_out.write(line)
-    #except:
-    #    error_log.write(">> Error cleaning SAM: line {0}\n".format(line_number))
-    #else:
-    #    error_log.write(">> Successfully cleaned SAM.\n")
-    #finally:
-    #    sam_in.close()
-    #    sam_error.close()
-    #    sam_out.close()
-    ##os.rename(sam_out_name, sam)
-    
-    #samfile = pysam.Samfile(sam_out_name, "r")
     samfile = pysam.Samfile(sam, 'r')
     bamfile = pysam.Samfile(bam, 'wb', template=samfile)
     if errorlog == "stderr":
@@ -67,11 +24,7 @@ def sam2bam(sam, bam, errorlog):
         bamfile.close()
     except:
         raise("Error converting SAM to BAM: read {0}\n".format(read_number))
-    #else:
-        #os.remove(sam)
-        #os.remove(sam_out_name)
     
-#def proc(bamfile, sort, rmdup, errorlog):
 def proc(arg):
     bamfile = arg[0]
     rmdup = arg[1]
@@ -112,9 +65,9 @@ def proc(arg):
         mb.close()
     
     if not os.path.exists(sort_bam + ".bam"):
-        #pdb.set_trace()
+
         print>>errorlog, "Sorting..."
-        #cmd_args = ['samtools', 'sort', mapped_bam, sort_bam]
+
         try:
             cmd_args = ['java', '-Xmx2g', '-jar', '/seq/picard/SortSam.jar',
                         "=".join(["INPUT", mapped_bam]),
@@ -127,10 +80,9 @@ def proc(arg):
             raise
         else:
             os.remove(mapped_bam)
-        #pysam.sort(rmdup_bam, sort_bam)
+
     if not os.path.exists(rmdup_bam) and rmdup:   
         print "Removing duplicates..."
-        #cmd_args = ['samtools', 'rmdup', mapped_bam, rmdup_bam]
         rmdup_metrics = stat_dir + bam_prefix + "_rmdup_metrics"
         cmd_args = ['java', '-Xmx2g', '-jar', '/seq/picard/MarkDuplicates.jar',
                     "=".join(["INPUT", sort_bam + ".bam"]),
@@ -163,13 +115,39 @@ def proc(arg):
     for line in pysam.flagstat(bamfile):
         bamfile_fs.write(line)
     bamfile_fs.close()
-    
-    #sort_bam_fs = open(sort_bam + "_stat", 'w')
-    #for line in pysam.flagstat(sort_bam):
-    #    sort_bam_fs.write(line)
-    #sort_bam_fs.close()
-    #os.remove(bamfile)
+
     return 0
+
+# Takes a BAMtoWindow or similar object and given read
+# Return midpoint as specified in obj
+def read_mid_compute(obj, read):
+    read_mid = 0
+    
+    if obj.ends:
+        if read.is_reverse:
+            read_mid = read.aend + 1
+        else:
+            read_mid = read.pos + 2
+    elif obj.pe:
+        if obj.extend > 0:
+            if read.is_read1:
+                if read.is_reverse:
+                    read_mid = read.aend - (obj.extend / 2)
+                else:
+                    read_mid = read.pos + (obj.extend / 2)
+        else:
+            if read.is_paired and read.is_read1:
+                if read.is_reverse:
+                    read_mid = read.aend + read.isize / 2
+                else:
+                    read_mid = read.pos + read.isize / 2
+            else: return -1
+    else:
+        if read.is_reverse:
+            read_mid = read.aend - (obj.extend / 2)
+        else:
+            read_mid = read.pos + (obj.extend / 2)
+    return read_mid
 
 def filterISize(inbam, outbam, imin, imax):
     inbam_file = pysam.Samfile(inbam, "rb")
@@ -222,7 +200,7 @@ def proc_sam(arg):
     print "Indexing..."
     sort_sam = sort_sam + ".sam"
     pysam.index(sort_sam)
-    #pysam.flagstat(samfile)
+
     samfile_fs = open(samfile + "_stat", 'w')
     for line in pysam.flagstat(samfile):
         samfile_fs.write(line)
@@ -231,7 +209,7 @@ def proc_sam(arg):
     for line in pysam.flagstat(sort_sam):
         sort_sam_fs.write(line)
     sort_sam_fs.close()
-    #os.remove(samfile)
+
 
 def splitStrands(bam):
     bam_base = bam.split(".bam")[0]
@@ -295,11 +273,11 @@ def removeWeirdChr(sam):
     head_out['HD'] = head_in['HD']
     head_out['PG'] = head_in['PG']
     chrs_ind = []
-    #pdb.set_trace()
+
     for index, ref in enumerate(head_in['SQ']):
         if ref['SN'] in chrs:
             chrs_ind.append(index)
-    #pdb.set_trace() 
+
     head_out['SQ'] = head_in['SQ'][0:22 ]
 
         
@@ -325,7 +303,7 @@ def computeChrMean(bam):
         ref_length = ref_lengths[index]
         ref = refs[index]
         print ref
-        #pdb.set_trace()
+
         for i in range(int(3E6), int(3.1E6)):
             print i
             total += bamfile.count(ref, i, i+1)
@@ -334,42 +312,18 @@ def computeChrMean(bam):
         total /= (ref_length - 3E6)  
         outfile.write("\t".join([ref, str(total)]) + "\n")
                       
-def extract_worker(sam_file, h5_file, ref, ref_length, track_name):
-    pass
-# Take paired end BAM file
-# For chr in reference list:
-# Initialize numpy vector with length equal to chr length
-# Generate pileup iterator for chr
-# For pileupProxy in iterator:
-#   For pileupRead.alignment in pileupProxy:
-#       add absolute value of insert size to list of insert sizes
-#   average sizes
-#   write to value vector
-# Write out as WIG:
 
 def extractInsertSizes(sam, wsize, output):
     sam_file = pysam.Samfile(sam, 'rb')
-    #h5_file = tb.openFile(output, 'a')
     wig_file = open(output, 'w')
     refs = sam_file.references
     ref_lengths = sam_file.lengths
-    #pool = Pool(processes=6)
     
-    #start_time = time.time()
-    #args = []
-    #args = [(sam_file, h5_file, ref, ref_lengths[])for files in files_group]
-    #for arg in args:
-    #    pool.apply_async(extract_worker, (arg,))
-    #    index_split(files, argv)
-    #pool.close()
-    #pool.join()
-    ## Loop through chromosomes
-    #for chr_index in range(len(refs)):
     for chr_index in [0]:
         ## Extract and initialize variables
         curr_ref = refs[chr_index]
         print curr_ref
-        #pdb.set_trace()
+    
         curr_length = ref_lengths[chr_index]
         values = numpy.zeros(curr_length / wsize)
         sum_inserts = 0
@@ -378,15 +332,15 @@ def extractInsertSizes(sam, wsize, output):
         
         out = "fixedStep chrom={0} start=1 step={1} span={1}\n".format(curr_ref, wsize)
         wig_file.write(out)
+    
         ## Create pileup iterator
         it = sam_file.pileup(reference=curr_ref)
         
         ## Loop through each position in iterator
-        #print "Computing"
         value_ind = 0
         value_ind_store = 0
         update = 1
-        #pdb.set_trace()
+
         for proxy in it:
             assert(value_ind < curr_length)
             
@@ -403,38 +357,24 @@ def extractInsertSizes(sam, wsize, output):
                 values[value_ind] += float(sum_inserts) / float(num_reads)
                 
             else:
-                #pdb.set_trace()
-                #values[value_ind]
                 values[value_ind_store] /= float(update)
                 if values[value_ind_store] > 1000: pdb.set_trace()
                 update = 0
             value_ind_store = value_ind    
             
-            
-            
-            #value = float(sum_inserts) / float(num_reads)
-            #wig_file.write(str(value) + "\n")
-            #if sum_inserts > 1: pdb.set_trace()
-            #if num_reads > 0: pdb.set_trace()
             sum_inserts = 0
             num_reads = 0
-            #value_ind = value_ind + 1
-        #pdb.set_trace()
+            
+        
         values[value_ind_store] /= float(update)
         for value in values:
-        #    if value > 0: pdb.set_trace()
+        
             wig_file.write(str(value) + "\n")
             
-        ## Write HDF5 track
-        #print "Writing"
-        #wig_file.write()
-        #track_util.writeTrack(h5_file, track_name, curr_ref, values, 1)
     wig_file.close()
     cmd_args = ['igvtools', 'tile', output, output + ".tdf", 'mm9']
     p = Popen(cmd_args)
     p.wait()
-    #h5_file.flush()
-    #h5_file.close()
 
 def main(argv):
     if argv[1] == "sam2bam":

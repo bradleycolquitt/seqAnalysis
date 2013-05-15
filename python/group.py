@@ -317,7 +317,9 @@ def tab_bam(obj, chr_tbp , tmp_path):
                         vals = bam.count(chr_tbp, start[i], end[i] + 1)
 
                     # Normalize by the length of the record
-                    vals /= (float(end[i] + 1 - start[i]))
+                    if obj.fun == "mean":
+                        vals /= (float(end[i] + 1 - start[i]))
+                        
                 
                 # Only count read if end aligns within record
                 elif obj.bam_attr == "count_ends":

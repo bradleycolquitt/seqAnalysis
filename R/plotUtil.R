@@ -175,3 +175,13 @@ minNAVal <- function(vals) {
   vals[is.na(vals)] <- min.nz
   return(vals)
 }
+
+group_by_rep <- function(samples) {
+  samples_split <- str_split(samples, "_")
+  samples_prefix <- unlist(lapply(samples_split, function(x) paste(x[1:(length(x)-1)], collapse="_")))
+  groups <- data.frame(prefix=samples_prefix, full=samples)
+  samples <- dlply(groups, .(prefix), function(d) d$full)
+  samples <- lapply(samples, function(x) list(as.character(x)))
+  return(samples)
+  
+}

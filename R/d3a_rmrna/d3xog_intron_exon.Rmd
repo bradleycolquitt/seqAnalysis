@@ -1,0 +1,10 @@
+D3xOG - intron/exon
+========================================================
+
+```{r}
+opts_chunk$set(warning=FALSE, message=FALSE, error=FALSE)
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+library(reshape2)
+library(ggplot2)
+```

@@ -78,13 +78,9 @@ permutationTest <- function(x, y, N=1000, sub=0.5, FUN="mean") {
   
   for (i in 1:N) {
     ind <- sample(1:length(x_y), sample_size)
-    #x_y_perm <- x_y[ind]
     half_1 <- 1:(sample_size/2)
-    #print(half_1)
     half_2 <- (sample_size/2 + 1):sample_size
-    #print(half_2)
     t_perm[i] <- abs(do.call(FUN, list(x_y[ind[half_1]], na.rm=TRUE)) - do.call(FUN, list(x_y[ind[half_2]], na.rm=TRUE)))
-
   }
   
   above <- table(t_perm >= t_obs)
@@ -117,7 +113,7 @@ permutationTest.mat <- function(d1, d2, chunkSize=5, N=10000, adjust="BH") {
 
 ## Accepts list of matrices and performs a pairwise comparison on all combinations
 ## Returns list of column pvalues for each comparison
-permutationTest.matList <- function(data, chunkSize=5, N=10000, adjust="BH") {
+permutationTest.matList <- function(data, chunkSize=5, N=1000, adjust="BH") {
   comparisons <- combn(names(data), 2)
   comparisons_labels <- apply(comparisons, 2, paste, collapse="_")
   out <- apply(comparisons, 2, function(comparison) {
@@ -138,7 +134,7 @@ permutationTest.quantile <- function(x, y, N=1000, quantile) {
 }
 
 plotSigLine <- function(sig_values, thresh=0.05, step, yval, ...) {
-  sig_positions <- which(sig_values <= thresh)
+  sig_positions <- which(sig_values <= thresh) - 1
   if (length(sig_positions > 0)) {
     for(i in 1:length(sig_positions)) {
       lines(c(sig_positions[i] * step, sig_positions[i] * step + step ), rep(yval, times=2), lwd=2, ...)
@@ -252,7 +248,3 @@ multiRF <- function(x,data, ...) {
           } 
 }
 
-dist_poission <- function(x) {
-    
-  
-}
