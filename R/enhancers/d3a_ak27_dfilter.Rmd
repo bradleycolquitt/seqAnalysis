@@ -1,0 +1,33 @@
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+```
+
+```{r}
+makeProfile2.allSamp("moe_h3k27ac_rmdup_input_moe_d3a_wt_input_q30_enriched_form.bed_W25F200_both_chr", data_type="rpkm/mean", rm.outliers=.01)
+makeProfile2.allSamp("moe_h3k27ac_rmdup_input_moe_d3a_wt_input_q30_enriched_form_interV_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", data_type="rpkm/mean", rm.outliers=.01)
+```
+
+```{r}
+par(mfrow=c(1,2))
+plot2("moe_h3k27ac_rmdup_input_moe_d3a_wt_input_q30_enriched_form.bed_W25F200_both_chr", "moe_h3k27ac_rmdup", data_type="rpkm/mean", group2="trim0.01")
+plot2("moe_h3k27ac_rmdup_input_moe_d3a_wt_input_q30_enriched_form.bed_W25F200_both_chr", "moe_h3k4me1_rmdup", data_type="rpkm/mean", group2="trim0.01")
+```
+
+```{r}
+par(mfrow=c(1,2))
+plot2("moe_h3k27ac_rmdup_input_moe_d3a_wt_input_q30_enriched_form_interV_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", "moe_h3k27ac_rmdup", data_type="rpkm/mean", group2="trim0.01")
+plot2("moe_h3k27ac_rmdup_input_moe_d3a_wt_input_q30_enriched_form_interV_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", "moe_h3k4me1_rmdup", data_type="rpkm/mean", group2="trim0.01")
+```
+
+```{r}
+positionMatrix.all("moe_h3k27ac_rmdup_input_moe_d3a_wt_input_q30_enriched_form_interV_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", data_type="rpkm/mean")
+```
+
+```{r}
+ac <- makeImage("moe_h3k27ac_rmdup", "moe_h3k27ac_rmdup_input_moe_d3a_wt_input_q30_enriched_form_interV_igenome_ensembl_genes_extend5kb.bed_W25F200_both_chr", data_type="rpkm/mean")
+```

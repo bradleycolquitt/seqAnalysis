@@ -47,6 +47,18 @@ shiftBedPositions <- function(bed, shift, pos="start", direction="up") {
   return(out)
 }
 
+# Input BED with variable width records
+# Trim to common width
+trimToCenter <- function(bed, end_width=500) {
+  mids <- (bed[,3] + bed[,2]) / 2
+  start <- mids - (end_width / 2)
+  end <- mids + (end_width / 2)
+  
+  out <- data.frame(bed[,1], start, end, bed[,4:6])
+  return(out)
+  
+}
+
 tileBed <- function(bed, extend, window) {
   start <- bed[,2] - extend
   end <- bed[,3] + extend
@@ -185,6 +197,8 @@ getSeq.bed <- function(bed, extend=0) {
     bed <- trimBed(bed, -1*extend)
     bed <- trimBed(bed, extend, "down")
   }
+  
+  
   #seq <- getSeq(Mmusculus, bed[,1], bed[,2], bed[,3], strand=bed[,6], as.character=TRUE, allow.nonnarrowing=TRUE)
   seq <- getSeq(Mmusculus, bed[,1], bed[,2], bed[,3], strand=bed[,6], as.character=TRUE)
   names(seq) <- bed[,4]

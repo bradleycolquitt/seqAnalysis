@@ -1,0 +1,85 @@
+D3a - mk4 - hopach
+========================================================
+
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(mclust)
+```
+
+```{r}
+en <- makeFeatureMatrix2("mk4_F3_interV_genes.bed_chr", "en_full", data_type="rpkm/mean")
+d3.mod <- makeFeatureMatrix2("mk4_F3_interV_genes.bed_chr", "d3xog_hmc_mc", data_type="rpkm/mean")
+cells.mod <- makeFeatureMatrix2("mk4_F3_interV_genes.bed_chr", "cells_rep_hmc_mc", data_type="rpkm/mean")
+```
+
+```{r}
+cells.mod.var <- apply(cells.mod[,1:3], 1, var)
+q <- quantile(cells.mod.var, probs=(nrow(cells.mod) - 5000 )/ nrow(cells.mod))
+cells.mod1 <- cells.mod[cells.mod.var>=q,]
+```
+
+```
+cells.mod1.dist <- distancematrix(cells.mod1[,1:3], "cosangle")
+cells.mod1.ho <- hopach(cells.mod1[,1:3], cells.mod1.dist)
+saveRDS(cells.mod1.ho, file="~/s2/analysis/cluster/hopach/mk4_F3_interV_genes_hopach_cells_hmc_var5000_cosangle.rds")
+```
+
+```{r}
+cells.mod1.ho <- readRDS("~/s2/analysis/cluster/hopach/mk4_F3_interV_genes_hopach_cells_hmc_var5000_cosangle.rds")
+names(cells.mod1.ho$clustering$labels) <- rownames(cells.mod1)
+
+```
+
+```{r}
+MP.heat(as.matrix(cells.mod1[cells.mod1.ho$clustering$order,]), color="ybb", range=c(0, 2))
+```
+
+```{r}
+d3.mod.m <- melt(d3.mod)
+d3.mod.m$id <- rownames(d3.mod)
+d3.mod.m$geno <- factor(rep(c("wt", "het", "ko"), each=nrow(d3.mod)), levels=c("wt", "het", "ko"))
+d3.mod.m$mod <- factor(rep(c("hmc", "mc"), each=nrow(d3.mod)*3))
+d3.mod.m1 <- d3.mod.m[d3.mod.m$id %in% rownames(cells.mod1),]
+d3.mod.m1$ho.label <- cells.mod1.ho$clustering$labels[match(d3.mod.m1$id, names(cells.mod1.ho$clustering$labels))]
+
+```
+
+```{r}
+cells.mod.m1 <- melt(cells.mod1)
+cells.mod.m1$id <- rownames(cells.mod1)
+cells.mod.m1$celltype <- factor(rep(c("omp", "ngn", "icam"), each=nrow(cells.mod1)))
+cells.mod.m1$mod <- factor(rep(c("hmc", "mc"), each=nrow(cells.mod1)*3))
+cells.mod.m1$ho.label <- cells.mod1.ho$clustering$labels[match(cells.mod.m1$id, names(cells.mod1.ho$clustering$labels))]
+
+```
+
+```{r}
+theme_bw()
+gg2 <- ggplot(cells.mod.m1, aes(celltype, value))
+gg2 + geom_boxplot(outlier.shape=NA) + facet_grid(mod~ho.label, scales="free_y")
+
+```
+
+```{r}
+gg <- ggplot(d3.mod.m1, aes(geno, value))
+gg + geom_boxplot(outlier.shape=NA) + facet_grid(mod~ho.label, scales="free_y")
+
+```
+
+```{r}
+cells.mod.m1$geno <- "wt"
+d3.mod.m1$celltype <- "omp"
+comb.m1 <- rbind(cells.mod.m1, d3.mod.m1)
+comb.m1$geno <- factor(comb.m1$geno, levels=c("wt", "het", "ko"))
+```
+
+```{r}
+theme_set(theme_bw())
+gg <- ggplot(comb.m1, aes(celltype, value, fill=geno))
+gg + geom_boxplot(notch=T, width=1, outlier.shape=NA) + facet_grid(mod~ho.label, scales="free_y")
+```

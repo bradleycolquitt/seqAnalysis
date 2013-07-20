@@ -1,0 +1,40 @@
+D3a - DNase peaks 2 - heatmaps
+========================================================
+
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(mclust)
+```
+
+
+```{r}
+makeProfile2.allSamp("mk4_interV_genes.bed_W25F200_both_chr", data_type="rpkm/mean", rm.outliers=.01)
+```
+
+```{r}
+par(mfrow=c(3,2), mar=c(2,2,1,1))
+plot2.several("mk4_interV_genes.bed_W25F200_both_chr", "cells_hmc_rep", data_type="rpkm/mean", group2="trim0.01", cols=col3, y.vals=c(.2, 1.2))
+plot2.several("mk4_interV_genes.bed_W25F200_both_chr", "cells_mc_rep", data_type="rpkm/mean", group2="trim0.01", cols=col3, y.vals=c(.2, 1.2))
+plot2.several("mk4_interV_genes.bed_W25F200_both_chr", "d3xog_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col3, y.vals=c(.2, 1.2))
+plot2.several("mk4_interV_genes.bed_W25F200_both_chr", "d3xog_mc", data_type="rpkm/mean", group2="trim0.01", cols=col3, y.vals=c(.2, 1.2))
+plot2.several("mk4_interV_genes.bed_W25F200_both_chr", "tt3_rep", data_type="rpkm/mean", group2="trim0.01", cols=col3, y.vals=c(.2, 1.2))
+```
+
+```{r}
+par(mfrow=c(1,2))
+plot2("mk4_interV_genes.bed_W25F200_both_chr", "moe_h3k27ac_rmdup_sub_moe_d3a_wt_input_q30_rmdup", data_type="rpkm/mean", group2="trim0.01")
+plot2("mk4_interV_genes.bed_W25F200_both_chr", "moe_h3k4me1_rmdup_sub_moe_d3a_wt_input_q30_rmdup", data_type="rpkm/mean", group2="trim0.01")
+```
+
+```{r}
+positionMatrix.all("mk4_interV_genes.bed_W25F200_both_chr", data_type="rpkm/mean")
+```
+
+```{r}
+en <- makeFeatureMatrix2("mk4_interV_genes.bed_chr", "en_full", data_type="rpkm/mean")
+```

@@ -12,7 +12,6 @@ library(mclust)
 ```
 rna <- readRDS("~/s2/analysis/rna/rdata/omp_ngn_icam_mrna_ucsc_fpkm_1log2.rds")
 rna <- rna[-grep("Olfr", rna$id),]
-#rownames(rna) <- rna$id
 ```
 
 ```

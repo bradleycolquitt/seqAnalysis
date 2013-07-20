@@ -49,6 +49,7 @@ class bowtie_class:
             #self.input2 = "/".join([fastq_dir, date, sample, index[0], '2.fastq'])
         
         ## Setup output files
+#        pdb.set_trace()
         sam_date_dir = "/".join([sam_dir, self.date])
         if not os.path.exists(sam_date_dir): os.mkdir(sam_date_dir)
         self.samfile = "/".join([sam_date_dir, "".join([subsample, ".sam"])])
@@ -77,12 +78,12 @@ class bowtie_class:
         if run:    
             if not self.single_end:
                 cmd_args = ['bowtie2',
-                            '-p', '8',
+                            '-p', '4',
                             '-I', '50', '-X', '1500',
                             #'--local', '--very-sensitive-local', '--mm',
                             '--end-to-end', '--mm',
                             '-x', 'mm9',
-                            '--met-file', self.bam_date_dir,
+                            #'--met-file', self.bam_date_dir + "/", 
                             '-1', self.input1,
                             '-2', self.input2, 
                             '-S', self.samfile]

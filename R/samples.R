@@ -22,13 +22,13 @@ if (set=="d3a") {
     columns <- 1
     orient <- 2
   } else if (set=="d3a_hmc") {
-    samples <- list(list("moe_d3a_wt_hmc_rpkm", "moe_d3a_ko_hmc_rpkm"))
+    samples <- list(list("moe_d3a_wt_hmc_sort_bt2", "moe_d3a_ko_hmc_sort_bt2"))
     rows <- 1
     columns <- 1
     orient <- 2
     
   } else if (set=="d3a_mc") {
-    samples <- list(list("moe_d3a_wt_mc_rpkm", "moe_d3a_ko_mc_rpkm"))
+    samples <- list(list("moe_d3a_wt_mc_sort_bt2", "moe_d3a_ko_mc_sort_bt2"))
     rows <- 1
     columns <- 1
     orient <- 2
@@ -41,12 +41,16 @@ if (set=="d3a") {
     orient <- 2
     
   } else if (set=="d3xog_hmc") {
-    samples <- list(list("omp_hmc_rep1_mean_omp_hmc_rep2", "d3xog_het_hmc_paired_q30", "d3xog_ko_hmc_paired_q30"))
+    samples <- list(list("omp_hmc_rep1_q30_rmdup_extend300_mean_omp_hmc_rep2_q30_rmdup", 
+                         "d3xog_het_hmc_sort_q30_rmdup", 
+                         "d3xog_ko_hmc_sort_q30_rmdup"))
     rows <- 1
     columns <- 1
     orient <- 2
   } else if (set=="d3xog_mc") {
-    samples <- list(list("omp_mc_rmdup",  "d3xog_het_mc_paired_q30", "d3xog_ko_mc_paired_q30"))
+    samples <- list(list("omp_mc_rep1_q30_rmdup_extend300",  
+                         "d3xog_het_mc_sort_q30_rmdup", 
+                         "d3xog_ko_mc_sort_q30_rmdup"))
     rows <- 1
     columns <- 1
     orient <- 2
@@ -71,10 +75,25 @@ if (set=="d3a") {
     rows <- 1
     columns <- 1
   } else if (set=="d3a_dnase") {
-    samples <- list(list("d3a_het_dnase_sort_q30", "d3a_ko_dnase_sort_q30"))
+    samples <- list(list("d3a_het_dnase_sort_q30", 
+                         "moe_d3a_ko_dnase_rep1_q30_rmdup_ends_mean_moe_d3a_ko_dnase_rep2_q30_rmdup_ends"))
     rows <- 1
     columns <- 1
     orient <- 2
+  } else if (set=="d3a_h3k27me3") {
+    samples <- list(list("moe_d3a_wt_h3k27me3_q30_rmdup_sub_moe_d3a_wt_input_q30_rmdup", 
+                         "moe_d3a_ko_h3k27me3_q30_rmdup_sub_moe_d3a_ko_input_q30_rmdup"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
+    
+  } else if (set=="d3a_h3k4me") {
+    samples <- list(list("moe_d3a_wt_h3k4me_q30_rmdup_sub_moe_d3a_wt_input_q30_rmdup", 
+                         "moe_d3a_ko_h3k4me_q30_rmdup_sub_moe_d3a_ko_input_q30_rmdup"))
+    rows <- 1
+    columns <- 1
+    orient <- 2
+    
   } else if (set=="cells") {
     samples <- list(list("omp_hmedip.bed", "ngn_hmedip.bed", "icam_hmedip.bed"),
                     list("omp_medip.bed", "ngn_medip.bed", "icam_medip.bed"))
@@ -118,6 +137,18 @@ if (set=="d3a") {
     samples <- list(list("omp_hmc_rep1_q30_rmdup_extend300_mean_omp_hmc_rep2_q30_rmdup", 
                          "ngn_hmc_rep1_q30_rmdup_extend300_mean_ngn_hmc_rep2_q30_rmdup",
                          "icam_hmc_rep1_q30_rmdup_extend300_mean_icam_hmc_rep2_q30_rmdup"))
+    
+    columns <- 1
+    #if (!is.null(group2)) {
+    #  columns <- 3
+    #}
+    rows <- 1
+    orient <- 2
+    
+  } else if (set=="cells_mc_rep") {
+    samples <- list(list("omp_mc_rep1_q30_rmdup_extend300", 
+                         "ngn_mc_rep1_q30_rmdup_extend300_mean_ngn_mc_rep2_q30_rmdup",
+                         "icam_mc_rep1_q30_rmdup_extend300_mean_icam_mc_rep2_q30_rmdup"))
     
     columns <- 1
     #if (!is.null(group2)) {
@@ -253,6 +284,11 @@ if (set=="d3a") {
     orient <- 2
   } else if (set=="d3a_nuc3") {
     samples <- list(list("d3xog_wt_nuc_478", "d3xog_ko_nuc_256"))
+    rows <- 1
+    columns <- 1
+    orient <- 2 
+  } else if (set=="d3xog_nuc") {
+    samples <- list(list("d3xog_wt_nuc_478_rmdup_q30", "d3xog_ko_nuc_256_rmdup_q30"))
     rows <- 1
     columns <- 1
     orient <- 2 

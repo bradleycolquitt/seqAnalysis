@@ -4,6 +4,11 @@ D3a TSSs
 suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
 ```
 
+```{r}
+makeProfile2.allSamp("refGene_noRandom_order_outsides2_tss_W25F200_chr", data_type="rpkm/mean", rm.outliers=0.01)
+positionMatrix.all("refGene_noRandom_order_outsides2_tss_W25F200_chr", data_type="rpkm/mean")
+```
+
 #### 5hmC
 ```{r}
 plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr", "d3a_hmc", data_type="rpkm/mean", group2="exclude-chrX_trim0.01", cols=col2)
@@ -42,4 +47,19 @@ plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr","d3a_nuc_extend
 #### DNase
 ```{r}
 plot2("refGene_noRandom_order_outsides2_tss_W25F200_chr","d3a_het_dnase_sort_q30", data_type="bam_ends/mean", group2="exclude-chrX_trim0.01")
+```
+
+#### H3K27me3
+```{r}
+plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr", "d3a_h3k27me3", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(-.1 ,.4))
+```
+
+#### H3K4me
+```{r}
+plot2.several("refGene_noRandom_order_outsides2_tss_W25F200_chr", "d3a_h3k4me", data_type="rpkm/mean", group2="trim0.01", cols=col2, y.vals=c(0, 5))
+```
+
+
+```{r}
+
 ```

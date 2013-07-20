@@ -7,4 +7,135 @@ suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
 suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
 library(reshape2)
 library(ggplot2)
+library(gridExtra)
 ```
+
+```{r}
+samples <- c("d3xog_wt_rmrna_blank_paired_q30_rmdup", 
+             "d3xog_het_rmrna_blank_paired_q30_rmdup",
+             "d3xog_ko_rmrna_blank_paired_q30_rmdup",
+             "d3xog_ko_rmrna_rep2_blank_paired_q30_rmdup")
+intron <- lapply(samples, function(x) read.delim(paste("~/s2/analysis/features/norm/bam/sum/Refgene_intron_map1_chr/", x, sep=""), header=FALSE))
+#intron <- makeFeatureMatrix2("Refgene_intron_map1_chr", "d3xog_rmrna_rmdup", data_type="bam/sum", include_score=T)
+#intron.bed <- read.delim("~/lib/features_general/Refgene_intron_map1", header=F)
+```
+
+```{r}
+intron_totals <- lapply(intron, function(x) sum(x[,7]))
+intron_norm <- lapply(1:4, function(x) {
+  intron[[x]][,7] <- intron[[x]][,7] / intron_totals[[x]]
+  return(intron[[x]])
+})
+intron_norm_len <- lapply(intron_norm, function(x) {
+  x[,7] <- x[,7] / (x[,3] - x[,2])
+  return(x)
+})
+```
+
+```{r}
+labels <- str_split(intron_norm_len[[1]][,4], "_")
+labels2 <- unlist(lapply(labels, function(x) x[2]))
+```
+
+```{r}
+for (x in 1:4) {
+  intron_norm_len[[x]][,8] <- labels2
+}
+```
+
+```{r}
+intron4 <- lapply(intron_norm_len, function(x) ddply(x, .(V8), summarize, value=mean(V7), .progress="text"))
+```
+
+```{r}
+par(mfrow=c(2,2))
+lapply(intron4, function(x) plot(density(log2(x[,2]))))
+```
+
+
+```{r}
+exon <- lapply(samples, function(x) read.delim(paste("~/s2/analysis/features/norm/bam/sum/Refgene_exons_split2_map1_chr/", x, sep=""), header=FALSE))
+#exon <- makeFeatureMatrix2("Refgene_exon_map1_chr", "d3xog_rmrna_rmdup", data_type="bam/sum", include_score=T)
+#exon.bed <- read.delim("~/lib/features_general/Refgene_exon_map1", header=F)
+```
+
+```{r}
+exon_totals <- lapply(exon, function(x) sum(x[,7]))
+exon_norm <- lapply(1:4, function(x) {
+  exon[[x]][,7] <- exon[[x]][,7] / exon_totals[[x]]
+  return(exon[[x]])
+})
+exon_norm_len <- lapply(exon_norm, function(x) {
+  x[,7] <- x[,7] / (x[,3] - x[,2])
+  return(x)
+})
+```
+
+```{r}
+labels <- str_split(exon_norm_len[[1]][,4], "_")
+labels2 <- unlist(lapply(labels, function(x) x[2]))
+```
+
+```{r}
+for (x in 1:4) {
+  exon_norm_len[[x]][,8] <- labels2
+}
+```
+
+```{r}
+exon4 <- lapply(exon_norm_len, function(x) ddply(x, .(V8), summarize, value=mean(V7), .progress="text"))
+```
+
+```{r}
+par(mfrow=c(2,2))
+lapply(exon4, function(x) plot(density(log2(x[,2]))))
+```
+
+```{r}
+m <- match(intron4[[1]][,1], exon4[[1]][,1])
+comb <- lapply(1:4, function(x) na.omit(cbind(intron4[[x]], exon4[[x]][m,2])))
+for (x in 1:4) {
+  colnames(comb[[x]]) <- c("id", "intron", "exon")
+  
+}
+```
+
+```{r}
+gg <- ggplot(comb[[4]], aes(intron, exon))
+gg + geom_point(alpha=I(1/10)) + coord_cartesian(xlim=c(0, .000002), ylim=c(0,.000002))
+```
+
+```{r}
+comb.ratio <- lapply(comb, function(x) data.frame(id=x[,1], ratio=log2((x[,3] + 1E-7) / (x[,2] + 1E-7))))
+```
+
+```{r}
+comb.df <- do.call("cbind", comb.ratio)
+comb.df <- comb.df[,c(1,2,4,6,8)]
+colnames(comb.df) <- c("id", "wt", "het", "ko1", "ko2")
+```
+
+```{r}
+het <- ggplot(comb.df, aes(wt, het)) + geom_point(alpha=I(1/10)) + coord_cartesian(xlim=c(-4, 4), ylim=c(-4, 4)) + geom_abline(slope=1, intercept=0, col=2)
+ko1 <- ggplot(comb.df, aes(wt, ko1)) + geom_point(alpha=I(1/10)) + coord_cartesian(xlim=c(-4, 4), ylim=c(-4, 4))+ geom_abline(slope=1, intercept=0, col=2)
+ko2 <- ggplot(comb.df, aes(wt, ko2)) + geom_point(alpha=I(1/10)) + coord_cartesian(xlim=c(-4, 4), ylim=c(-4, 4))+ geom_abline(slope=1, intercept=0, col=2)
+grid.arrange(het, ko1, ko2, ncol=3)
+```
+
+```{r}
+hmc <- makeFeatureMatrix2("refgene_nodup.bed_chr", "d3xog_hmc", data_type="rpkm/mean")
+hmc$ko.wt <- with(hmc, log2((ko+.01) / (wt+.01)))
+hmc$id <- id[match(rownames(hmc), id[,2]),1]
+```
+
+```{r}
+comb.df$id2 <- paste("NM", comb.df$id, sep="_")
+comb.df$hmc.ko.wt <- hmc$ko.wt[match(comb.df$id2, hmc$id)]
+```
+
+```{r}
+palette <- 
+gg <- ggplot(comb.df, aes(wt, ko1, color=hmc.ko.wt))
+gg + geom_point() + color_scale_continuous()
+```
+

@@ -8,6 +8,7 @@ Cuffdiff parameters:
 * --compatible-hits-norm
 * -u
 * --library-norm-method classic-fpkm
+* --dispersion-method pooled
 * genes_chr_protein.gtf
 
 Samples
@@ -26,50 +27,66 @@ opts_chunk$set(warning=FALSE, message=FALSE, error=FALSE)
 library(plyr)
 library(reshape2)
 library(ggplot2)
+library(gridExtra)
 suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
 suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/ggplot2.R"))
 ```
 
   
 ```{r}
-wt.hmc <- makeImage("omp_hmc_rep1_mean_omp_hmc_rep2", "gene_whole_W200N50F50_chr", data_type="rpkm/mean", image=F)
-#wt.hmc <- makeImage("omp_hmc_120424_rpkm", "gene_whole_W200N50F50_chr", data_type="rpkm/mean", image=F)
-het.hmc <- makeImage("d3xog_het_hmc_paired_q30", "gene_whole_W200N50F50_chr", data_type="rpkm/mean", image=F)
-ko.hmc <- makeImage("d3xog_ko_hmc_paired_q30", "gene_whole_W200N50F50_chr", data_type="rpkm/mean", image=F)
+samples <- c("omp_hmc_rep1_q30_rmdup_extend300_mean_omp_hmc_rep2_q30_rmdup", 
+                 "d3xog_het_hmc_sort_q30_rmdup", 
+                 "d3xog_ko_hmc_sort_q30_rmdup", 
+                 "omp_mc_rep1_q30_rmdup_extend300", 
+                 "d3xog_het_mc_sort_q30_rmdup", 
+                 "d3xog_ko_mc_sort_q30_rmdup",
+             "ngn_hmc_rep1_q30_rmdup_extend300_mean_ngn_hmc_rep2_q30_rmdup", 
+             "icam_hmc_rep1_q30_rmdup_extend300_mean_icam_hmc_rep2_q30_rmdup",
+             "ngn_mc_rep1_q30_rmdup_extend300_mean_ngn_mc_rep2_q30_rmdup", 
+             "icam_mc_rep1_q30_rmdup_extend300_mean_icam_mc_rep2_q30_rmdup")
+data <- lapply(samples, function(x) makeImage(x, "gene_whole_W200N50F50_chr", data_type="rpkm/mean"))
 ```
 
 #### Compute means of gene body levels
 ```{r}
-wt.hmc.up <- apply(wt.hmc[,51:100], 1, mean)
-het.hmc.up <- apply(het.hmc[,51:100], 1, mean)
-ko.hmc.up <- apply(ko.hmc[,51:100], 1, mean)
-
-wt.hmc.up <- wt.hmc.up[order(wt.hmc.up)]
-het.hmc.up <- het.hmc.up[match(names(wt.hmc.up), names(het.hmc.up))]
-ko.hmc.up <- ko.hmc.up[match(names(wt.hmc.up), names(ko.hmc.up))]
-
-hmc.up <- cbind(wt.hmc.up, het.hmc.up, ko.hmc.up)
-hmc.up.c100 <- chunkMatrix(hmc.up, 100)
-hmc.up.c100.m <- melt(hmc.up.c100, id.vars="index")
+data.mid <- lapply(data, function(x) apply(x[,51:100], 1, mean))
+data.mid <- data.frame(do.call("cbind", data.mid))
+colnames(data.mid) <- c("wt_omp_hmc", "het_omp_hmc", "ko_omp_hmc", "wt_omp_mc", "het_omp_mc", "ko_omp_mc", "wt_ngn_hmc", "wt_icam_hmc", "wt_ngn_mc", "wt_icam_mc")
+data.mid <- data.mid[order(data.mid[,1]),]
 ```
 
 ```{r}
-gg <- ggplot(hmc.up.c100.m, aes(index, value, color=variable))
-gg + geom_point() + coord_cartesian(xlim=c(20, 100))
+data.mid$id <- rownames(data.mid)
+data.mid.m <- melt(data.mid)
+s <- str_split(data.mid.m$variable, "_")
+data.mid.m$geno <- factor(unlist(lapply(s, function(x) x[1])), levels=c("wt", "het", "ko"))
+levels(data.mid.m$geno) <- c("+/+", "+/-", "-/-")
+data.mid.m$celltype <- factor(unlist(lapply(s, function(x) x[2])), levels=c("omp", "ngn", "icam"))
+levels(data.mid.m$celltype) <- c("mOSN", "GBC", "HBC")
+data.mid.m$mod <- factor(unlist(lapply(s, function(x) x[3])), levels=c("hmc", "mc"))
+levels(data.mid.m$mod) <- c("5hmC", "5mC")
 ```
-
 
 ```{r}
 gene <- read.delim("~/s2/data/rna/cuffdiff/d3xog_wt_het_ko_rmrna_run7/gene_exp.diff")
 gene.read <- read.delim("~/s2/data/rna/cuffdiff/d3xog_wt_het_ko_rmrna_run7/genes.read_group_tracking")
 gene.read.fpkm <- dcast(gene.read, tracking_id~condition+replicate, value.var="FPKM")
 gene.read.fpkm$gene <- gene$gene[match(gene.read.fpkm$tracking_id, gene$test_id)]
-gene.read.fpkm <- na.omit(gene.read.fpkm[match(names(wt.hmc.up), gene.read.fpkm$gene),])
+gene.read.fpkm <- na.omit(gene.read.fpkm[match(rownames(data.mid), gene.read.fpkm$gene),])
 gene.read.fpkm <- numcolwise(onelog2)(gene.read.fpkm)
+cor(gene.read.fpkm)
+gene.read.fpkm.m <- melt(gene.read.fpkm)
+levels(gene.read.fpkm.m$variable) <-  c("+/+ rep1", "+/+ rep2", "+/+ rep3", "+/-", "-/- rep1", "-/- rep2")
 ```
 
 ```{r}
-gene.read.fpkm.0 <- gene.read.fpkm[,c("q1_0", "q2_0", "q3_0")]
+gg <- ggplot(gene.read.fpkm.m, aes(value, color=variable))
+gg + geom_density() + facet_grid(variable~.) + scale_color_brewer(palette="Set1") + labs(x="log2(FPKM+1)")
+```
+
+```{r}
+gene.read.fpkm.0 <- gene.read.fpkm[,c("q3_0", "q2_0", "q1_0")]
 gene.read.fpkm.0.sub <- pairwise(gene.read.fpkm.0, subtract)
 ```
 
@@ -77,13 +94,32 @@ gene.read.fpkm.0.sub <- pairwise(gene.read.fpkm.0, subtract)
 gene.read.fpkm.c100 <- chunkMatrix(gene.read.fpkm, 100, median)
 head(gene.read.fpkm.c100)
 gene.read.fpkm.c100.m <- melt(gene.read.fpkm.c100, id.vars="index")
+levels(gene.read.fpkm.c100.m$variable) <-  c("+/+ rep1", "+/+ rep2", "+/+ rep3", "+/-", "-/- rep1", "-/- rep2")
 ```
 
-#### Replicates separate
-```{r}
-gg.rep <- ggplot(gene.read.fpkm.c100.m[gene.read.fpkm.c100.m$variable %in% c("q1_0", "q2_0", "q3_0"),], aes(index, value, color=variable))
-gg.rep + geom_point() + scale_color_manual(values=c("red1", "blue", "green2"))
+### Replicates separate
+#### Ordered by gene body 5hmC 
 
+
+```{r d3xog_wt_het_ko_rmrna_run7_fpkm_ordered_by_omp_hmc_gene_body_wt, fig.width=6, fig.height=6, dev=c("png", "pdf") }
+theme_set(theme_bw())
+gg.rep <- ggplot(gene.read.fpkm.c100.m[gene.read.fpkm.c100.m$variable %in% c("+/+ rep1", "+/+ rep2", "+/+ rep3"),], aes(index, value, color=variable))
+gg.rep + geom_point() + scale_color_brewer(name="Dnmt3a", palette="Set1") + stat_smooth(se=F) + coord_cartesian(ylim=c(0, 5)) + labs(x="5hmC gene body index", y="log2(FPKM+1)") + theme(legend.position=c(.8, .3))
+```
+
+```{r d3xog_wt_het_ko_rmrna_run7_fpkm_ordered_by_omp_hmc_gene_body_wt_het, fig.width=6, fig.height=6, dev=c("png", "pdf")}
+gg.rep <- ggplot(gene.read.fpkm.c100.m[gene.read.fpkm.c100.m$variable %in% c("+/+ rep1", "+/+ rep2", "+/+ rep3", "+/-"),], aes(index, value, color=variable))
+gg.rep + geom_point() + scale_color_brewer(name="Dnmt3a", palette="Set1") + stat_smooth(se=F) + coord_cartesian(ylim=c(0, 5)) + labs(x="5hmC gene body index", y="log2(FPKM+1)") + theme(legend.position=c(.8, .3))
+```
+
+```{r d3xog_wt_het_ko_rmrna_run7_fpkm_ordered_by_omp_hmc_gene_body_wt_het_ko1, fig.width=6, fig.height=6, dev=c("png", "pdf")}
+gg.rep <- ggplot(gene.read.fpkm.c100.m[gene.read.fpkm.c100.m$variable %in% c("+/+ rep1", "+/+ rep2", "+/+ rep3", "+/-", "-/- rep1"),], aes(index, value, color=variable))
+gg.rep + geom_point() + scale_color_brewer(name="Dnmt3a", palette="Set1") + stat_smooth(se=F) + coord_cartesian(ylim=c(0, 5)) + labs(x="5hmC gene body index", y="log2(FPKM+1)") + theme(legend.position=c(.8, .3))
+```
+
+```{r d3xog_wt_het_ko_rmrna_run7_fpkm_ordered_by_omp_hmc_gene_body_wt_het_ko2, fig.width=6, fig.height=6, dev=c("png", "pdf")}
+gg.rep <- ggplot(gene.read.fpkm.c100.m[gene.read.fpkm.c100.m$variable %in% c("+/+ rep1", "+/+ rep2", "+/+ rep3", "+/-", "-/- rep2"),], aes(index, value, color=variable))
+gg.rep + geom_point() + scale_color_brewer(name="Dnmt3a", palette="Set1") + stat_smooth(se=F) + coord_cartesian(ylim=c(0, 5)) + labs(x="5hmC gene body index", y="log2(FPKM+1)") + theme(legend.position=c(.8, .3))
 ```
 
 ```{r}
@@ -92,12 +128,7 @@ head(gene.read.fpkm.0.sub.c100)
 gene.read.fpkm.0.sub.c100.m <- melt(gene.read.fpkm.0.sub.c100, id.vars="index")
 ```
 
-```{r}
-gg.rep <- ggplot(gene.read.fpkm.0.sub.c100.m, aes(index, value, color=variable))
-gg.rep + geom_point() + scale_color_manual(values=c("red1", "blue", "green2"))
-
-```
-
+FPKM densities
 ```{r}
 par(mfrow=c(2,3))
 apply(gene.read.fpkm, 2, function(x) plot(density(x)))
@@ -106,24 +137,192 @@ apply(gene.read.fpkm, 2, function(x) plot(density(x)))
 ```{r}
 gene.fpkm <- read.delim("~/s2/data/rna/cuffdiff/d3xog_wt_het_ko_rmrna_run7/genes.fpkm_tracking")
 gene.fpkm.mat <- gene.fpkm[,c("gene_short_name", "q1_FPKM", "q2_FPKM", "q3_FPKM")]
-gene.fpkm.mat <- na.omit(gene.fpkm.mat[match(names(wt.hmc.up), gene.fpkm.mat[,1]),])
-gene.fpkm.mat <- numcolwise(onelog2)(gene.fpkm.mat)
-gene.fpkm.mat <- transform(gene.fpkm.mat, q2.q1=q2_FPKM - q1_FPKM, q3.q1=q3_FPKM - q1_FPKM)
+gene.fpkm.mat <- na.omit(gene.fpkm.mat[match(rownames(data.mid), gene.fpkm.mat[,1]),])
+gene.fpkm.mat.1log2 <- numcolwise(onelog2)(gene.fpkm.mat)
+gene.fpkm.mat.1log2$id <- gene.fpkm.mat$gene_short_name
+gene.fpkm.mat.1log2 <- transform(gene.fpkm.mat.1log2, q2.q1=q2_FPKM - q1_FPKM, q3.q1=q3_FPKM - q1_FPKM)
 
 
-gene.fpkm.mat.c100 <- chunkMatrix(gene.fpkm.mat, 100, median)
+gene.fpkm.mat.c100 <- chunkMatrix(gene.fpkm.mat.1log2[,-grep("id", colnames(gene.fpkm.mat.1log2))], 100, median)
 gene.fpkm.mat.c100.m <- melt(gene.fpkm.mat.c100, id.vars="index")
+levels(gene.fpkm.mat.c100.m$variable) <- c("+/+", "+/-", "-/-", "Het / WT", "KO / WT")
 ```
 
+```{r d3xog_wt_het_ko_rmrna_run7_wt_ko_scatter, fig.width=5, fig.height=5, dev=c("png", "pdf")}
+gg <- gg_scatter(gene.fpkm.mat.1log2, "q1_FPKM", "q3_FPKM", 10, density=T)
+gg
+```
+
+
+### Ordered by gene body 5hmC
+```{r d3xog_wt_het_ko_rmrna_run7_fpkm_ordered_by_omp_hmc_gene_body_wt_het_ko, fig.width=6, fig.height=6, dev=c("png", "pdf")}
+gg <- ggplot(gene.fpkm.mat.c100.m[-grep("WT", gene.fpkm.mat.c100.m$variable),], aes(index, value, color=variable))
+gg + geom_point() + scale_color_brewer(name="Dnmt3a", palette="Set1") + stat_smooth(se=F) + coord_cartesian(ylim=c(0, 5)) + labs(x="5hmC gene body index", y="log2(FPKM+1)") + theme(legend.position=c(.8, .3))
+```
+
+```{r d3xog_wt_het_ko_rmrna_run7_fpkm_ordered_by_omp_hmc_gene_body_wt_het_ko_ratio,fig.width=6, fig.height=6, dev=c("png", "pdf") }
+gg <- ggplot(gene.fpkm.mat.c100.m[grep("WT", gene.fpkm.mat.c100.m$variable),], aes(index, value, color=variable))
+gg + geom_point() + scale_color_brewer(name="Dnmt3a", palette="Set1") + stat_smooth(se=F) + coord_cartesian(ylim=c(-1, 1)) + labs(x="5hmC gene body index", y="log2(FPKM+1)") + theme(legend.position=c(.8, .3))
+```
+
+### Ordered by gene body 5hmC KO / WT
+```{r}
+data.mid.1log2 <- log2(data.mid + .01)
+data.mid.1log2 <- pairwise(data.mid.1log2[,6:1], subtract)
+data.mid.1log2 <- data.mid.1log2[order(data.mid.1log2[,"ko_omp_hmc_wt_omp_hmc"]),]
+data.mid <- data.mid[order(data.mid.1log2[,"ko_omp_hmc_wt_omp_hmc"]),]
+
+data.mid.1log2.c100 <- chunkMatrix(data.mid.1log2, 100, median)
+data.mid.1log2.c100.m <- melt(data.mid.1log2.c100, id.vars="index")
+```
+
+```{r}
+gene.fpkm.mat <- na.omit(gene.fpkm.mat[match(rownames(data.mid), gene.fpkm.mat[,1]),])
+gene.fpkm.mat.1log2 <- numcolwise(onelog2)(gene.fpkm.mat)
+gene.fpkm.mat.1log2$id <- gene.fpkm.mat$gene_short_name
+gene.fpkm.mat.1log2 <- transform(gene.fpkm.mat.1log2, q2.q1=q2_FPKM - q1_FPKM, q3.q1=q3_FPKM - q1_FPKM)
+
+
+gene.fpkm.mat.c100 <- chunkMatrix(gene.fpkm.mat.1log2[,-grep("id", colnames(gene.fpkm.mat.1log2))], 100, median)
+gene.fpkm.mat.c100.m <- melt(gene.fpkm.mat.c100, id.vars="index")
+levels(gene.fpkm.mat.c100.m$variable) <- c("+/+", "+/-", "-/-", "Het / WT", "KO / WT")
+```
+
+```{r}
+gg <- ggplot(data.mid.1log2.c100.m[data.mid.1log2.c100.m$variable=="ko_omp_hmc_wt_omp_hmc",], aes(index, value))
+gg + geom_point()
+```
+
+```{r d3xog_wt_het_ko_rmrna_run7_fpkm_ordered_by_omp_hmc_ko_wt_ratio_gene_body_wt_het_ko, fig.width=6, fig.height=6, dev=c("png", "pdf")}
+gg <- ggplot(gene.fpkm.mat.c100.m[-grep("WT", gene.fpkm.mat.c100.m$variable),], aes(index, value, color=variable))
+gg + geom_point() + scale_color_brewer(name="Dnmt3a", palette="Set1") + stat_smooth(se=F) + coord_cartesian(ylim=c(0, 5)) + labs(x="5hmC gene body index", y="log2(FPKM+1)") + theme(legend.position=c(.8, .3))
+```
+
+```{r d3xog_wt_het_ko_rmrna_run7_fpkm_ordered_by_omp_hmc_ko_wt_ratio_gene_body_wt_het_ko_ratio,fig.width=6, fig.height=6, dev=c("png", "pdf") }
+gg <- ggplot(gene.fpkm.mat.c100.m[grep("WT", gene.fpkm.mat.c100.m$variable),], aes(index, value, color=variable))
+gg + geom_point() + scale_color_brewer(name="Dnmt3a", palette="Set1") + stat_smooth(se=F) + coord_cartesian(ylim=c(-1, 1)) + labs(x="5hmC gene body index", y="log2(FPKM+1)") + theme(legend.position=c(.8, .3))
+```
+
+### Ordered by WT RNA
+```{r}
+gene.fpkm.mat <- gene.fpkm.mat[order(gene.fpkm.mat[,"q1_FPKM"]),]
+gene.fpkm.mat.c100 <- chunkMatrix(gene.fpkm.mat[,-grep("gene", colnames(gene.fpkm.mat))], 100, median)
+gene.fpkm.mat.c100.m <- melt(gene.fpkm.mat.c100, id.vars="index")
+```
 
 ```{r}
 gg <- ggplot(gene.fpkm.mat.c100.m, aes(index, value, color=variable))
 gg + geom_point()
 ```
 
+### 5hmC versus RNA
 ```{r}
-gene.fpkm.mat <- transform(gene.fpkm.mat, q2.q1=q2_FPKM - q1_FPKM, q3.q1=q3_FPKM - q1_FPKM)
-par(mfrow=c(1,5))
-apply(gene.fpkm.mat, 2, function(x) plot(density(x)))
+gene.fpkm.mat <- gene.fpkm.mat[order(gene.fpkm.mat[,"q1_FPKM"]),]
+gene.fpkm.mat.nz <- gene.fpkm.mat[gene.fpkm.mat$q1_FPKM>0,]
+data.mid <- data.mid[match(gene.fpkm.mat.nz$gene_short_name, rownames(data.mid)),]
+data.mid.c100 <- chunkMatrix(data.mid[-grep("id", colnames(data.mid))], 500, median)
+data.mid.c100.m <- melt(data.mid.c100, id.vars="index")
 ```
+
+```{r}
+s <- str_split(data.mid.c100.m$variable, "_")
+data.mid.c100.m$geno <- factor(unlist(lapply(s, function(x) x[1])), levels=c("wt", "het", "ko"))
+levels(data.mid.c100.m$geno) <- c("+/+", "+/-", "-/-")
+data.mid.c100.m$celltype <- factor(unlist(lapply(s, function(x) x[2])), levels=c("omp", "ngn", "icam"))
+levels(data.mid.c100.m$celltype) <- c("mOSN", "GBC", "HBC")
+data.mid.c100.m$mod <- factor(unlist(lapply(s, function(x) x[3])), levels=c("hmc", "mc"))
+levels(data.mid.c100.m$mod) <- c("5hmC", "5mC")
+```
+
+```{r}
+gg <- ggplot(data.mid.c100.m[data.mid.c100.m$celltype=="mOSN",], aes(index, value, color=geno))
+gg + facet_grid(mod~.) + stat_smooth(se=T)
+```
+
+```{r}
+data.mid$id <- rownames(data.mid)
+data.mid.m <- melt(data.mid)
+s <- str_split(data.mid.m$variable, "_")
+data.mid.m$geno <- factor(unlist(lapply(s, function(x) x[1])), levels=c("wt", "het", "ko"))
+levels(data.mid.m$geno) <- c("+/+", "+/-", "-/-")
+data.mid.m$celltype <- factor(unlist(lapply(s, function(x) x[2])), levels=c("omp", "ngn", "icam"))
+levels(data.mid.m$celltype) <- c("mOSN", "GBC", "HBC")
+data.mid.m$mod <- factor(unlist(lapply(s, function(x) x[3])), levels=c("hmc", "mc"))
+levels(data.mid.m$mod) <- c("5hmC", "5mC")
+data.mid.m$index <- 1:nrow(data.mid)
+```
+
+```{r gene_whole_W200N50F50_d3xog_hmc_mc_wt_het_ko_ordered_by_wt_rna, fig.height=6, fig.width=5, dev=c("png", "pdf")}
+gg <- ggplot(data.mid.m[data.mid.m$celltype=="mOSN",], aes(index, value, color=geno))
+gg + facet_grid(mod~.) + stat_smooth(se=T) + scale_color_brewer(palette="Set1", name="Dnmt3a") + labs(x="mOSN expression index", y="Mean RPKM")
+```
+
+Compare with developmental gene expression 
+--------------------------------------------------
+```{r}
+gene.sig <- gene[gene$significant=="yes",]
+cells.rna <- readRDS("~/s2/analysis/rna/rdata/omp_ngn_icam_mrna_ucsc_fpkm_1log2.rds")
+cells.rna.m <- melt(cells.rna)
+levels(cells.rna.m$variable) <- c("mOSN", "GBC", "HBC")
+```
+
+```{r}
+gene.sig.q3.up <- gene.sig[gene.sig$sample_2=="q3" & gene.sig$log2.fold_change.>0,]
+dim(gene.sig.q3.up[!duplicated(gene.sig.q3.up$gene),])
+gene.sig.q3.down <- gene.sig[gene.sig$sample_2=="q3" & gene.sig$log2.fold_change.<0,]
+dim(gene.sig.q3.down)
+cells.rna.m$sig.q3.up <- cells.rna.m$id %in% gene.sig.q3.up$gene
+cells.rna.m$sig.q3.down <- cells.rna.m$id %in% gene.sig.q3.down$gene
+```
+
+Significantly upregulated genes in mOSNs are expressed in ICAM
+```{r omp_ngn_icam_mrna_ucsc_fpkm_1log2_d3xog_wt_het_ko_rmrna_run7_sig_up, fig.height=6, fig.width=4, dev=c("png", "pdf") }
+gg <- ggplot(cells.rna.m, aes(variable, value, fill=sig.q3.up))
+gg <- gg + geom_boxplot(outlier.shape=NA) + scale_fill_manual(name="Upregulated in Dnmt3a -/- mOSNs", values=c("grey", "red3")) + labs(x="", y="log2(FPKM + 1)")
+gg <- gg + theme(legend.position=c(.4, .9) ) + coord_cartesian(ylim=c(0, 12))
+gg
+```
+
+```{r}
+gg <- ggplot(cells.rna.m, aes(variable, value, fill=sig.q3.down))
+gg + geom_boxplot()
+```
+
+```{r}
+gene.fpkm.mat.1log2.m <- melt(gene.fpkm.mat.1log2)
+```
+
+```{r}
+cells.class <- read.delim("~/s2/analysis/rna/summaries/omp_ngn_icam_mrna_ucsc_fpkm_1log2_rna_class.txt")
+gene.fpkm.mat.1log2.m$class <- cells.class$class[match(gene.fpkm.mat.1log2.m$id, cells.class$id)]
+gene.fpkm.mat.1log2.m <- na.omit(gene.fpkm.mat.1log2.m)
+gene.fpkm.mat.1log2.m$class <- factor(gene.fpkm.mat.1log2.m$class, levels=c("mosn-specific", "mosn/gbc-common", "gbc-specific", "gbc/hbc-common", "hbc-specific"))
+```
+
+Not general increase in HBC-specific gene expression
+```{r d3xog_wt_het_ko_rmrna_run7_omp_ngn_icam_mrna_ucsc_fpkm_1log2_rna_class, fig.height=6, fig.width=4, dev=c("png", "pdf")}
+gg <- ggplot(na.omit(gene.fpkm.mat.1log2.m[gene.fpkm.mat.1log2.m$variable=="q3.q1",]), aes(value, color=class))
+gg + geom_density() + geom_vline(xintercept=0, linetype=2) + scale_color_brewer(palette="Set1") + facet_grid(class~.)
+```
+
+### Gene body 5hmC 
+```{r}
+hmc <- makeFeatureMatrix2("refgene_nodup.bed_chr", "d3xog_tt3_hmc", data_type="rpkm/mean")
+hmc.m <- melt(hmc)
+hmc.m$id <- rownames(hmc)
+```
+
+```{r}
+data.mid.m$sig.q3.up <- data.mid.m$id %in% gene.sig.q3.up$gene
+```
+
+```{r}
+data.mid.m.ratio <- ddply(data.mid.m[data.mid.m$celltype=="mOSN",], .(mod, sig.q3.up, id), summarize, ko.wt=log2((value[geno=="-/-"] + 0.01) / (value[geno=="+/+"] + 0.01)))
+```
+
+```{r gene_whole_W200N50F50_mid_d3xog_hmc_mc_d3xog_wt_het_ko_rmrna_run7_sig_up, fig.height=6, fig.width=5, dev=c("png", "pdf")}
+gg <- ggplot(data.mid.m.ratio, aes(ko.wt, color=sig.q3.up))
+gg + geom_density() + facet_grid(mod~.) + geom_vline(xintercept=0, linetype=2) + scale_color_manual(name="Upregulated in Dnmt3a -/- mOSNs", values=c("grey3", "red3")) + coord_cartesian(xlim=c(-2, 2))
+```
+
 

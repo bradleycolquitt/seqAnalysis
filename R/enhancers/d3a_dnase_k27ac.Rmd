@@ -1,0 +1,63 @@
+D3a - DNase - ak27
+========================================================
+
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+```
+
+### Peak
+```{r}
+cells <- makeFeatureMatrix2("d3a_het_dnase_inter_moe_h3k27ac_interV_moe_h3k4me_3.bed_chr", "cells_rep_hmc", data_type="rpkm/mean")
+d3a <- makeFeatureMatrix2("d3a_het_dnase_inter_moe_h3k27ac_interV_moe_h3k4me_3.bed_chr", "d3xog_hmc", data_type="rpkm/mean")
+```
+
+```{r}
+mid.comb <- cbind(cells, d3a[,3])
+```
+
+```{r}
+mid.comb <- mid.comb[order(mid.comb[,1]),]
+mid.comb.c100 <- chunkMatrix(mid.comb, chunks=100)
+mid.comb.c100.m <- melt(mid.comb.c100, id.vars="index")
+levels(mid.comb.c100.m$variable) <- c("mOSN WT", "GBC", "HBC", "mOSN KO")
+```
+
+```{r, fig.width=5, fig.height=5}
+theme_set(theme_classic())
+gg <- ggplot(mid.comb.c100.m, aes(index, value, color=variable))
+gg + geom_point() + scale_color_manual(values=c("skyblue4", "slategray4", "slategray3", "tomato4")) + labs(y="Average RPM") + theme(legend.position=c(.2, .8), legend.title=element_blank(), legend.key=element_blank())
+```
+
+### Flank +- 1kb
+```{r}
+cells <- makeFeatureMatrix2("d3a_het_dnase_inter_moe_h3k27ac_interV_moe_h3k4me_3.bed_chr", "cells_rep_hmc", data_type="rpkm/mean", select="flank1000")
+d3a <- makeFeatureMatrix2("d3a_het_dnase_inter_moe_h3k27ac_interV_moe_h3k4me_3.bed_chr", "d3xog_hmc", data_type="rpkm/mean", select="flank1000")
+```
+
+```{r}
+flank.comb <- cbind(cells, d3a$ko)
+```
+
+```{r}
+flank.comb <- flank.comb[order(flank.comb[,1]),]
+flank.comb.c100 <- chunkMatrix(flank.comb, chunks=100)
+flank.comb.c100.m <- melt(flank.comb.c100, id.vars="index")
+levels(flank.comb.c100.m$variable) <- c("mOSN WT", "GBC", "HBC", "mOSN KO")
+```
+
+```{r fig.width=5, fig.height=5}
+theme_set(theme_classic())
+gg <- ggplot(flank.comb.c100.m, aes(index, value, color=variable))
+gg + geom_point() + scale_color_manual(values=c("skyblue4", "slategray4", "slategray3", "tomato4")) + labs(y="Average RPM") + theme(legend.position=c(.2, .8), legend.title=element_blank(), legend.key=element_blank())
+```
+
+```{r}
+colnames(mid.comb)[4] <- "omp_hmc_ko"
+mid.log2 <- colwise(hundrethlog2)(mid.comb)
+mid.pair <- pairwise(mid.log2, subtract)
+```

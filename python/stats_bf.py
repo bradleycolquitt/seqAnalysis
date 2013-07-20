@@ -181,16 +181,10 @@ def import_features(set, feature, samples, data_type):
   return d
 
 def worker(d):
-  #n = d.keys()
   e = ExprData(d)
   bf = e.compute_bayes_factor()
   return bf
-  #for i in range(len(bf)):
-  #  if args.cutoff:
-  #    if bf[i] > args.cutoff:
-  #      print "%s\t%d" % (n[i], bf[i])
-  #  else:  
-  #    print "%s\t%d" % (n[i], bf[i])
+
   
 def main():
   parser = argparse.ArgumentParser(description='Determine differentially expressed genes.')

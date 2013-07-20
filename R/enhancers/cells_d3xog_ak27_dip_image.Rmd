@@ -1,0 +1,32 @@
+D3a - DNase peaks, H3K27ac - heatmaps
+========================================================
+
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+opts_chunk$set(warning=FALSE, message=FALSE, error=FALSE, results='hide')
+```
+
+```{r}
+positionMatrix.all("ak27_F3_interV_genes_W25F100_ak27_height3_min1.bed_W25F200_both_chr", data_type="rpkm/mean")
+```
+
+```{r}
+omp <- makeImage("omp_hmc_rep1_q30_rmdup_extend300_mean_omp_hmc_rep2_q30_rmdup_smooth5", "ak27_F3_interV_genes_W25F100_ak27_height3_min1.bed_W25F200_both_chr", data_type="rpkm/mean")
+ko <- makeImage("d3xog_ko_hmc_paired_q30_smooth5", "ak27_F3_interV_genes_W25F100_ak27_height3_min1.bed_W25F200_both_chr", data_type="rpkm/mean")
+
+```
+
+```{r}
+MP.heat(omp, range=c(0,1))
+```
+
+```{r}
+omp.pc <- prcomp(omp)
+omp.pred <- predict(omp.pc, omp)
+```
+
+```{r}
+MP.heat(omp[order(omp.pred[,1]),], range=c(0,1))
+```
+
+

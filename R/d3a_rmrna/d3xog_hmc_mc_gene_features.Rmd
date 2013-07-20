@@ -1,0 +1,90 @@
+D3xOG 5hmC 5mC gene body - features
+========================================================
+
+```{r}
+opts_chunk$set(warning=FALSE, message=FALSE, error=TRUE)
+library(plyr)
+library(reshape2)
+library(gridExtra)
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
+source("~/src/seqAnalysis/R/ggplot2.R")
+```
+
+```{r}
+positionMatrix.all("gene_whole_W200N50F50_chr", data_type="rpkm/mean")
+```
+
+```{r}
+samples <- c("omp_hmc_rep1_q30_rmdup_extend300_mean_omp_hmc_rep2_q30_rmdup", 
+                 "d3xog_het_hmc_sort_q30_rmdup", 
+                 "d3xog_ko_hmc_sort_q30_rmdup", 
+                 "omp_mc_rep1_q30_rmdup_extend300", 
+                 "d3xog_het_mc_sort_q30_rmdup", 
+                 "d3xog_ko_mc_sort_q30_rmdup",
+             "ngn_hmc_rep1_q30_rmdup_extend300_mean_ngn_hmc_rep2_q30_rmdup", 
+             "icam_hmc_rep1_q30_rmdup_extend300_mean_icam_hmc_rep2_q30_rmdup",
+             "ngn_mc_rep1_q30_rmdup_extend300_mean_ngn_mc_rep2_q30_rmdup", 
+             "icam_mc_rep1_q30_rmdup_extend300_mean_icam_mc_rep2_q30_rmdup")
+data <- lapply(samples, function(x) makeImage(x, "gene_whole_W200N50F50_chr", data_type="rpkm/mean"))
+```
+
+```{r}
+data.mid <- lapply(data, function(x) apply(x[,51:100], 1, mean))
+data.mid <- data.frame(do.call("cbind", data.mid))
+colnames(data.mid) <- c("wt_omp_hmc", "het_omp_hmc", "ko_omp_hmc", "wt_omp_mc", "het_omp_mc", "ko_omp_mc", "wt_ngn_hmc", "wt_icam_hmc", "wt_ngn_mc", "wt_icam_mc")
+```
+
+```{r}
+cor(data.mid)
+```
+
+```{r gene_whole_W200N50F50_mean_body_d3xog_wt_ko_ngn_icam_hmc_mc_point, fig.width=8, fig.height=6, dev=c("png", "pdf")}
+theme_set(theme_bw())
+wt.ko <- gg_scatter(as.data.frame(data.mid), "wt_omp_hmc", "ko_omp_hmc", 10) + coord_cartesian(x=c(0,3), y=c(0,3)) + labs(x="mOSN Dnmt3a +/+", y="mOSN Dnmt3a -/-") 
+ngn.ko <- gg_scatter(as.data.frame(data.mid), "wt_ngn_hmc", "ko_omp_hmc", 10) + coord_cartesian(x=c(0,3), y=c(0,3)) + labs(x="GBC Dnmt3a +/+", y="mOSN Dnmt3a -/-")  
+icam.ko <- gg_scatter(as.data.frame(data.mid), "wt_icam_hmc", "ko_omp_hmc", 10) + coord_cartesian(x=c(0,3), y=c(0,3)) + labs(x="HBC Dnmt3a +/+", y="mOSN Dnmt3a -/-")  
+wt.ko.mc <- gg_scatter(as.data.frame(data.mid), "wt_omp_mc", "ko_omp_mc", 10) + coord_cartesian(x=c(0,3), y=c(0,3)) + labs(x="mOSN Dnmt3a +/+", y="mOSN Dnmt3a -/-") 
+ngn.ko.mc <- gg_scatter(as.data.frame(data.mid), "wt_ngn_mc", "ko_omp_mc", 10) + coord_cartesian(x=c(0,3), y=c(0,3)) + labs(x="GBC Dnmt3a +/+", y="mOSN Dnmt3a -/-") 
+icam.ko.mc <- gg_scatter(as.data.frame(data.mid), "wt_icam_mc", "ko_omp_mc", 10) + coord_cartesian(x=c(0,3), y=c(0,3)) + labs(x="HBC Dnmt3a +/+", y="mOSN Dnmt3a -/-") 
+grid.arrange(wt.ko, ngn.ko, icam.ko, wt.ko.mc, ngn.ko.mc, icam.ko.mc, ncol=3, nrow=2)
+```
+
+```{r}
+data.mid$id <- rownames(data.mid)
+data.mid.m <- melt(data.mid)
+s <- str_split(data.mid.m$variable, "_")
+data.mid.m$geno <- factor(unlist(lapply(s, function(x) x[1])), levels=c("wt", "het", "ko"))
+levels(data.mid.m$geno) <- c("+/+", "+/-", "-/-")
+data.mid.m$celltype <- factor(unlist(lapply(s, function(x) x[2])), levels=c("omp", "ngn", "icam"))
+levels(data.mid.m$celltype) <- c("mOSN", "GBC", "HBC")
+data.mid.m$mod <- factor(unlist(lapply(s, function(x) x[3])), levels=c("hmc", "mc"))
+levels(data.mid.m$mod) <- c("5hmC", "5mC")
+```
+
+```{r gene_whole_W200N50F50_mean_body_d3xog_wt_ko_omp_hmc_mc_density, fig.height=4, fig.width=6, dev=c("png", "pdf")}
+theme_set(theme_bw())
+gg <- ggplot(data.mid.m[data.mid.m$celltype=="mOSN",], aes(value, color=geno))
+gg + geom_density() + facet_grid(mod~.) + coord_cartesian(xlim=c(0, 5)) + scale_color_brewer(name="Dnmt3a", palette="Set1") + labs(x="Mean RPKM")
+```
+
+```{r gene_whole_W200N50F50_mean_body_d3xog_wt_ko_omp_ngn_icam_hmc_mc_density, fig.height=4, fig.width=6, dev=c("png", "pdf")}
+theme_set(theme_bw())
+gg <- ggplot(data.mid.m, aes(value, color=geno))
+gg + geom_density() + facet_grid(celltype~mod) + coord_cartesian(xlim=c(0, 5)) + scale_color_brewer(name="Dnmt3a", palette="Set1") + labs(x="Mean RPKM")
+```
+
+```{r gene_whole_W200N50F50_mean_body_omp_ngn_icam_hmc_mc_density, fig.height=4, fig.width=6, dev=c("png", "pdf")}
+theme_set(theme_bw())
+gg <- ggplot(data.mid.m[data.mid.m$geno=="+/+",], aes(value, color=celltype))
+gg + geom_density() + facet_grid(mod~.) + coord_cartesian(xlim=c(0, 5)) + scale_color_brewer(name="Cell type", palette="Set1") + labs(x="Mean RPKM")
+```
+
+
+```{r}
+data.mid.ratio <- ddply(data.mid.m[data.mid.m$celltype=="mOSN",], .(mod, id), summarize, ko.wt = log2((value[geno=="-/-"]+.01) / (value[geno=="+/+"]+.01)))
+```
+
+
+

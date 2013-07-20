@@ -104,7 +104,7 @@ def compute_worker_h5(obj, chr_tbp):
     for line in feature_data:
         line = line.strip()
         sline = line.split()
-        if re.search("chr3-438", line): pdb.set_trace()
+
         start = (int(sline[1]) - 1 - obj.flank) / window_size
         end = (int(sline[2]) + obj.flank) / window_size
         vals1 = sample1_data[start:end]

@@ -1,0 +1,38 @@
+D3a - DNase peaks 2 - heatmaps
+========================================================
+
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(mclust)
+```
+
+### Peak
+```{r}
+cells <- makeFeatureMatrix2("d3a_het_dnase_inter_moe_h3k27ac_interV_genes.bed_chr", "cells_rep_hmc", data_type="rpkm/mean")
+d3a <- makeFeatureMatrix2("d3a_het_dnase_inter_moe_h3k27ac_interV_genes.bed_chr", "d3xog_hmc", data_type="rpkm/mean")
+```
+
+```{r}
+mid.comb <- cbind(cells, d3a[,3])
+colnames(mid.comb)[4]<- "omp_hmc_ko"
+```
+
+```{r}
+mid.comb.log2 <- numcolwise(hundrethlog2)(mid.comb)
+rownames(mid.comb.log2) <- rownames(mid.comb)
+mid.comb.log2$ko.wt <- with(mid.comb.log2, omp_hmc_ko - omp_hmc)
+```
+
+```{r}
+mid.comb.log2.mc <- Mclust(mid.comb.log2$ko.wt, G=3)
+```
+
+```{r}
+mid.comb.log2$class3 <- mid.comb.log2.mc$classification
+```
+

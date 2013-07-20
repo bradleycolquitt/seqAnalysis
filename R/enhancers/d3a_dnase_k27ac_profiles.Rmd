@@ -1,0 +1,23 @@
+D3a - DNase peaks 2 - heatmaps
+========================================================
+
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
+```
+
+
+```
+makeProfile2.allSamp("d3a_het_dnase_inter_moe_tk27_mk4_interV_genes.bed_W25F200_both_chr", data_type="rpkm/mean", rm.outliers=0.01)
+```
+
+```{r}
+plot2.several("d3a_het_dnase_inter_moe_tk27_mk4_interV_genes.bed_W25F200_both_chr", "d3xog_nuc", data_type="rpkm/mean", group2="trim0.01", cols=col2)
+```
+
+```{r}
+par(mfrow=c(2,1))
+plot2("d3a_het_dnase_inter_moe_tk27_mk4_interV_genes.bed_W25F200_both_chr", "moe_h3k4me1_rmdup_sub_moe_d3a_wt_input_q30_rmdup", data_type="rpkm/mean", group2="trim0.01", cols=col2)
+plot2("d3a_het_dnase_inter_moe_tk27_mk4_interV_genes.bed_W25F200_both_chr", "moe_h3k27ac_rmdup_sub_moe_d3a_wt_input_q30_rmdup", data_type="rpkm/mean", group2="trim0.01", cols=col2)
+```

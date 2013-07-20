@@ -75,22 +75,6 @@ abline(h = 0.5, lty = 2)
 plot2.several("Refgene_exons_split2_start_midExons_W25F40_both_chr", "d3xog_hmc", 
     data_type = "rpkm/mean", group2 = "trim0.01", cols = col3, y.vals = c(0, 
         1.2), lab = "Exon start", wsize = 25)
-```
-
-```
-## [1] "omp_hmc_rep1_mean_omp_hmc_rep2_trim0.01"
-## [1] "omp_hmc_rep1_mean_omp_hmc_rep2_trim0.01_mean"
-## [1] "d3xog_het_hmc_paired_q30_trim0.01"
-## [1] "d3xog_het_hmc_paired_q30_trim0.01_mean"
-## [1] "d3xog_ko_hmc_paired_q30_trim0.01"
-## [1] "d3xog_ko_hmc_paired_q30_trim0.01_mean"
-```
-
-```
-## [1] 0.0 1.2
-```
-
-```r
 abline(h = 0.5, lty = 2)
 ```
 
@@ -152,6 +136,7 @@ rna <- makeFeatureMatrix2("Refgene_exons_split_noFirstLast.bed_chr", "d3xog_rmrn
 
 ```r
 rna.1log2 <- numcolwise(onelog2)(rna)
+rna.1log2$id <- rownames(rna)
 ```
 
 
@@ -176,22 +161,34 @@ gg <- gg + theme(strip.text.y = element_text(angle = 0), legend.position = "none
 gg
 ```
 
-![plot of chunk Refgene_exons_split_noFirstLast_omp_d3xog_rmrna_protein_densities](figure/Refgene_exons_split_noFirstLast_omp_d3xog_rmrna_protein_densities.png) 
-
 
 
 ```r
 hmc <- namerows(hmc)
 comb <- cbind(hmc, rna.1log2)
-# colnames(comb) <- c('hmc.wt.1', 'hmc.het.1', 'hmc.ko.1', 'hmc.tt3.1',
-# 'id', 'rna.wt.1', 'rna.het.1', 'rna.ko.1', 'rna.ko.2')
+colnames(comb) <- c("hmc.wt.1", "hmc.het.1", "hmc.ko.1", "hmc.tt3.1", "id", 
+    "rna.wt.1", "rna.wt.2", "rna.wt.3", "rna.het.1", "rna.ko.1", "rna.ko.2")
 ```
 
 
 
 ```r
-# comb.rna.nz <- comb[as.logical(apply(comb[,6:9], 1, prod)),]
+comb <- comb[order(comb[, 1]), ]
+comb.c100 <- chunkMatrix(comb, chunks = 100, FUN = median)
+comb.c100.m <- melt(comb.c100, id.vars = "index")
+gg <- ggplot(comb.c100.m, aes(index, value))
+gg + geom_point() + facet_wrap(~variable)
 ```
+
+![plot of chunk unnamed-chunk-7](figure/unnamed-chunk-7.png) 
+
+
+
+```r
+comb.rna.nz <- comb[as.logical(apply(comb[, grep("rna", colnames(comb))], 1, 
+    prod)), ]
+```
+
 
 
 
@@ -205,23 +202,63 @@ comb <- cbind(hmc, rna.1log2)
 
 
 ```r
-# comb.rna.nz.m <- melt(comb.rna.nz) comb.rna.nz.m$mod <- rep(c('hmc',
-# 'rna'), each=4*nrow(comb.rna.nz)) comb.rna.nz.m$genotype <- rep(c('wt',
-# 'het', 'ko', 'tt3', 'wt', 'het', 'ko', 'ko'), each=nrow(comb.rna.nz))
-# comb.rna.nz.m$rep <- rep(c('1', '1', '1', '1', '1', '1', '1', '2'),
-# each=nrow(comb.rna.nz)) var_split <- str_split(comb.rna.nz.m$variable,
-# '\\.')
-
+comb.rna.nz.m <- melt(comb.rna.nz)
+comb.rna.nz.m$mod <- rep(c(rep("hmc", times = 4), rep("rna", times = 6)), each = nrow(comb.rna.nz))
+comb.rna.nz.m$genotype <- rep(c("wt", "het", "ko", "tt3", "wt", "wt", "wt", 
+    "het", "ko", "ko"), each = nrow(comb.rna.nz))
+comb.rna.nz.m$rep <- rep(c("1", "1", "1", "1", "1", "2", "3", "1", "1", "2"), 
+    each = nrow(comb.rna.nz))
+# var_split <- str_split(comb.rna.nz.m$variable, '\\.')
 ```
 
 
 
 
 ```r
-# sample_1E4 <- sample(comb.rna.nz.m$id, 1E4) comb.rna.nz.m.1E4 <-
-# comb.rna.nz.m[comb.rna.nz.m$id %in% sample_1E4,] comb.rna.nz.m.ratio <-
-# ddply(comb.rna.nz.m.1E4, .(id, mod), mutate, value.ratio.wt = value /
-# value[genotype=='wt'], .progress#='text')
+sample_1E4 <- sample(comb.rna.nz.m$id, 10000)
+comb.rna.nz.m.1E4 <- comb.rna.nz.m[comb.rna.nz.m$id %in% sample_1E4, ]
+hmc.rati <- ddply(comb.rna.nz.m[comb.rna.nz.m$mod == "hmc", ], .(id), function(d) d$value/d$value[d$genotype == 
+    "wt"], .progress = "text")
 ```
+
+
+### Median normalized
+
+```r
+library(DESeq)
+rna.unnorm <- makeFeatureMatrix2("Refgene_exons_split_noFirstLast.bed_chr", 
+    "d3xog_rmrna_protein2", data_type = "bam/sum")
+```
+
+```
+## [1] "omp_rmrna_rep1_blank_protein"      "omp_rmrna_rep2_blank_protein"     
+## [3] "d3xog_wt_rmrna_blank_protein"      "d3xog_het_rmrna_blank_protein"    
+## [5] "d3xog_ko_rmrna_blank_protein"      "d3xog_ko_rmrna_rep2_blank_protein"
+```
+
+```r
+rna.unnorm <- rna.unnorm[!duplicated(rownames(rna.unnorm)), ]
+conditions <- data.frame(row.names = colnames(rna.unnorm[, -4]), condition = c("wt", 
+    "wt", "wt", "ko", "ko"))
+rna.cds <- newCountDataSet(rna.unnorm[, -4], factor(conditions$condition))
+rna.cds <- estimateSizeFactors(rna.cds)
+rna.norm <- counts(rna.cds, normalized = T)
+rna.norm.1log2 <- numcolwise(onelog2)(as.data.frame(rna.norm))
+```
+
+
+
+```r
+boxplot(rna.norm.1log2)
+```
+
+![plot of chunk unnamed-chunk-13](figure/unnamed-chunk-13.png) 
+
+
+
+```r
+rna.cds <- estimateDispersions(rna.cds)
+```
+
 
 

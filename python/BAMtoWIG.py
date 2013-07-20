@@ -38,8 +38,9 @@ from multiprocessing import Queue, Process, Pool
 from string import *
 
 #bam_dir = "/media/storage2/data/rna/tophat"
-bam_dir = "/media/storage2/data/bam"
+#bam_dir = "/media/storage2/data/bam"
 #wig_dir = "/media/storage2/data/wig/unnorm"
+bam_dir = "/media/storage2/jessica/data/ChIP_BAM"
 
 #bam_dir = "/home/user/storage/data/guanz/bam"
 wig_dir = "/media/storage2/data/wig"
@@ -143,57 +144,31 @@ def window_core(obj, chrom):
     for read in bamfile.fetch(chrom):
         read_mid = sam.read_mid_compute(obj, read)
         if read_mid < 0: continue
-        """
-        # if just using read ends
-        #if obj.ends:
-           # pdb.set_trace()
-            if read.is_reverse:
-                read_mid = read.aend + 1
-            else:
-                read_mid = read.pos + 2
-        elif obj.pe:
-            if obj.extend > 0:
-                #pdb.set_trace()
-                if read.is_read1:
-                    if read.is_reverse:
-                        read_mid = read.aend - (obj.extend / 2)
-                    else:
-                        read_mid = read.pos + (obj.extend / 2)
-            else:
-                if read.is_paired and read.is_read1:
-                    if read.is_reverse:
-                        read_mid = read.aend + read.isize / 2
-                    else:
-                        read_mid = read.pos + read.isize / 2
-                else: continue
-        else:
-            if read.is_reverse:
-                read_mid = read.aend - (obj.extend / 2)
-            else:
-                read_mid = read.pos + (obj.extend / 2)
-        """
+
         read_mid_index = read_mid / obj.window_size
         if read_mid_index <= len(pos_vect) - 1:
             pos_vect[read_mid_index] = pos_vect[read_mid_index] + 1
     
-    #pdb.set_trace()
-    #first_non_zero = np.nonzero(pos_vect)[0][0]
-    #first_non_zero_scaled = first_non_zero * obj.window_size
-    
-    #out = "fixedStep chrom={0} start={1} step={2} span={2}\n".format(chrom, first_non_zero_scaled, obj.window_size)
     out = "fixedStep chrom={0} start={1} step={2} span={2}\n".format(chrom, "1", obj.window_size)
     obj.wigfile.write(out)
     
+    if obj.no_norm:
+        for val in pos_vect:
+            if obj.pseudo and val == 0: val = 1
+            obj.wigfile.write(str(val) + "\n")
+
     pos_vect = window_correct * pos_vect
     #pdb.set_trace()
     if obj.smooth > 0:
         pos_vect = signal_utils.smooth(pos_vect, obj.smooth, window="flat")
     
-    if not obj.no_norm:    
-        #for val in pos_vect[first_non_zero:]:
+    if not obj.no_output:    
+        if obj.pseudo: pos_vect[pos_vect==0] = 1
+        if not obj.no_norm:
+             pos_vect = window_correct * pos_vect
+             
         for val in pos_vect:
-            if obj.pseudo and val == 0: val = 1
-            obj.wigfile.write(str(val) + "\n")
+             obj.wigfile.write(str(val) + "\n")
         
 def window_full(obj, chrom):
     #pdb.set_trace()
@@ -308,14 +283,19 @@ def window_bed(obj):
                         read_mid = read.aend - 1 - bed_start
                     else:
                         read_mid = read.pos - bed_start
-            
+                else:
+                    #pdb.set_trace()
+                    read_mid = sam.read_mid_compute(obj, read)
+                    if read_mid < 0: continue
+                    read_mid = read_mid - bed_start
+
                 # Record ends within relative vector
                 read_mid_index = read_mid / obj.window_size
                 if read_mid_index >= 0 and read_mid_index <= len(pos_vect) - 1:
                     pos_vect[read_mid_index] = pos_vect[read_mid_index] + 1
         else:
             # Currently written for only window_size of 1
-#            pdb.set_trace()
+#           pdb.set_trace()
             for column in bamfile.pileup(reference=chrom, start=bed_start, end=bed_end):
                 if (column.pos >= bed_start and column.pos < bed_end):
  #                   pdb.set_trace()

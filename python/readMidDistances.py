@@ -280,7 +280,7 @@ def extend_bam(bam, type, reheader, size=0):
     tmp_name = bam_prefix + ".bed"
     tmp_bed = open(tmp_name, 'w')
     size_name = str(size)
-    if size == 0 : size_name = "insert"
+    if type=="extend" and size == 0 : size_name = "insert"
     
     out_name = "_".join([bam_prefix, type, size_name]) + ".bam"
     out_bam = open(out_name, 'w')

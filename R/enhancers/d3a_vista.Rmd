@@ -1,0 +1,15 @@
+D3a Vista
+========================================================
+
+```{r}
+opts_chunk$set(warning=FALSE, message=FALSE, error=FALSE, results='hide')
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+library(ggplot2)
+```
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, results='hide'}
+makeProfile2.allSamp("phastConsElements30way_len50_inter_vista.bed_W25F200_both_chr", data_type="bam_extend/mean_chrom_mean_0", rm.outliers=0.01)
+makeProfile2.allSamp("phastConsElements30way_len50_inter_vista.bed_W25F200_both_chr", data_type="bam_ends/mean", rm.outliers=0.01)
+makeProfile2.allSamp("phastConsElements30way_len50_inter_vista.bed_W25F200_both_chr", data_type="rpkm/mean", rm.outliers=0.01)
+makeProfile2.allSamp("phastConsElements30way_len50_inter_vista.bed_W25F200_both_chr", data_type="bam/mean", rm.outliers=0.01)
+```

@@ -84,6 +84,7 @@ enhancerClasses <- data.frame(cluster=1:14, class=factor(1:4, labels=c("5hmC var
 makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type, 
                                transf=NULL, rep=FALSE, write=TRUE, 
                                include_score=FALSE) {
+  cnames <- NULL
   if (set=="cells_norm" | set=="cells") {
     samples <- samples.cells_norm
   } else if (set=="unnorm") {
@@ -102,10 +103,22 @@ makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type,
   } else if (set=="cells_full") {
     samples <- c("omp_hmc_120424_full", "ngn_hmc_120424_full", "icam_hmc_120424_full",
                  "omp_mc_full", "ngn_mc_full", "icam_mc_full")
+    
   } else if (set=="cells_bam") {
     samples <- c("omp_hmc_120424_rmdup", "ngn_hmc_120424_rmdup", "icam_hmc_120424_rmdup")
   } else if (set=="cells_rep_hmc")  {
-    samples <- c("omp_hmc_rep1_mean_omp_hmc_rep2", "ngn_hmc_rep1_mean_ngn_hmc_rep2", "icam_hmc_rep1_mean_icam_hmc_rep2")
+    samples <- c("omp_hmc_rep1_q30_rmdup_extend300_mean_omp_hmc_rep2_q30_rmdup", 
+                 "ngn_hmc_rep1_q30_rmdup_extend300_mean_ngn_hmc_rep2_q30_rmdup", 
+                 "icam_hmc_rep1_q30_rmdup_extend300_mean_icam_hmc_rep2_q30_rmdup")
+    cnames <- c("omp_hmc", "ngn_hmc", "icam_hmc")
+  } else if (set=="cells_rep_hmc_mc")  {
+    samples <- c("omp_hmc_rep1_q30_rmdup_extend300_mean_omp_hmc_rep2_q30_rmdup", 
+                 "ngn_hmc_rep1_q30_rmdup_extend300_mean_ngn_hmc_rep2_q30_rmdup", 
+                 "icam_hmc_rep1_q30_rmdup_extend300_mean_icam_hmc_rep2_q30_rmdup",
+                 "omp_mc_rep1_q30_rmdup_extend300",
+                 "ngn_mc_rep1_q30_rmdup_extend300_mean_ngn_mc_rep2_q30_rmdup", 
+                 "icam_mc_rep1_q30_rmdup_extend300_mean_icam_mc_rep2_q30_rmdup")
+    cnames <- c("omp_hmc", "ngn_hmc", "icam_hmc", "omp_mc", "ngn_mc", "icam_mc")
   } else if (set=="medips_rf_1" | set=="medips_rf_2") {
     samples <- samples.medips_rf
   } else if (set=="rpm_avg_2") {
@@ -133,14 +146,22 @@ makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type,
                  "moe_d3a_wt_in_plus_sub_minus")
   } else if (set=="all") {
     samples <- list.files(paste(feature_norm_path, feature, sep="/")) 
+  } else if (set=="d3a_hist") {
+    samples <- c("moe_d3a_wt_h3k27me3_q30_rmdup_sub_moe_d3a_wt_input_q30_rmdup",
+                 "moe_d3a_ko_h3k27me3_q30_rmdup_sub_moe_d3a_ko_input_q30_rmdup",
+                 "moe_d3a_wt_h3k4me_q30_rmdup_sub_moe_d3a_wt_input_q30_rmdup",
+                 "moe_d3a_ko_h3k4me_q30_rmdup_sub_moe_d3a_ko_input_q30_rmdup")
+    cnames <- c("wt_k27", "ko_k27", "wt_k4", "ko_k4")
   } else if (set=="d3a_mrna") {
     samples <- c("moe_d3a_wt_mrna_rpkm", "moe_d3a_ko_mrna_rpkm")
   } else if (set=="d3a_mrna_2") {
     samples <- c("moe_d3a_wt_mrna", "moe_d3a_ko_mrna")
   } else if (set=="cells_nuc") {
     samples <- c("omp_nuc_0123", "icam_nuc_01234")
-  } else if (set=="d3a_nuc") {
+  } else if (set=="d3xog_nuc") {
     samples <- c("d3xog_wt_nuc_478_rmdup", "d3xog_ko_nuc_256_rmdup")
+  } else if (set=="d3xog_nuc_q30") {
+    samples <- c("d3xog_wt_nuc_478_rmdup_q30", "d3xog_ko_nuc_256_rmdup_q30")
   } else if (set=="d3a_nuc_sub") {
     samples <- samples.d3a_nuc_sub
   } else if (set=="d3a_nuc_extend") {
@@ -150,9 +171,29 @@ makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type,
   } else if (set=="d3a_kde") {
     samples <- c("d3xog_wt_nuc_478_p1", "d3xog_ko_nuc_256_p1")
   } else if (set=="d3xog_tt3_hmc") {
-    samples <- c("omp_hmc_rep1_mean_omp_hmc_rep2", "d3xog_het_hmc_paired_q30", 
-                 "d3xog_ko_hmc_paired_q30", "ott3_hmc_rep1_mean_ott3_hmc_rep2")
+    samples <- c("omp_hmc_rep1_q30_rmdup_extend300_mean_omp_hmc_rep2_q30_rmdup", 
+                 "d3xog_het_hmc_paired_q30", 
+                 "d3xog_ko_hmc_paired_q30", 
+                 "ott3_hmc_rep1_mean_ott3_hmc_rep2")
     
+  }  else if (set=="d3xog_hmc") {
+    samples <- c("omp_hmc_rep1_q30_rmdup_extend300_mean_omp_hmc_rep2_q30_rmdup", 
+                 "d3xog_het_hmc_sort_q30_rmdup", 
+                 "d3xog_ko_hmc_sort_q30_rmdup")
+    cnames <- c("wt", "het", "ko")
+  } else if (set=="d3xog_mc") {
+    samples <- c("omp_mc_rep1_q30_rmdup_extend300", 
+                 "d3xog_het_mc_sort_q30_rmdup", 
+                 "d3xog_ko_mc_sort_q30_rmdup")
+    cnames <- c("wt", "het", "ko")
+  } else if (set=="d3xog_hmc_mc") {
+    samples <- c("omp_hmc_rep1_q30_rmdup_extend300_mean_omp_hmc_rep2_q30_rmdup", 
+                 "d3xog_het_hmc_sort_q30_rmdup", 
+                 "d3xog_ko_hmc_sort_q30_rmdup", 
+                 "omp_mc_rep1_q30_rmdup_extend300", 
+                 "d3xog_het_mc_sort_q30_rmdup", 
+                 "d3xog_ko_mc_sort_q30_rmdup")
+    cnames <- c("hmc_wt", "hmc_het", "hmc_ko", "mc_wt", "mc_het", "mc_ko")
   } else if (set=="d3xog_rmrna") {
     samples <- c("d3xog_wt_rmrna_blank_paired_q30", "d3xog_het_rmrna_blank_paired_q30", 
                  "d3xog_ko_rmrna_blank_paired_q30", "d3xog_ko_rmrna_rep2_blank_paired_q30")
@@ -177,8 +218,34 @@ makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type,
     samples <- c("omp_rmrna_rep1_blank_protein", "omp_rmrna_rep2_blank_protein", "d3xog_wt_rmrna_blank_protein", 
                  "d3xog_het_rmrna_blank_protein", "d3xog_ko_rmrna_blank_protein", "d3xog_ko_rmrna_rep2_blank_protein")
   } else if (set=="d3a_dnase") {
-    samples <- c("d3a_het_dnase_sort_q30", "d3a_ko_dnase_sort_q30")
+    samples <- c("d3a_het_dnase_sort_q30", 
+                 "moe_d3a_ko_dnase_rep1_q30_rmdup_ends_mean_moe_d3a_ko_dnase_rep2_q30_rmdup_ends")
+    cnames <- c("het_dnase", "ko_dnase")
+  } else if (set=="en_marks") {
+    samples <- c("d3a_het_dnase_sort_q30", "moe_h3k27ac_rmdup",
+                 "moe_h3k4me1_rmdup", "moe_tk79")
     
+  } else if (set=="en_full") { 
+    samples <- c("moe_h3k27ac_rmdup_sub_moe_d3a_wt_input_q30_rmdup",
+                 "moe_d3a_wt_h3k27me3_q30_rmdup_sub_moe_d3a_wt_input_q30_rmdup",
+                 "d3a_het_dnase_sort_q30",
+                 "omp_hmc_rep1_q30_rmdup_extend300_mean_omp_hmc_rep2_q30_rmdup",
+                 "ngn_hmc_rep1_q30_rmdup_extend300_mean_ngn_hmc_rep2_q30_rmdup",
+                 "icam_hmc_rep1_q30_rmdup_extend300_mean_icam_hmc_rep2_q30_rmdup",
+                 "omp_mc_rep1_q30_rmdup_extend300",
+                 "ngn_mc_rep1_q30_rmdup_extend300_mean_ngn_mc_rep2_q30_rmdup",
+                 "icam_mc_rep1_q30_rmdup_extend300_mean_icam_mc_rep2_q30_rmdup"
+                 #"d3xog_ko_hmc_paired_q30_rmdup",
+                 #"d3xog_ko_mc_paired_q30_rmdup"
+                 )
+    cnames <- c("ak27", "tk27", "dnase", "omp_hmc", "ngn_hmc", "icam_hmc", "omp_mc", "ngn_mc", 
+                "icam_mc")
+                #, "omp_hmc_d3a_ko", "omp_mc_d3a_ko")
+    } else if (set=="hist_mod") {
+    samples <- c("moe_d3a_wt_h3k27me3_q30_rmdup_sub_moe_d3a_wt_input_q30_rmdup", 
+                 "moe_h3k27ac_rmdup_sub_moe_d3a_wt_input_q30_rmdup",
+                 "moe_h3k4me1_rmdup_sub_moe_d3a_wt_input_q30_rmdup")
+    cnames <- c("tk27", "ak27", "mk4")
   } else if (set=="cpg") {
     samples <- c("mm9")
   } else if (set=="encode_dnase") {
@@ -190,8 +257,13 @@ makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type,
                    "encode_liver_h3k4me1", "encode_lung_h3k4me1")
   }
   if (!is.null(select)) {
-    samples <- sapply(samples, function(x) paste(x, select, sep="_"))
-  }
+    if (!is.null(cnames)) {
+      cnames <- sapply(cnames, function(x) paste(x, select, sep="_"))
+      samples <- sapply(samples, function(x) paste(x, select, sep="_"))  
+    } else {
+      samples <- sapply(samples, function(x) paste(x, select, sep="_"))  
+    }
+  }  
 
   print(samples)
   vals <- foreach (sample=samples, .combine="cbind") %dopar% {
@@ -208,6 +280,9 @@ makeFeatureMatrix2 <- function(feature, set = "all", select=NULL, data_type,
     colnames(vals) <- c(samples, "score")
   } else {
     colnames(vals) <- samples  
+  }
+  if (!is.null(cnames)) {
+    colnames(vals) <- cnames
   }
 
   out_path <- paste(feature_norm_path, data_type, "summaries", sep="/")
@@ -582,11 +657,11 @@ saveBedBySubset <- function(data, bed, fname=NULL) {
 }
 
 prepForHeatmap <- function(mat, var_ind=c(1:3), N=1000) {
-  mat <- apply(mat, 2, pseudoCountNorm)
-  mat <- na.omit(mat)
+  #mat <- apply(mat, 2, pseudoCountNorm)
+  #mat <- na.omit(mat)
   #mat <- log(mat, 2)
-  mat <- sqrt(mat)
-  mat_extremes <- quantile(mat, probs=c(.02,.98))
+  #mat <- sqrt(mat)
+  mat_extremes <- quantile(as.matrix(mat), probs=c(.02,.98))
   mat <- mat[as.logical(apply(mat >= mat_extremes[1] & mat <= mat_extremes[2], 1, prod)),]
   mat.var <- apply(mat, 1, function(x) var(x[var_ind]))
   mat.var.q <- quantile(mat.var, probs=(length(mat.var) - N)/ length(mat.var))

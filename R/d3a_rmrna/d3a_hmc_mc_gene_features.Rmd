@@ -1,0 +1,61 @@
+D3xOG 5hmC 5mC gene body - features
+========================================================
+
+```{r}
+opts_chunk$set(warning=FALSE, message=FALSE, error=TRUE)
+library(plyr)
+library(reshape2)
+library(gridExtra)
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
+source("~/src/seqAnalysis/R/ggplot2.R")
+```
+
+```{r}
+positionMatrix.all("gene_whole_W200N50F50_chr", data_type="rpkm/mean")
+```
+
+```{r}
+samples <- c("moe_d3a_wt_hmc_sort_bt2", 
+                 "moe_d3a_ko_hmc_sort_bt2", 
+                 "moe_d3a_wt_mc_sort_bt2", 
+                 "moe_d3a_ko_mc_sort_bt2")
+data <- lapply(samples, function(x) makeImage(x, "gene_whole_W200N50F50_chr", data_type="rpkm/mean"))
+```
+
+```{r}
+data.mid <- lapply(data, function(x) apply(x[,51:100], 1, mean))
+data.mid <- as.data.frame(do.call("cbind", data.mid))
+colnames(data.mid) <- c("wt_hmc", "ko_hmc", "wt_mc",  "ko_mc")
+data.mid <- namerows(data.mid)
+```
+
+```{r}
+data.mid.m <- melt(data.mid)
+s <- str_split(data.mid.m$variable, "_")
+data.mid.m$geno <- factor(unlist(lapply(s, function(x) x[1])), levels=c("wt", "ko"))
+levels(data.mid.m$geno) <- c("+/+", "-/-")
+data.mid.m$mod <- factor(unlist(lapply(s, function(x) x[2])), levels=c("hmc", "mc"))
+levels(data.mid.m$mod) <- c("5hmC", "5mC")
+```
+
+```{r gene_whole_W200N50F50_moe_d3a_wt_ko_hmc_mc_density, fig.height=6, fig.width=4, dev=c("png", "pdf") }
+theme_set(theme_bw())
+gg <- ggplot(data.mid.m, aes(value, color=geno))
+gg <- gg + geom_density() + facet_grid(mod~.) + coord_cartesian(xlim=c(0, 5)) + scale_color_manual(name="Dnmt3a", values=c("black", "red3"))
+gg <- gg + labs(x="Mean RPKM") 
+gg
+```
+
+```{r}
+cor(data.mid)
+```
+
+```{r , fig.width=6, fig.height=6, dev=c("png", "pdf")}
+theme_set(theme_bw())
+hmc <- gg_scatter(as.data.frame(data.mid), "wt_hmc", "ko_hmc", 10) + coord_cartesian(x=c(0,3), y=c(0,3)) + labs(x="Dnmt3a +/+", y="Dnmt3a -/-") 
+mc <- gg_scatter(as.data.frame(data.mid), "wt_mc", "ko_mc", 10) + coord_cartesian(x=c(0,3), y=c(0,3)) + labs(x="Dnmt3a +/+", y="Dnmt3a -/-")  
+
+grid.arrange(hmc, mc, ncol=2, nrow=1)
+```

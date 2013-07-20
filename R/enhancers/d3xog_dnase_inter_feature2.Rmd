@@ -1,0 +1,78 @@
+DNase HS sites - Dnmt3a 5hmC/5mC/Nuc
+========================================================
+
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
+library(plyr)
+library(ggplot2)
+```
+
+```{r}
+d0.mod0 <- makeFeatureMatrix2("d3a_het_dnase_inter_moe_ak27_mk4_interV_genes.bed_chr", "d3xog_hmc_mc", data_type="rpkm/mean")
+d0.mod500 <- makeFeatureMatrix2("d3a_het_dnase_inter_moe_ak27_mk4_interV_genes.bed_chr", "d3xog_hmc_mc", data_type="rpkm/mean", select="flank500")
+d0.mod1000 <- makeFeatureMatrix2("d3a_het_dnase_inter_moe_ak27_mk4_interV_genes.bed_chr", "d3xog_hmc_mc", data_type="rpkm/mean", select="flank1000")
+
+
+d0.nuc0 <- makeFeatureMatrix2("d3a_het_dnase_inter_moe_ak27_mk4_interV_genes.bed_chr", "d3xog_nuc_q30", data_type="rpkm/mean")
+d0.nuc500 <- makeFeatureMatrix2("d3a_het_dnase_inter_moe_ak27_mk4_interV_genes.bed_chr", "d3xog_nuc_q30", data_type="rpkm/mean", select="flank500")
+d0.nuc1000 <- makeFeatureMatrix2("d3a_het_dnase_inter_moe_ak27_mk4_interV_genes.bed_chr", "d3xog_nuc_q30", data_type="rpkm/mean", select="flank1000")
+
+
+```
+
+```{r}
+m <- match(rownames(d0.mod0), rownames(d0.nuc0))
+d0.comb <- cbind(d0.mod0, d0.mod500, d0.mod1000, d0.nuc0[m,], d0.nuc500[m,], d0.nuc1000[m,])
+d0.comb.melt <- melt(d0.comb)
+d0.comb.melt$id <- rownames(d0.comb)
+d0.comb.melt$mod <- as.factor(c(rep(rep(c("hmc", "mc"), each=nrow(d0.mod0)*3), times=3), rep("nuc", each=nrow(d0.mod0)*6)))
+d0.comb.melt$genotype <- as.factor(c(rep(rep(c("wt", "het", "ko"), each=nrow(d0.mod0)), times=6), rep(rep(c("wt", "ko"), each=nrow(d0.mod0)), times=3)))
+d0.comb.melt$pos <- as.factor(c(rep(c("0", "500", "1000"), each=nrow(d0.mod0)*6), rep(c("0", "500", "1000"), each=nrow(d0.mod0)*2)))
+```
+
+```{r}
+d0.comb.ratio <- ddply(d0.comb.melt, .(id, mod, pos), summarize, ko.wt = log2((value[genotype=="ko"] + .01) / (value[genotype=="wt"] + .01)))
+```
+
+```{r}
+gg <- ggplot(d0.comb.ratio, aes(ko.wt, color=pos))
+gg + geom_density() + facet_grid(mod~., scales="free_y")
+```
+
+```{r}
+d0.comb.ratio.c <- recast(d0.comb.ratio, id~mod+pos)
+```
+
+```{r}
+gg <- ggplot(d0.comb.ratio.c, aes(hmc_500, nuc_500))
+gg + geom_point(alpha=I(1/5)) + labs(title="5hmC")
+```
+
+```{r}
+gg <- ggplot(d0.comb.ratio.c, aes(mc_500, nuc_500))
+gg + geom_point(alpha=I(1/5)) + labs(title="5mC")
+```
+
+```{r}
+d0.comb.ratio.c$hmc_500_cut4 <- cut(d0.comb.ratio.c$hmc_500, quantile(d0.comb.ratio.c$hmc_500))
+d0.comb.ratio$hmc_500_cut4 <- d0.comb.ratio.c$hmc_500_cut4[match(d0.comb.ratio$id, d0.comb.ratio.c[,1])]
+```
+
+```{r}
+gg <- ggplot(na.omit(d0.comb.ratio[d0.comb.ratio$mod=="nuc" & d0.comb.ratio$pos=="500",]), aes(hmc_500_cut4, ko.wt))
+gg + geom_boxplot() + coord_cartesian(ylim=c(-1, 2))
+```
+
+```{r}
+d0.comb.ratio.c$hmc_500_cut3 <- with(d0.comb.ratio.c, cut(hmc_500, c(min(hmc_500), -1, 1, max(hmc_500))))
+d0.comb.ratio$hmc_500_cut3 <- d0.comb.ratio.c$hmc_500_cut3[match(d0.comb.ratio$id, d0.comb.ratio.c[,1])]
+```
+
+```{r}
+gg <- ggplot(na.omit(d0.comb.ratio[d0.comb.ratio$mod=="nuc" & d0.comb.ratio$pos=="500",]), aes(hmc_500_cut3, ko.wt))
+gg + geom_boxplot() + coord_cartesian(ylim=c(-1, 2))
+```
+
+```{r}
+with(d0.comb.ratio[d0.comb.ratio$mod=="nuc" & d0.comb.ratio$pos=="500",], wilcox.test(ko.wt[as.numeric(hmc_500_cut3)==1], ko.wt[as.numeric(hmc_500_cut3)==2]))
+```

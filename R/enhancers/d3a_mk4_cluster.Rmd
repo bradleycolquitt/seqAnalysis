@@ -1,0 +1,64 @@
+D
+========================================================
+
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(mclust)
+```
+
+```{r}
+mk4 <- read.delim("~/s2/data/homer/peaks/moe_h3k4me1_q30_rmdup_gc/moe_h3k4me1_q30_rmdup_gc_input_moe_d3a_wt_input_q30_rmdup_gc_F2_interV_igenome_ensembl_genes_extend5kb.bed", header=F)
+mk4.tk27 <- read.delim("~/s2/data/homer/peaks/moe_h3k4me1_q30_rmdup_gc/moe_h3k4me1_q30_rmdup_gc_input_moe_d3a_wt_input_q30_rmdup_gc_F2_interV_igenome_ensembl_genes_extend5kb_inter_moe_d3a_wt_h3k27me3_gc_input_moe_d3a_wt_input_gc_histone_F3.bed", header=F)
+mk4.ak27 <- read.delim("~/s2/data/homer/peaks/moe_h3k4me1_q30_rmdup_gc/moe_h3k4me1_q30_rmdup_gc_input_moe_d3a_wt_input_q30_rmdup_gc_F2_interV_igenome_ensembl_genes_extend5kb_inter_moe_h3k27ac_q30_rmdup_gc_input_moe_d3a_wt_input_q30_rmdup_gc_histone_F2.bed", header=F)
+mk4.pres <- matrix(0, ncol=3, nrow=nrow(mk4))
+mk4.pres[,1] <- 1
+rownames(mk4.pres) <- mk4[,4]
+mk4.pres[rownames(mk4.pres) %in% mk4.tk27[,4],2] <- 1
+mk4.pres[rownames(mk4.pres) %in% mk4.ak27[,4],3] <- 1
+colnames(mk4.pres) <- c("mk4", "tk27", "ak27")
+mk4.pres <- data.frame(mk4.pres)
+mk4.pres$tk27.only <- mk4.pres[,2] & !mk4.pres[,3]
+mk4.pres$ak27.only <- mk4.pres[,3] & !mk4.pres[,2]
+mk4.pres$tk27.ak27 <- mk4.pres[,3] & mk4.pres[,2]
+mk4.pres$mk4.only <- !mk4.pres[,3] & !mk4.pres[,2]
+```
+
+```{r}
+en <- makeFeatureMatrix2("mk4_interV_genes.bed_chr", "hist_mod", data_type="rpkm/mean")
+en <- cbind(en, mk4.pres[match(rownames(en), rownames(mk4.pres)),3:7])
+en$class <- 0
+en$class[en$mk4.only] <- "no H3K27me3 or H3K27ac"
+en$class[en$tk27.only] <- "only H3K27me3"
+en$class[en$ak27.only] <- "only H3K27ac"
+en$class[en$tk27.ak27] <- "both H3K27me3 and H3K27ac"
+```
+
+```{r moe_h3k4me1_q30_rmdup_gc_input_moe_d3a_wt_input_q30_rmdup_gc_F2_ak27_tk27_scatter, fig.width=6, fig.height=6, dev=c("png", "pdf")}
+theme_set(theme_bw())
+gg <- ggplot(en, aes(ak27, tk27, color=factor(class)))
+gg <- gg + geom_point(alpha=I(1/10)) + scale_color_brewer(name="", palette="Set1") + theme( legend.position=c(.5, .8))
+gg <- gg + labs(x="H3K27ac", y="H3K27me3")
+gg
+```
+
+```{r}
+
+makeProfile2.allSamp("mk4_interV_genes_ak27_only.bed_W25F200_both_chr", data_type="rpkm/mean", rm.outliers=.01)
+makeProfile2.allSamp("mk4_interV_genes_ak27_tk27.bed_W25F200_both_chr", data_type="rpkm/mean", rm.outliers=.01)
+makeProfile2.allSamp("mk4_interV_genes_tk27_only.bed_W25F200_both_chr", data_type="rpkm/mean", rm.outliers=.01)
+makeProfile2.allSamp("mk4_interV_genes_mk4_only.bed_W25F200_both_chr", data_type="rpkm/mean", rm.outliers=.01)
+```
+
+```{r}
+par(mfrow=c(2,2), mar=c(2,3,1,1))
+plot2.several("mk4_interV_genes_mk4_only.bed_W25F200_both_chr", "d3xog_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col3, y.vals=c(.2, 1.2))
+plot2.several("mk4_interV_genes_ak27_only.bed_W25F200_both_chr", "d3xog_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col3, y.vals=c(.2, 1.2))
+plot2.several("mk4_interV_genes_tk27_only.bed_W25F200_both_chr", "d3xog_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col3,y.vals=c(.2, 1.2))
+plot2.several("mk4_interV_genes_ak27_tk27.bed_W25F200_both_chr", "d3xog_hmc", data_type="rpkm/mean", group2="trim0.01", cols=col3,y.vals=c(.2, 1.2))
+```
+

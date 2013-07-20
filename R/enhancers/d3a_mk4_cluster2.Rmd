@@ -1,0 +1,19 @@
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/profiles2.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(mclust)
+```
+
+```{r}
+omp <- makeImage("omp_hmc_rep1_q30_rmdup_extend300_mean_omp_hmc_rep2_q30_rmdup", "mk4_interV_genes.bed_W25F200_both_chr", data_type="rpkm/mean", image=F)
+ngn <- makeImage("ngn_hmc_rep1_q30_rmdup_extend300_mean_ngn_hmc_rep2_q30_rmdup", "mk4_interV_genes.bed_W25F200_both_chr", data_type="rpkm/mean")
+```
+
+```{r}
+omp.ngn <- omp - ngn
+omp.ngn2 <- log2((omp+.01) / (ngn+.01))
+```

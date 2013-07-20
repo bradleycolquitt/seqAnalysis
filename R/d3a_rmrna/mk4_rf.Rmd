@@ -1,0 +1,51 @@
+H3K4me1 regions -- Random Forest classification
+========================================================
+
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/features.R"))
+```
+
+```{r}
+d <- makeFeatureMatrix2("mk4_interV_genes.bed_chr", "en_full", data_type="rpkm/mean")
+```
+
+```{r}
+d.rand <- d[sample(1:nrow(d), 5000),]
+d.hmc <- d.rand[,grep("hmc", colnames(d.rand))]
+d.hmc.dist <- dist(d.hmc)
+```
+
+```{r}
+d.hmc.hc <- hclust(d.hmc.dist, method="ward")
+```
+
+```{r}
+heatmap.2(as.matrix(d.hmc), Rowv=as.dendrogram(d.hmc.hc), Colv=F, dendrogram="row", trace="none", cexCol=.5)
+```
+
+```{r}
+d.mod <- d.rand[,grep("mc", colnames(d.rand))]
+d.mod.dist <- dist(d.mod)
+```
+
+```{r}
+d.mod.hc <- hclust(d.mod.dist, method="ward")
+```
+
+```{r}
+heatmap.2(as.matrix(d.mod), Rowv=as.dendrogram(d.mod.hc), Colv=T, dendrogram="both", trace="none", cexCol=.5, breaks=seq(0, 3, .1))
+```
+
+
+```{r}
+d.hist <- d.rand[,c("ak27", "omp_hmc", "ngn_hmc", "icam_hmc")]
+d.hist.dist <- dist(d.hist)
+```
+
+```{r}
+d.hist.hc <- hclust(d.hist.dist, method="ward")
+```
+
+```{r}
+heatmap.2(as.matrix(d.hist), Rowv=as.dendrogram(d.hist.hc), Colv=T, dendrogram="both", trace="none", cexCol=.5, breaks=seq(0, 3, .1))
+```

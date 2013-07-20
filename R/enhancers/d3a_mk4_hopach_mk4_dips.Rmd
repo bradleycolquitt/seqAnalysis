@@ -1,0 +1,40 @@
+D3a - mk4 - hopach
+========================================================
+
+```{r}
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/image.R"))
+suppressPackageStartupMessages(source("~/src/seqAnalysis/R/signal.R"))
+```
+
+```{r}
+positionMatrix.all("mk4_F3_interV_genes_cells_hmc_var5000.bed_W25F200_both_chr", data_type="rpkm/mean")
+```
+
+```{r}
+mk4 <- makeImage("moe_h3k4me1_rmdup_sub_moe_d3a_wt_input_q30_rmdup_smooth5", "mk4_F3_interV_genes_cells_hmc_var5000.bed_W25F200_both_chr", data_type="rpkm/mean")
+bed <- read.delim("~/lib/annotations_hires/mk4_F3_interV_genes_cells_hmc_var5000.bed_W25F200_both", header=F)
+```
+
+```{r}
+dips <- find_dips(mk4, bed, height_min=3, floor_max=1)
+```
+
+```
+write.table(dips, file="~/s2/analysis/peak_dips/mk4_F3_interV_genes.bed_W25F200_mk4_height3_floor1.bed", quote=F, sep="\t", row.names=F, col.names=F)
+```
+```{r}
+s <- str_split(dips[,4], "\\.")
+dips[,7] <- unlist(lapply(s, function(x) x[1]))
+colnames(dips) <- c("chr", "start", "stop", "id", "min_score", "strand", "id2")
+dips2 <- ddply(dips, .(id2), mutate, min_score_mean=mean(min_score) )
+dips2$ho.class <- cells.mod1.ho$clustering$labels[match(dips2$id2, names(cells.mod1.ho$clustering$labels))]
+```
+
+```{r}
+dcast(dips2, ho.class~.,fun.aggregate=median, value.var="min_score_mean")
+dips2$ho.class <- factor(dips2$ho.class)
+```
+
+
+
+

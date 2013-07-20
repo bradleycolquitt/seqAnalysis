@@ -44,8 +44,8 @@ def run(one_track, two_track, out, to_floor):
     print out_track_name
     test = checkIfNodeExists(out, out_track_name)
     if test: return
-    one_track_chrs = one_track._f_listNodes()
-    two_track_chrs = two_track._f_listNodes()
+    #one_track_chrs = one_track._f_listNodes()
+    #two_track_chrs = two_track._f_listNodes()
     #assert len(one_track_chrs) == len(two_track_chrs), "one chrs are %s, two chrs are %s" \
     #    % (one_track_chrs, two_track_chrs)
     floor_val = 0
@@ -53,9 +53,14 @@ def run(one_track, two_track, out, to_floor):
     out_track_chr = []
     for chr in one_track._f_iterNodes():
         chr_name = chr._v_name
+        
         print chr_name
         one_track_chr = one_track._f_getChild(chr_name)
-        two_track_chr = two_track._f_getChild(chr_name)
+        two_track_chr = ""
+        try:
+            two_track_chr = two_track._f_getChild(chr_name)
+        except tb.exceptions.NoSuchNodeError:
+            continue
         if to_floor:
             out_track_chr = subtract_w_floor(one_track_chr, two_track_chr, floor_val)
         else:

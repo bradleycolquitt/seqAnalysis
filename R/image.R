@@ -8,6 +8,8 @@ library(RColorBrewer)
 source("~/src/seqAnalysis/R/paths.R")
 source("~/src/seqAnalysis/R/plotUtil.R")
 
+ybb <- colorRampPalette(c("yellow", "black", "blue"), space="rgb")
+
 ## Generates matrix of samples values with annotation observations as rows and
 ##    positions as columns
 ##    Arguments:  data - profile data with [chr start stop name position strand value]
@@ -167,7 +169,7 @@ positionMatrix.all <- function(anno, data_type="unnorm/mean") {
 }
 
 
-makeImage <- function(sample, anno, data_type="unnorm", image=TRUE, heat=TRUE, range=NULL, average=NULL) {
+makeImage <- function(sample, anno, data_type="unnorm", image=FALSE, heat=TRUE, range=NULL, average=NULL) {
   image.path <- paste(profile2.path, "norm", data_type, anno, "images", sample, sep="/")
   print(image.path)
   data <- as.matrix(read.delim(image.path, header=FALSE, row.names=1, as.is=T))
@@ -221,7 +223,7 @@ MP.image <- function(vals) {
   
 }
 
-MP.heat <- function(data, density="none", range=NULL, average=NULL, fname=NULL) {
+MP.heat <- function(data, density="none", range=NULL, average=NULL, fname=NULL, color="blues") {
   require(gplots)
   if (is.null(fname)) {
     #x11()
@@ -249,8 +251,12 @@ MP.heat <- function(data, density="none", range=NULL, average=NULL, fname=NULL) 
     }
   }
   #return(data)
-  rgb.palette <- colorRampPalette(c("yellow", "black", "blue"), space="rgb")
-  lab.palette <- colorRampPalette(brewer.pal(5,"Blues"), space="Lab")
+  lab.palette <- c()
+  if (color=="blues") {
+    lab.palette <- colorRampPalette(brewer.pal(5,"Blues"), space="Lab")
+  } else if (color=="ybb") {
+    lab.palette <- ybb
+  }  
   heatmap.2(data, Rowv=FALSE, Colv=FALSE, trace="none", dendrogram="none",
             hclustfun = .hclustWard,
             #col=blueyellow(100),
@@ -262,7 +268,8 @@ MP.heat <- function(data, density="none", range=NULL, average=NULL, fname=NULL) 
             #col=terrain.colors(100),
             #col=rainbow(100, end=.7),
             density.info=density, # "none", "density", "histogram"
-            breaks=breaks)
+            breaks=breaks,
+            cexCol=.5)
   if (!is.null(fname)) dev.off()
 }
 
@@ -277,8 +284,8 @@ smoothImage <- function(data, margin, span=.05) {
   } else if (margin==2) {
     x <- 1:nrow(data)
   }
-  out <- apply(data, margin, function(y) predict(loess(y~x, span=span)))
-  return(do.call("rbind", out))
+  out <- t(apply(data, margin, function(y) predict(loess(y~x, span=span))))
+  return(out)
 }
 
 summarizeImageByCol <- function(data, col, chunkSize, FUN, span=NA, ...) {
@@ -317,9 +324,53 @@ orderByAnchor <- function(vals, anchor, width) {
   return(vals[order_vals,])
                                
 }
-MP.plyrMatrix <- function(mp) {
-  fun <- function(x) {
-    return(data.frame(x$ams_A, colnames=x$name))
-  }
-  out <- daply(mp, group, fun)
+
+# Take 'image' matrix
+# Smooth across columns
+# Determine min, max
+# Identify most 5' and 3' windows at some fraction of data range
+identifyEnriched <- function(mat, span=0.05, fraction=.50) {
+  mat <- smoothImage(mat, margin=1, span=span)
+  mat <- t(apply(mat, 1, range01))
+  #mat.max <- max(mat)
+  #mat.min <- min(mat)
+  #print(mat.max)
+  #print(mat.min)
+  #mat.range <- mat.max - mat.min
+  #thresh <- mat.range * fraction
+  #eps <- mat.range * .05
+  #print(eps)
+  #print(thresh)
+  #mat <- t(apply(mat, 1, range01))
+  mid <- round(ncol(mat) / 2)
+  thresh_positions <- apply(mat, 1, function(x) {
+    pos <- which(x>=(fraction-.05) & x<=(fraction+.05))    
+    #pos <- which(x>=(thresh-eps) & x<=(thresh+eps)) 
+    #if (is.null(length(pos))) {
+    if (length(pos) == 0) {
+      #return(list(min=(0 - mid), max=(0 + mid)))
+      return(NA)
+    }
+    return(list(min=min(pos) - mid, max=max(pos) - mid))
+  })
+  #return(thresh_positions)
+  return(thresh_positions[!is.na(thresh_positions)])
+}
+
+identifyEnrichedBed <- function(mat, span=0.05, fraction=.25, wsize=25, bed) {
+  pos <- identifyEnriched(mat, span=span, fraction=fraction)
+  #return(pos)
+  pos <- lapply(pos, function(x) lapply(x, function(y) y * wsize))
+  #return(pos)
+  bed <- bed[match(names(pos), bed[,4]),]
+  #return(bed)
+  for (i in 1:nrow(bed)) {
+    mid <- round((bed[i,3] + bed[i,2]) / 2)
+    #print(mid)
+    #print(pos[[i]])
+    bed[i,2] <- mid + pos[[i]]$min
+    bed[i,3] <- mid + pos[[i]]$max
+  }    
+  return(bed)
+  
 }
