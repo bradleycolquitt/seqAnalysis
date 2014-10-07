@@ -1,0 +1,13 @@
+### Define linear Gaussian system 
+### Generate random data set
+
+n = 1000
+
+data = zeros((n, 3))
+
+
+for i in 1:size(data, 1):
+    data[i,1] = randn(1)
+    data[i,2] = 2*x + randn(1)
+    data[i,3] = 5*x + 4*y + randn(1)
+end

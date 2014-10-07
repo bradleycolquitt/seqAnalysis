@@ -1,0 +1,20 @@
+## From MCMC package docs
+
+using MCMC
+
+### First way of defining the model by explicitly defining the log-target
+
+# Log of Normal(0, 1): v-> -dot(v,v), initial values of parameters: (1.0, 1.0, 1.0)
+mymodel1 = model(v-> -dot(v,v), init=ones(3))
+
+# As in model 1, by providing additionally the gradient of the log of Normal(0, 1), which is v->-2v
+mymodel2 = model(v-> -dot(v,v), grad=v->-2v, init=ones(3))
+
+### Second way of defining the model by using expression parsing and automatic differentiation
+
+modelxpr = quote
+        v ~ Normal(0, 1)
+    end
+
+mymodel3 = model(modelxpr, v=ones(3)) # without specifying the gradient
+mymodel4 = model(modelxpr, gradient=true, v=ones(3)) # with gradient
