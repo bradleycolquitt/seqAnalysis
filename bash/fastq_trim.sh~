@@ -1,0 +1,14 @@
+#! /bin/bash
+
+# $1 input fastq
+# $2 length of records in output
+
+prefix=(${1//.fastq/ })
+
+awk -v outlength="$2" '
+{
+if (NR % 2 == 0) {
+	    print substr($1, 1, outlength)
+} else print 
+}
+' $1 > ${prefix[0]}_"$2"bp.fastq

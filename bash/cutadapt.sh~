@@ -1,0 +1,18 @@
+#! /bin/bash
+
+read1=(${1//.fastq/ })
+read2=(${2//.fastq/ })
+
+read1_tmp=${read1[0]}_tmp
+read2_tmp=${read2[0]}_tmp
+
+read1_trim=${read1[0]}_trimmed.fastq.gz
+read2_trim=${read2[0]}_trimmed.fastq.gz
+
+# filter index adaptor
+cutadapt -a index=AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC --minimum-length 20 -o $read1_tmp -p $read2_tmp $1 $2
+
+# filter universal adaptor
+cutadapt -a univ=AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT --minimum-length 20 -o $read1_trim -p $read2_trim $read1_tmp $read2_tmp
+
+rm $read1_tmp $read2_tmp

@@ -1,0 +1,14 @@
+cmake_minimum_required (VERSION 2.6)
+project (bamtools_test)
+
+configure_file (
+  "${PROJECT_SOURCE_DIR}/test.h.in"
+  "${PROJECT_BINARY_DIR}/test.h"
+  )
+
+include_directories (
+  "/usr/local/bamtools/include"
+  "$(PROJECT_BINARY_DIR)"
+)
+
+add_executable(bamtools_test test.cpp)

@@ -1,0 +1,5 @@
+#! /bin/bash
+
+# Determine number of unique sequences 
+awk ’f if (NR%4==2) print substr($0,1,20); g’ input.fastq | sort | uniq -c
+| awk ’f print $1 g’ > counts.txt

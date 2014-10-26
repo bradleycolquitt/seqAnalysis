@@ -1,0 +1,8 @@
+#Makefile
+all: bamtools_test
+g++ -o bamtools_test test.cpp
+main: bamtools_test
+    g++ -o bamtools_test help.o main.cpp
+
+help: help.cpp
+    g++ -c -o help.o help.cpp

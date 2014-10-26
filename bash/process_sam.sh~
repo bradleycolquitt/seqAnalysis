@@ -1,0 +1,22 @@
+#! /bin/bash
+
+dir_name=`dirname $1`
+base_name=`basename $1`
+
+echo $dir_name
+echo $base_name
+
+
+prefix=(${base_name//./ })
+echo $prefix
+
+bam="${dir_name}/${prefix}.bam"
+samtools view -Sb -@ 1 $1 > $bam
+
+bam_sort="${dir_name}/${prefix}_sort"
+samtools sort -m 2G -@ 1 $bam $bam_sort
+
+mv "${bam_sort}.bam" $bam
+
+samtools index $bam
+

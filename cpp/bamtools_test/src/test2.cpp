@@ -1,0 +1,11 @@
+#include "api/BamMultiReader.h"
+#include "api/BamWriter.h"
+#include <iostream>
+#include <stdlib.h>
+using namespace std;
+using namespace BamTools;
+BamMultiReader reader;
+
+int main(int argc, char* argv[]) {
+  cerr << "Test";
+}
