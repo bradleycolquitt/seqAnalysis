@@ -6,7 +6,7 @@ import pdb
 import numpy
 import tables as tb
 import track_util
-from subprocess import Popen
+from subprocess import Popen, PIPE
 
 bed_dir = "/media/storage2/data/bed/"
 
@@ -375,6 +375,13 @@ def extractInsertSizes(sam, wsize, output):
     cmd_args = ['igvtools', 'tile', output, output + ".tdf", 'mm9']
     p = Popen(cmd_args)
     p.wait()
+
+def count_bam(bam):
+    cmd_args = ["samtools", "view", "-c", bam]
+    p = Popen(cmd_args, stdout=PIPE)
+    out = int(p.stdout.read().strip())
+    return out
+
 
 def main(argv):
     if argv[1] == "sam2bam":
