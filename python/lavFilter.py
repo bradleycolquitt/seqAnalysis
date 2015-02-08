@@ -44,29 +44,31 @@ def lav_to_df(lav_file, out):
 
 class LavProcess:
     def __init__(self, lav_dir):
-
+        ### Read in filenames within lav directory
         self.lav_dir = os.path.abspath(lav_dir)
-        # Read in filenames within lav directory
         self.fnames = [os.path.join(self.lav_dir, f) for f in  os.listdir(self.lav_dir)]
 
-
-        # Split fnames to get list of queries
+        ### Split fnames to get list of queries
         fnames_query = []
         for x in self.fnames:
             try:
                 fnames_query.append(x.split("-")[1].split(".lav")[0])
             except:
                 pass
-
         self.query_set = set(fnames_query)
 
-        #abs_path = os.abspath(argv[1])
-        #head = os.path.split(abs_path)[0]
+        ### Output files
         self.out_dir = "/media/data2/assembly/lonStrDom1/lastz/lav_proccessing"
-        #echo self.out_dir
         if not os.path.exists(self.out_dir): os.mkdir(self.out_dir)
 
     def find_best_targets(self):
+        """Find best query-target pair as determined by sum of alignment block scores
+        Returns:
+            best_target (dict): score, best target, query start on target, query stop on target
+        Side effect:
+            Writes best_target to tabbed text file
+        """
+
         # PARALLEL
         pool = mp.Pool(processes=2)
         inputs = []
@@ -79,9 +81,10 @@ class LavProcess:
 
             inputs.append((query, fnames_wquery))
 
+        print "Finding query-target pairs..."
         best_target = dict(pool.map(_find_highest_score, inputs))
 
-        # # SERIES
+        # SERIES
         # best_target = {}
         # for query in self.query_set:
         #     print query
@@ -89,18 +92,31 @@ class LavProcess:
         #     fnames_wquery = itemgetter(*indices)(self.fnames)
 
         #     # workaround for cases when only one fnames_wquery
-        #     if isinstance(fnames_wquery, str): fnames_wquery = (fnames_wquery, )
+        #     if isinstance(fnames_wquery, str): fnames_wquery = (fnames_wquery, ) #
 
         #     best_target[query] = find_highest_score(query, fnames_wquery)
 
+        ### Write out best query-target pairs
+        print "Writing query-target pairs..."
         self.best_file = "/".join([self.out_dir, "lav_pairs.txt"])
         out = open(self.best_file, "w")
         for query,value in best_target.iteritems():
             out.write("\t".join([query] + map(str, list(value))) + "\n")
         out.close()
+
         return best_target
 
     def find_longest_alignments(self):
+        """Groups alignment blocks into larget segments
+        Returns:
+            longest_alignments (dict):
+                key - query name
+                value (tuple) -
+                    target-based start of longest segment
+                    target-based end of longest segment
+                    fraction coverage of longest segment over whole query
+        """
+
         best_file = open(self.best_file)
         out = open(os.path.join(self.out_dir, "longest_segments.txt"), 'w')
 
@@ -109,13 +125,14 @@ class LavProcess:
             sline = line.split()
             fname = "{0}-{1}.lav".format(sline[2], sline[0])
             lav_file = lav.Reader(file(os.path.join(self.lav_dir, fname)))
+            print fname
 
             a = lav_file.next()
             min_pos = a.components[0].start
             max_pos = a.components[0].get_end()
             query_length = lav_file.seq2_end - lav_file.seq2_start
 
-            # Group alignment blocks into larger segments
+            ### Group alignment blocks into larger segments
             last_target_pos = 0
             segments = []
             for align in lav_file:
@@ -125,7 +142,7 @@ class LavProcess:
                     min_pos = curr_target_pos
                 max_pos = align.components[0].get_end()
 
-            # Find longest segment
+            ### Find longest segment
             lengths = [s[1] - s[0] for s in segments]
             longest = segments[lengths.index(max(lengths))]
             longest_alignments[sline[0]] = (longest[0], longest[1], float(longest[1] - longest[0]) / query_length)
@@ -152,7 +169,6 @@ def find_highest_score(query, fnames_wquery):
         try:
             aligns = [block for block in lav_obj]
             (sum_score, start, end) = sum_scores(aligns)
-
             if sum_score > max_score:
                 max_score = sum_score
                 max_src = lav_obj.seq1_src
