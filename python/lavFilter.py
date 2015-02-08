@@ -1,20 +1,132 @@
 #! /usr/bin/env python
 
-#Read in filenames within directory
-#Split fnames to get list of scaffolds
-#For each scaffold, identify highest scoring chromosome
-#return (scaffold, chrom, cstart, cend)
+## First pass
+# Identify target-query pair with highest match and write to tabbed file
+
+## Second pass
+# Identify longest alignment block for each pair and write out target-based start and stop for each query
+
 
 
 import sys
 import os
+import pdb
+import numpy as np
 import pandas as pd
+import multiprocessing as mp
 from bx.align import lav
 from operator import itemgetter
 from fastahack import FastaHack
 
-#Loop through all lav files containig scaffold name
-#Find max score, return chrom, cstart, cend
+import matplotlib.pyplot as plt
+from PIL import Image
+from PIL import ImageDraw
+
+#### Utilities
+def plot_align(lav_file):
+    lav_file.next()
+    seq1_len = lav_file.seq1_end - lav_file.seq1_start
+    seq2_len = lav_file.seq2_end - lav_file.seq2_start
+    im = Image.new('RGBA', (seq1_len, seq2_len), (255,255,255,255))
+    draw = ImageDraw.Draw(im)
+
+    for align in lav_file:
+        draw.line(((align.components[0].start, align.components[1].start), (align.components[0].get_end(), align.components[1].get_end())), fill=255, width=1)
+    plt.imshow(np.asarray(im), origin='lower')
+    plt.show()
+
+def lav_to_df(lav_file, out):
+    out_file = open(out, 'w')
+    out_line = ""
+    for align in lav_file:
+        out_line = "\t".join(map(str, [align.components[0].start, align.components[0].get_end(), align.components[1].start, align.components[1].get_end()])) + "\n"
+        out_file.write(out_line)
+
+class LavProcess:
+    def __init__(self, lav_dir):
+
+        self.lav_dir = os.path.abspath(lav_dir)
+        # Read in filenames within lav directory
+        self.fnames = [os.path.join(self.lav_dir, f) for f in  os.listdir(self.lav_dir)]
+
+
+        # Split fnames to get list of queries
+        fnames_query = []
+        for x in self.fnames:
+            try:
+                fnames_query.append(x.split("-")[1].split(".lav")[0])
+            except:
+                pass
+
+        self.query_set = set(fnames_query)
+
+        #abs_path = os.abspath(argv[1])
+        #head = os.path.split(abs_path)[0]
+        self.out_dir = "/media/data2/assembly/lonStrDom1/lastz/lav_proccessing"
+        #echo self.out_dir
+        if not os.path.exists(self.out_dir): os.mkdir(self.out_dir)
+
+    def find_best_targets(self):
+        # PARALLEL
+        pool = mp.Pool(processes=2)
+        inputs = []
+        for query in self.query_set:
+            indices = [i for i, s in enumerate(self.fnames) if query in s]
+            fnames_wquery = itemgetter(*indices)(self.fnames)
+
+            # workaround for cases when only one fnames_wquery
+            if isinstance(fnames_wquery, str): fnames_wquery = (fnames_wquery, )
+
+            inputs.append((query, fnames_wquery))
+
+        best_target = dict(pool.map(_find_highest_score, inputs))
+
+        # # SERIES
+        # best_target = {}
+        # for query in self.query_set:
+        #     print query
+        #     indices = [i for i, s in enumerate(self.fnames) if query + ".lav" in s]
+        #     fnames_wquery = itemgetter(*indices)(self.fnames)
+
+        #     # workaround for cases when only one fnames_wquery
+        #     if isinstance(fnames_wquery, str): fnames_wquery = (fnames_wquery, )
+
+        #     best_target[query] = find_highest_score(query, fnames_wquery)
+
+        out = open("/".join([self.out_dir, "lav_pairs.txt"]), "w")
+        for query,value in best_target.iteritems():
+            out.write("\t".join([query] + map(str, list(value))) + "\n")
+
+        return best_target
+
+def _find_highest_score(tup):
+    query, fnames_query = tup
+    return (query, find_highest_score(query, fnames_query))
+
+def find_highest_score(query, fnames_wquery):
+    sum_score = 0
+    start = 0
+    end = 0
+
+    max_score = 0
+    max_src = ""
+    max_start = 0
+    max_end = 0
+    for fname in fnames_wquery:
+        lav_obj = lav.Reader(file(fname))
+        try:
+            aligns = [block for block in lav_obj]
+            (sum_score, start, end) = sum_scores(aligns)
+
+            if sum_score > max_score:
+                max_score = sum_score
+                max_src = lav_obj.seq1_src
+                max_start = start
+                max_end = end
+        except AssertionError, e:
+            continue
+
+    return (max_score, max_src, max_start, max_end)
 
 def sum_scores(aligns):
     """ Sum scores and find minimum start and maximum end of lav file
@@ -37,35 +149,6 @@ def sum_scores(aligns):
         if align.components[0].get_end() > max_end: max_end = align.components[0].get_end()
     return (ss, min_start, max_end)
 
-def find_highest_score(scaffold, fnames):
-    """"""
-    indices = [i for i, s in enumerate(fnames) if scaffold in s]
-    fnames_wscaf = itemgetter(*indices)(fnames)
-
-    sum_score = 0
-    src = ""
-    start = 0
-    end = 0
-
-    max_score = 0
-    max_src = ""
-    max_start = 0
-    max_end = 0
-    for fname in fnames_wscaf:
-        lav_obj = lav.Reader(file(fname))
-        try:
-            aligns = [block for block in lav_obj]
-            (sum_score, start, end) = sum_scores(aligns)
-
-            if sum_score > max_score:
-                max_score = sum_score
-                max_src = lav_obj.seq1_src
-                max_start = start
-                max_end = end
-        except AssertionError, e:
-            continue
-
-    return (max_src, max_start, max_end)
 
     # TODO: turn dict into 4 column dataframe
     # sort by chrom, start
@@ -81,18 +164,17 @@ def create_merged_seq(scaf_chrom, lav_dir):
     return d
 
 
+
 def main(argv):
 
-    fnames = os.listdir(argv[1])
-    fnames_scaf = [x.split("-")[1].split(".lav")[0] for x in fnames]
-    fnames_scaf_set = set(fnames_scaf)
 
-    scaf_chrom = {}
-    for scaffold in fnames_scaf_set:
-        print scaffold
-        scaf_chrom[scaffold] = find_highest_score(scaffold, fnames)
-    return scaf_chrom
-    d = create_merged_seq(scaf_chrom)
+    L = LavProcess(argv[1])
+
+    #For each query, identify highest scoring target
+    best_target = L.find_best_targets()
+
+    #For each pair, find start/end coord on largest alignment block
+    #d = create_merged_seq(scaf_chrom)
 
 
 if __name__ == "__main__":
