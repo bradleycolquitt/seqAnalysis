@@ -93,11 +93,46 @@ class LavProcess:
 
         #     best_target[query] = find_highest_score(query, fnames_wquery)
 
-        out = open("/".join([self.out_dir, "lav_pairs.txt"]), "w")
+        self.best_file = "/".join([self.out_dir, "lav_pairs.txt"])
+        out = open(self.best_file, "w")
         for query,value in best_target.iteritems():
             out.write("\t".join([query] + map(str, list(value))) + "\n")
-
+        out.close()
         return best_target
+
+    def find_longest_alignments(self):
+        best_file = open(self.best_file)
+        out = open(os.path.join(self.out_dir, "longest_segments.txt"), 'w')
+
+        longest_alignments = {}
+        for line in best_file:
+            sline = line.split()
+            fname = "{0}-{1}.lav".format(sline[2], sline[0])
+            lav_file = lav.Reader(file(os.path.join(self.lav_dir, fname)))
+
+            a = lav_file.next()
+            min_pos = a.components[0].start
+            max_pos = a.components[0].get_end()
+            query_length = lav_file.seq2_end - lav_file.seq2_start
+
+            # Group alignment blocks into larger segments
+            last_target_pos = 0
+            segments = []
+            for align in lav_file:
+                curr_target_pos = align.components[0].start
+                if curr_target_pos > max_pos + 1000:
+                    segments.append((min_pos, max_pos))
+                    min_pos = curr_target_pos
+                max_pos = align.components[0].get_end()
+
+            # Find longest segment
+            lengths = [s[1] - s[0] for s in segments]
+            longest = segments[lengths.index(max(lengths))]
+            longest_alignments[sline[0]] = (longest[0], longest[1], float(longest[1] - longest[0]) / query_length)
+
+            out.write("\t".join(sline + map(str, list(longest_alignments[sline[0]])) ) + "\n")
+        out.close()
+        return longest_alignments
 
 def _find_highest_score(tup):
     query, fnames_query = tup
@@ -166,14 +201,13 @@ def create_merged_seq(scaf_chrom, lav_dir):
 
 
 def main(argv):
-
-
     L = LavProcess(argv[1])
 
     #For each query, identify highest scoring target
     best_target = L.find_best_targets()
-
     #For each pair, find start/end coord on largest alignment block
+    longest = L.find_longest_alignments()
+
     #d = create_merged_seq(scaf_chrom)
 
 
