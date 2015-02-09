@@ -70,38 +70,46 @@ class LavProcess:
             Writes best_target to tabbed text file
         """
 
-        # # PARALLEL
-        # pool = mp.Pool(processes=2)
-        # inputs = []
-        # for query in self.query_set:
-        #     indices = [i for i, s in enumerate(self.fnames) if query in s]
-        #     fnames_wquery = itemgetter(*indices)(self.fnames)
+        self.best_file = "/".join([self.out_dir, "lav_pairs.txt"])
 
-        #     # workaround for cases when only one fnames_wquery
-        #     if isinstance(fnames_wquery, str): fnames_wquery = (fnames_wquery, )
+        dec = "y"
+        if os.path.exists(self.best_file):
+            dec = raw_input("lav_pairs exists. Overwrite? [y/n]")
+            if dec == "n": return
 
-        #     inputs.append((query, fnames_wquery))
-
-        # print "Finding query-target pairs..."
-        # best_target = dict(pool.map(_find_highest_score, inputs))
-
-        # SERIES
-        best_target = {}
+        # PARALLEL
+        pool = mp.Pool(processes=10)
+        inputs = []
         for query in self.query_set:
-            print query
-            indices = [i for i, s in enumerate(self.fnames) if query + ".lav" in s]
+            indices = [i for i, s in enumerate(self.fnames) if query in s]
             fnames_wquery = itemgetter(*indices)(self.fnames)
 
             # workaround for cases when only one fnames_wquery
-            if isinstance(fnames_wquery, str): fnames_wquery = (fnames_wquery, ) #
+            if isinstance(fnames_wquery, str): fnames_wquery = (fnames_wquery, )
 
-            best_target[query] = find_highest_score(query, fnames_wquery)
+            inputs.append((query, fnames_wquery))
+
+        print "Finding query-target pairs..."
+        best_target = dict(pool.map(_find_highest_score, inputs))
+
+        # # SERIES
+        # best_target = {}
+        # for query in self.query_set:
+        #     print query
+        #     indices = [i for i, s in enumerate(self.fnames) if query + ".lav" in s]
+        #     fnames_wquery = itemgetter(*indices)(self.fnames)
+
+        #     # workaround for cases when only one fnames_wquery
+        #     if isinstance(fnames_wquery, str): fnames_wquery = (fnames_wquery, ) #
+
+        #     best_target[query] = find_highest_score(query, fnames_wquery)
 
         ### Write out best query-target pairs
         print "Writing query-target pairs..."
         self.best_file = "/".join([self.out_dir, "lav_pairs.txt"])
         out = open(self.best_file, "w")
         for query,value in best_target.iteritems():
+            if value[0] == 0: continue
             out.write("\t".join([query] + map(str, list(value))) + "\n")
         out.close()
         return best_target
@@ -119,6 +127,7 @@ class LavProcess:
 
         best_file = open(self.best_file)
         out = open(os.path.join(self.out_dir, "longest_segments.txt"), 'w')
+        skipped = open(os.path.join(self.out_dir, "skipped_pairs.txt"), 'w')
         out.write("\t".join(["query_name",
                              "score",
                              "target_name",
@@ -126,6 +135,7 @@ class LavProcess:
                              "target_initial_end",
                              "target_final_start",
                              "target_final_end",
+                             "query_strand",
                              "query_coverage"]) + "\n")
         longest_alignments = {}
         for line in best_file:
@@ -135,7 +145,7 @@ class LavProcess:
             score = int(sline[1])
 
             segments = []
-            span = []
+            #span = []
 
             ### Initial
             lav_file = lav.Reader(file(os.path.join(self.lav_dir, fname)))
@@ -149,24 +159,35 @@ class LavProcess:
             ### If poor coverage, skip
             if (score / 100 < query_length * 0.2):
                 print "Low score: {0}".format(fname)
+                skipped.write("\t".join(sline) + "\tlow_score\n")
                 continue
 
             ### Initial segment read and merge
             gap = 1000
             segments.append([])
+            strand = "+"
+
             for align in lav_file:
-                curr_target_pos = align.components[0].start - gap
-                if curr_target_pos > max_pos + gap:
-                    segments[0].append((min_pos, max_pos))
+                curr_target_pos = align.components[0].start
+                if abs(curr_target_pos - max_pos) >  gap:
+                    segments[0].append((min_pos, max_pos, align.components[1].strand))
                     min_pos = curr_target_pos
                 max_pos = align.components[0].get_end()
+                strand = align.components[1].strand
+
+            segments[0].append((min_pos, max_pos, strand))
             segments[0] = sorted(segments[0], key=lambda x: x[0])
 
             ### Drop short segments
             segments[0] = [s for s in segments[0] if float(s[1]-s[0]) / query_length > 0.001]
-            span.append(segments[0][-1][1] - segments[0][0][0])
+            #span.append(segments[0][-1][1] - segments[0][0][0])
+            #pdb.set_trace()
+            try:
+                final = self.merge_segments(segments, query_length)
+            except:
+                skipped.write("\t".join(sline) + "\tbad_match\n")
+                continue
 
-            final = merge_segments(segments)
             if len(final) > 1:
                 spans = [x[1] - x[0] for x in final]
                 final = final[spans.index(max(spans))]
@@ -176,34 +197,35 @@ class LavProcess:
             coverage = round(float(final[1] - final[0]) / query_length, 2)
             longest_alignments[sline[0]] = (final[0], \
                                             final[1], \
+                                            final[2], \
                                             coverage)
             out.write("\t".join(sline + map(str, list(longest_alignments[sline[0]])) ) + "\n")
 
         out.close()
         return longest_alignments
 
-    def merge_segments(self, segments):
+    def merge_segments(self, segments, query_length):
         gap_range = [20000, 50000, 100000, 1000000]
         for i in range(1, len(gap_range) + 1):
             segment_iter = iter(segments[i-1])
             segment = next(segment_iter)
+
             min_pos = segment[0]
             max_pos = segment[1]
-
+            strand = segment[2]
             segments.append([])
+
             for segment in segment_iter:
                 curr_target_pos = segment[0]
                 if curr_target_pos > max_pos + gap_range[i-1]:
-                    segments[i].append((min_pos, max_pos))
+                    segments[i].append((min_pos, max_pos, strand))
                     min_pos = curr_target_pos
+                    strand = segment[2]
                 max_pos = segment[1]
-            segments[i].append((min_pos, max_pos))
+            segments[i].append((min_pos, max_pos, strand))
 
             ### Drop short segments
             segments[i] = [s for s in segments[i] if float(s[1]-s[0]) / query_length > 0.01]
-
-            ### Calculate span of remaining segments
-            span.append(segments[i][-1][1] - segments[i][0][0])
 
         return segments[-1]
 
@@ -229,6 +251,8 @@ class LavProcess:
                 curr_target_name = target
 
             fasub = fa.get_sequence(query)
+            if row[1]['query_strand'] == "-":
+                fasub = futil.reverse_complement(fasub)
             fasub1 = futil.format_fasta(fasub)
             [out.write(x) for x in fasub1]
 
@@ -240,6 +264,7 @@ class LavProcess:
 
 def _find_highest_score(tup):
     query, fnames_query = tup
+    print query
     return (query, find_highest_score(query, fnames_query))
 
 def find_highest_score(query, fnames_wquery):
