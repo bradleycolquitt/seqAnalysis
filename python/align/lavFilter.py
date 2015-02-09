@@ -12,8 +12,8 @@ import pdb
 import numpy as np
 import pandas as pd
 import multiprocessing as mp
-#from bx.align import lav
 import bx_lav as lav
+
 from operator import itemgetter
 from fastahack import FastaHack
 
@@ -103,7 +103,6 @@ class LavProcess:
         for query,value in best_target.iteritems():
             out.write("\t".join([query] + map(str, list(value))) + "\n")
         out.close()
-
         return best_target
 
     def find_longest_alignments(self):
@@ -119,35 +118,101 @@ class LavProcess:
 
         best_file = open(self.best_file)
         out = open(os.path.join(self.out_dir, "longest_segments.txt"), 'w')
-
         longest_alignments = {}
         for line in best_file:
             sline = line.split()
             fname = "{0}-{1}.lav".format(sline[2], sline[0])
-            lav_file = lav.Reader(file(os.path.join(self.lav_dir, fname)))
             print fname
+            score = int(sline[1])
 
+            segments = []
+            span = []
+
+            ### Initial
+            lav_file = lav.Reader(file(os.path.join(self.lav_dir, fname)))
             a = lav_file.next()
+
             min_pos = a.components[0].start
             max_pos = a.components[0].get_end()
             query_length = lav_file.seq2_end - lav_file.seq2_start
 
-            ### Group alignment blocks into larger segments
-            last_target_pos = 0
-            segments = []
+            if (score / 100 < query_length * 0.2):
+                print "Low score: {0}".format(fname)
+                continue
+
+            gap = 1000
+            segments.append([])
             for align in lav_file:
-                curr_target_pos = align.components[0].start
-                if curr_target_pos > max_pos + 1000:
-                    segments.append((min_pos, max_pos))
+                curr_target_pos = align.components[0].start - gap
+                if curr_target_pos > max_pos + gap:
+                    segments[0].append((min_pos, max_pos))
                     min_pos = curr_target_pos
                 max_pos = align.components[0].get_end()
+            segments[0] = sorted(segments[0], key=lambda x: x[0])
 
-            ### Find longest segment
-            lengths = [s[1] - s[0] for s in segments]
-            longest = segments[lengths.index(max(lengths))]
-            longest_alignments[sline[0]] = (longest[0], longest[1], float(longest[1] - longest[0]) / query_length)
+            ### Drop short segments
+            segments[0] = [s for s in segments[0] if float(s[1]-s[0]) / query_length > 0.0001]
+            try:
+                span.append(segments[0][-1][1] - segments[0][0][0])
+            except:
+                pdb.set_trace()
+
+
+            gap_range = [20000, 50000, 100000, 1000000]
+            for i in range(1, len(gap_range) + 1):
+                #lav_file = lav.Reader(file(os.path.join(self.lav_dir, fname)))
+                #a = lav_file.next()
+                #min_pos = a.components[0].start
+                #max_pos = a.components[0].get_end()
+                #pdb.set_trace()
+                segment_iter = iter(segments[i-1])
+                segment = next(segment_iter)
+                min_pos = segment[0]
+                max_pos = segment[1]
+
+                segments.append([])
+                for segment in segment_iter:
+                    curr_target_pos = segment[0]
+                    if curr_target_pos > max_pos + gap_range[i-1]:
+                        segments[i].append((min_pos, max_pos))
+                        min_pos = curr_target_pos
+                    max_pos = segment[1]
+                segments[i].append((min_pos, max_pos))
+
+                ### Drop short segments
+                segments[i] = [s for s in segments[i] if float(s[1]-s[0]) / query_length > 0.01]
+
+                ### Calculate span of remaining segments
+                try:
+                    span.append(segments[i][-1][1] - segments[i][0][0])
+                except:
+                    pdb.set_trace()
+
+
+
+            final = segments[-1]
+
+            print final
+
+            if len(final) > 1:
+                spans = [x[1] - x[0] for x in final]
+                final = final[spans.index(max(spans))]
+            else:
+                final = final[0]
+
+            print final
+
+            try:
+                coverage = round(float(final[1] - final[0]) / query_length, 2)
+            except:
+                pdb.set_trace()
+
+            longest_alignments[sline[0]] = (final[0], \
+                                            final[1], \
+                                            coverage)
 
             out.write("\t".join(sline + map(str, list(longest_alignments[sline[0]])) ) + "\n")
+
         out.close()
         return longest_alignments
 
