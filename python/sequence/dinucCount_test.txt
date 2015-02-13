@@ -1,0 +1,2 @@
+asdfaserf	cgatcgtttgactgacgatag	chr1	56	5853	280
+casdf	ACGTAGCGTAGTCGATATGACCCCCGATCAT	chr2	5665	34672	90

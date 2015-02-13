@@ -6,14 +6,15 @@
 ## Second pass
 # Identify longest alignment block for each pair and write out target-based start and stop for each query
 
+
+
 import sys
 import os
 import pdb
 import numpy as np
 import pandas as pd
 import multiprocessing as mp
-import bx_lav as lav
-import fasta_utils as futil
+from bx.align import lav
 from operator import itemgetter
 from fastahack import FastaHack
 
@@ -41,13 +42,11 @@ def lav_to_df(lav_file, out):
         out_line = "\t".join(map(str, [align.components[0].start, align.components[0].get_end(), align.components[1].start, align.components[1].get_end()])) + "\n"
         out_file.write(out_line)
 
-#### Main class, functions
 class LavProcess:
     def __init__(self, lav_dir):
         ### Read in filenames within lav directory
         self.lav_dir = os.path.abspath(lav_dir)
         self.fnames = [os.path.join(self.lav_dir, f) for f in  os.listdir(self.lav_dir)]
-        self.query_fas = {}
 
         ### Split fnames to get list of queries
         fnames_query = []
@@ -70,15 +69,8 @@ class LavProcess:
             Writes best_target to tabbed text file
         """
 
-        self.best_file = "/".join([self.out_dir, "lav_pairs.txt"])
-
-        dec = "y"
-        if os.path.exists(self.best_file):
-            dec = raw_input("lav_pairs exists. Overwrite? [y/n]")
-            if dec == "n": return
-
         # PARALLEL
-        pool = mp.Pool(processes=10)
+        pool = mp.Pool(processes=2)
         inputs = []
         for query in self.query_set:
             indices = [i for i, s in enumerate(self.fnames) if query in s]
@@ -92,7 +84,7 @@ class LavProcess:
         print "Finding query-target pairs..."
         best_target = dict(pool.map(_find_highest_score, inputs))
 
-        # # SERIES
+        # SERIES
         # best_target = {}
         # for query in self.query_set:
         #     print query
@@ -109,9 +101,9 @@ class LavProcess:
         self.best_file = "/".join([self.out_dir, "lav_pairs.txt"])
         out = open(self.best_file, "w")
         for query,value in best_target.iteritems():
-            if value[0] == 0: continue
             out.write("\t".join([query] + map(str, list(value))) + "\n")
         out.close()
+
         return best_target
 
     def find_longest_alignments(self):
@@ -127,151 +119,40 @@ class LavProcess:
 
         best_file = open(self.best_file)
         out = open(os.path.join(self.out_dir, "longest_segments.txt"), 'w')
-        skipped = open(os.path.join(self.out_dir, "skipped_pairs.txt"), 'w')
-        out.write("\t".join(["query_name",
-                             "score",
-                             "target_name",
-                             "target_initial_start",
-                             "target_initial_end",
-                             "target_final_start",
-                             "target_final_end",
-                             "query_strand",
-                             "query_coverage"]) + "\n")
+
         longest_alignments = {}
         for line in best_file:
             sline = line.split()
             fname = "{0}-{1}.lav".format(sline[2], sline[0])
-            print fname
-            score = int(sline[1])
-
-            segments = []
-
-            ### Initial
             lav_file = lav.Reader(file(os.path.join(self.lav_dir, fname)))
-            a = lav_file.next()
-            self.query_fas[lav_file.seq2_src] = lav_file.seq2_filename
+            print fname
 
+            a = lav_file.next()
             min_pos = a.components[0].start
             max_pos = a.components[0].get_end()
             query_length = lav_file.seq2_end - lav_file.seq2_start
 
-            ### If poor coverage, skip
-            # if (score / 100 < query_length * 0.2):
-            #     print "Low score: {0}".format(fname)
-            #     skipped.write("\t".join(sline) + "\tlow_score\n")
-            #     continue
-
-            ### Initial segment read and merge
-            gap = 1000
-            segments.append([])
-            strand = "+"
-
+            ### Group alignment blocks into larger segments
+            last_target_pos = 0
+            segments = []
             for align in lav_file:
                 curr_target_pos = align.components[0].start
-                if abs(curr_target_pos - max_pos) >  gap:
-                    segments[0].append((min_pos, max_pos, align.components[1].strand))
+                if curr_target_pos > max_pos + 1000:
+                    segments.append((min_pos, max_pos))
                     min_pos = curr_target_pos
                 max_pos = align.components[0].get_end()
-                strand = align.components[1].strand
 
-            segments[0].append((min_pos, max_pos, strand))
-            segments[0] = sorted(segments[0], key=lambda x: x[0])
+            ### Find longest segment
+            lengths = [s[1] - s[0] for s in segments]
+            longest = segments[lengths.index(max(lengths))]
+            longest_alignments[sline[0]] = (longest[0], longest[1], float(longest[1] - longest[0]) / query_length)
 
-            ### Drop short segments
-            segments[0] = [s for s in segments[0] if float(s[1]-s[0]) / query_length > 0.001]
-            #span.append(segments[0][-1][1] - segments[0][0][0])
-            #pdb.set_trace()
-            try:
-                final = self.merge_segments(segments, query_length)
-            except:
-                skipped.write("\t".join(sline) + "\tbad_match\n")
-                continue
-
-            if len(final) > 1:
-                spans = [x[1] - x[0] for x in final]
-                final = final[spans.index(max(spans))]
-            else:
-                final = final[0]
-
-            coverage = round(float(final[1] - final[0]) / query_length, 2)
-            if coverage < 0.5:
-                skipped.write("\t".join(sline) + "\tlow_coverage\n")
-                continue
-            elif coverage > 2:
-                skipped.write("\t".join(sline) + "\tdisjoint_path\n")
-                continue
-
-            longest_alignments[sline[0]] = (final[0], \
-                                            final[1], \
-                                            final[2], \
-                                            coverage)
             out.write("\t".join(sline + map(str, list(longest_alignments[sline[0]])) ) + "\n")
-
         out.close()
         return longest_alignments
 
-    def merge_segments(self, segments, query_length):
-        gap_range = [20000, 50000, 100000]
-        for i in range(1, len(gap_range) + 1):
-            segment_iter = iter(segments[i-1])
-            segment = next(segment_iter)
-
-            min_pos = segment[0]
-            max_pos = segment[1]
-            strand = segment[2]
-            segments.append([])
-
-            for segment in segment_iter:
-                curr_target_pos = segment[0]
-                if curr_target_pos > max_pos + gap_range[i-1]:
-                    segments[i].append((min_pos, max_pos, strand))
-                    min_pos = curr_target_pos
-                    strand = segment[2]
-                max_pos = segment[1]
-            segments[i].append((min_pos, max_pos, strand))
-
-            ### Drop short segments
-            segments[i] = [s for s in segments[i] if float(s[1]-s[0]) / query_length > 0.01]
-
-        return segments[-1]
-
-    def create_merged_seq(self):
-        """Writes merged target-ordered query sequence"""
-        align = pd.read_table(os.path.join(self.out_dir, "longest_segments.txt"))
-        align.sort(columns=["target_name", "target_final_start"], inplace=True)
-
-        out = open(os.path.join(self.out_dir, "merged_seq.fa"), "w")
-
-        curr_target_name = ""
-        i = 0
-        start = 0
-        for row in align.iterrows():
-            query = row[1]['query_name']
-            target = row[1]['target_name']
-            fa = FastaHack(self.query_fas[query])
-
-            if curr_target_name != target:
-                if i > 0:
-                    out.write("\n")
-                    i = 1
-                out.write(">{0}\n".format(target))
-                curr_target_name = target
-
-            fasub = fa.get_sequence(query)
-            if row[1]['query_strand'] == "-":
-                fasub = futil.reverse_complement(fasub)
-            fasub1, start = futil.format_fasta(fasub, start)
-            [out.write(x) for x in fasub1]
-
-            ns = "N" * 1000
-            ns1, start = futil.format_fasta(ns, start)
-            [out.write(x) for x in ns1]
-
-        out.write("\n")
-
 def _find_highest_score(tup):
     query, fnames_query = tup
-    print query
     return (query, find_highest_score(query, fnames_query))
 
 def find_highest_score(query, fnames_wquery):
@@ -294,8 +175,6 @@ def find_highest_score(query, fnames_wquery):
                 max_start = start
                 max_end = end
         except AssertionError, e:
-            continue
-        except ZeroDivisionError, e:
             continue
 
     return (max_score, max_src, max_start, max_end)
@@ -321,6 +200,22 @@ def sum_scores(aligns):
         if align.components[0].get_end() > max_end: max_end = align.components[0].get_end()
     return (ss, min_start, max_end)
 
+
+    # TODO: turn dict into 4 column dataframe
+    # sort by chrom, start
+    # create dict of chrom:fasta_file
+    # foreach row
+    #    read in lav
+    #    extract query (seq2) sequence
+    #    add 500 bp 'N'
+    #    append to fasta file givenby chrom
+def create_merged_seq(scaf_chrom, lav_dir):
+
+    d = pd.DataFrame(scaf_chrom)
+    return d
+
+
+
 def main(argv):
     L = LavProcess(argv[1])
 
@@ -329,8 +224,7 @@ def main(argv):
     #For each pair, find start/end coord on largest alignment block
     longest = L.find_longest_alignments()
 
-    print "Writing sequence"
-    seq = L.create_merged_seq()
+    #d = create_merged_seq(scaf_chrom)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,17 @@
+#! /usr/bin/env python
+
+import sys
+
+def main(argv):
+
+    gtf_in = argv[1]
+    
+    for line in gtf_in:
+        line_tab = line.strip().split()
+        info = line_tab[8].split("; ")
+        vals = []
+        for field in info:
+            vals.append(field.split(" ")[1])
+            
+if __name__ == "__main__":
+    main(sys.argv)

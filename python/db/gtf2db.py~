@@ -1,0 +1,40 @@
+#! /usr/bin/env python
+
+##############################################################################################
+# Parse CompletedJobInfo.xml and GenerateFASTQRunStatistics.xml within Illumina run folder
+# Export
+#   - library ID <SampleID>
+#   - run ID <Run>
+#   - instrument <Instrument>
+#   - cycle number <NumCycles>
+#   - type of sequencing PE/SE (Calculate from number of children of <Read>)
+#   - Total number of clusters <NumberOfClustersRaw>
+#   - Passed number of clusters <NumberOfClustersPF>
+##############################################################################################
+
+
+import sys
+import argparse
+import xml.etree.ElementTree as ET
+import MySQLdb as mdb
+import pdb
+import datetime
+
+def main(argv):
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('gtf', help='GTF file')
+    parser.add_argument('organism', help='Source organism')
+    parser.add_argument('build', help="Annotations build")
+    args = parser.parse_args()
+
+    gtf = open(argv[1])
+
+    ## Connect to db
+    try:
+        conn = mdb.connect('localhost', 'brad', 'Eu23ler1', 'annotations')
+        cur = conn.cursor()
+    except mdb.Error, e:
+        print "MySQLdb error %d: %s " % (e.args[0] + e.args[1])
+
+    for record in

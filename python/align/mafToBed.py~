@@ -1,0 +1,29 @@
+#! /usr/bin/env python
+
+import sys
+import os.path
+import re
+
+def main(argv):
+
+    infile = open(argv[1])
+    out_fname = os.path.splitext(argv[1])[0]
+
+    out_files = {}
+    #out_target = open( + ".bed", 'w')
+    #out_query = open(os.path.splitext(argv[1])[0] + ".bed", 'w')
+
+    s_pattern = re.compile("^s")
+    for line in infile:
+        if s_pattern.search(line):
+            sline = line.split()
+            sline1s = sline[1].split()
+
+            outline = "\t".join([sline1s[1], sline[2], str(int(sline[2]) + int(sline[3])), sline[4]]) + "\n"
+            if sline1s[0] in out_files:
+                ret = out_files[sline1s[0]].write(outline)
+            else:
+                out_files[sline1s[0]] = open(out_fname + "_" + sline1s[0] + ".bed", 'w')
+
+if __name__ == "__main__":
+    main(sys.argv)

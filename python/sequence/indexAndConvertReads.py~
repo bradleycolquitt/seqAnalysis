@@ -1,0 +1,41 @@
+#! /usr/bin/env python
+
+import os, sys
+import indexSplitter
+import argparse
+from subprocess import Popen
+
+def main(argv):
+    parser = argparse.ArgumentParser(description="Separate libraries by indices and convert to fastq.")
+    parser.add_argument('-i', '--qseq', required=True, 
+                        dest='qseq', help='qseq file')
+    parser.add_argument('-d', required=True, dest="date", help='sample date')
+    args = parser.parse_args()
+    qseq_dir = "/media/storage2/data/qseq/" + args.date
+    fastq_dir = "/media/storage2/data/fastq/" + args.date
+    input_path = qseq_dir + "/" + args.qseq
+
+    print "Splitting samples by indices..."
+    if os.path.exists(input_path + "/1"):
+        dec = raw_input("Split files exist. Split again [y/n]?")
+        if dec == "y": indexSplitter.main(input_path)
+    else:
+        indexSplitter.main(input_path)
+    
+    print "Converting to fastq..."
+    if not os.path.exists(fastq_dir): os.mkdir(fastq_dir)
+    out_dir = "/".join([fastq_dir, args.qseq])
+    if not os.path.exists(out_dir): os.mkdir(out_dir)
+    print "/".join([fastq_dir, args.qseq])
+    for index in range(1,7):
+        index_dir = out_dir + "/" + str(index)
+        if not os.path.exists(index_dir): os.mkdir(index_dir)
+        cmd_args = ['qseq2fastq', 
+                    '-i', input_path + "/" + str(index), 
+                    '-o', "/".join([fastq_dir, args.qseq, str(index)]),
+                    '--preserve', '--threads', '8']
+        convert = Popen(cmd_args)
+        convert.wait()
+    
+if __name__ == "__main__":
+    main(sys.argv)
