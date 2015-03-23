@@ -1,0 +1,4 @@
+#! /usr/bin/env python
+
+# Read in GFF
+# Store entry in dict using ID as key 
