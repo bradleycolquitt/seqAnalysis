@@ -40,7 +40,7 @@ def main(argv):
                     ofile.write("\t".join(sline) + "\n")
                     pos = 0
             except:
-                print "Malformed line: " line
+                print "Malformed line: " + line
         else:
             ofile.write(line)
 
