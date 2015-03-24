@@ -28,16 +28,19 @@ def main(argv):
     for line in ifile:
         if s_pattern.search(line):
             sline = line.split()
-            if pos == 0:
-                # target
-                sline[1] = ".".join([name1, sline[1]])
-                ofile.write("\t".join(sline) + "\n")
-                pos = 1
-            elif pos == 1:
-                # query
-                sline[1] = ".".join([name2, sline[1]])
-                ofile.write("\t".join(sline) + "\n")
-                pos = 0
+            try:
+                if pos == 0:
+                    # target
+                    sline[1] = ".".join([name1, sline[1]])
+                    ofile.write("\t".join(sline) + "\n")
+                    pos = 1
+                elif pos == 1:
+                    # query
+                    sline[1] = ".".join([name2, sline[1]])
+                    ofile.write("\t".join(sline) + "\n")
+                    pos = 0
+            except:
+                print "Malformed line: " line
         else:
             ofile.write(line)
 
