@@ -10,6 +10,7 @@ import argparse
 import sqlite3
 import pdb
 import datetime
+import re
 import traceback as tb
 
 class AnnoDB:
@@ -20,7 +21,7 @@ class AnnoDB:
         now = datetime.datetime.now()
         self.date = "%s-%s-%s" % (now.year, now.month, now.day)
         self.nrows = 0
-        self.conn = sqlite3.connect("/media/data/db/anno.db", isolation_level=None)
+        self.conn = sqlite3.connect("/media/data/db/anno2.db", isolation_level=None)
         self.cur = self.conn.cursor()
 
         script = '''CREATE TABLE IF NOT EXISTS genes (build text,
@@ -30,7 +31,8 @@ class AnnoDB:
                                                   end int,
                                                   strand text,
                                                   gene_id text,
-                                                  transcript_id text
+                                                  transcript_id text,
+                                                  gene_name text
                                                   );
                     CREATE TABLE IF NOT EXISTS builds (build text,
                                                   date_entered text,
@@ -48,7 +50,8 @@ class AnnoDB:
                             strand = 0,
                             element = "start_codon",
                             gene_id = "",
-                            transcript_id = ""
+                            transcript_id = "",
+                            gene_name = ""
                             )
 
         try:
@@ -68,6 +71,9 @@ class AnnoDB:
                 record_parse['strand'] = "0" if record_s[6] == "+" else "1"
                 record_parse['gene_id'] = "'" + record_s[9].split(";")[0] + "'"
                 record_parse['transcript_id'] = "'" + record_s[11].split(";")[0] + "'"
+
+                if re.search("gene_name", record):
+                    record_parse['gene_name'] = "'" + record_s[13].split(";")[0] + "'"
 
                 # Check if record exists
                 exec_string = '''SELECT EXISTS(SELECT 1 FROM genes
