@@ -8,7 +8,6 @@ import numpy as np
 import re
 import pdb
 import track_util as tutil
-import signal_utils
 
 import genome.track
 import genome.db
