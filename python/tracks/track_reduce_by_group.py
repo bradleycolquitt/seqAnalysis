@@ -41,8 +41,9 @@ def main(argv):
     gdb = genome.db.GenomeDB()
     tracks = gdb.list_tracks(subdir=args.track_dir, recursive=False)
     tracks_base = [os.path.basename(t) for t in tracks]
-    out_prefix = "/".join([os.path.dirname(args.track_dir), "reduced", "-".join(groups)])
+    out_prefix = "/".join([args.track_dir, "reduced", "-".join(groups)])
 
+    #pdb.set_trace()
     # read info file and group
     info = read_df(args.info)
     info_gp = info.groupby(groups)
@@ -57,10 +58,12 @@ def main(argv):
         if len(curr_tracks_full) == 0:
             continue
 
+        #pdb.set_trace()
+        name_chr = [str(a) for a in name]
         if len(name) == 1:
-            curr_name = name
+            curr_name = name_chr
         else:
-            curr_name = "-".join(list(name))
+            curr_name = "-".join(list(name_chr))
         print curr_name
         out_fname = "/".join([out_prefix, curr_name])
 

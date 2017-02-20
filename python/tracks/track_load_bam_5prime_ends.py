@@ -54,7 +54,7 @@ def get_sam_iter(samfile, chrom):
 
 
 def add_read_counts(chrom, fwd_array, rev_array, bam_filename):
-    pdb.set_trace()
+    #pdb.set_trace()
     samfile = pysam.Samfile(bam_filename, "rb")
 
     count = 0
@@ -93,13 +93,19 @@ def add_read_counts(chrom, fwd_array, rev_array, bam_filename):
         else:
             fwd_array[start-1] += 1
 
+def threshold_large_vals(array):
+    n_large_vals = np.sum(array > MAX_VAL)
+    if n_large_vals > 0:
+        sys.stderr.write("%d sites exceed max value %d\n" %
+                         (n_large_vals, MAX_VAL))
+        array[array > MAX_VAL] = MAX_VAL
 
-def run_script(bam_filename, assembly):
+def run_script(bam_filename, prefix, assembly):
     gdb = genome.db.GenomeDB(assembly=assembly)
 
     bam_base = os.path.basename(bam_filename).strip(".bam")
-    fwd_track_name = bam_base + "-fwd"
-    rev_track_name = bam_base + "-rev"
+    fwd_track_name = "/".join([prefix, bam_base + "-fwd"])
+    rev_track_name = "/".join([prefix,bam_base + "-rev"])
 
     gdb.delete_track(fwd_track_name)
     gdb.delete_track(rev_track_name)
@@ -138,6 +144,7 @@ def run_script(bam_filename, assembly):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', dest='in_dir')
+    parser.add_argument('-p', dest='prefix')
 
     parser.add_argument('--assembly', help="assembly to use", default=None)
     args = parser.parse_args()
@@ -148,7 +155,7 @@ def main():
     in_files = ["/".join([full_in_dir, f]) for f in in_files]
 
     for f in in_files:
-        run_script(f, args.assembly)
+        run_script(f, args.prefix, args.assembly)
 
 
 if __name__ == '__main__':
